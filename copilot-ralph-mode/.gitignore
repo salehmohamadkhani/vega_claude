@@ -1,0 +1,55 @@
+# Copilot Ralph Mode - State Files
+.ralph-mode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temp
+*.tmp
+*.temp
+*.bak
+
+# Logs
+*.log
+
+# Node / npm
+.npmrc
+
+# Testing & Coverage
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage.json
+.tox/
+.nox/
+.benchmarks/
+
+# Mypy
+.mypy_cache/

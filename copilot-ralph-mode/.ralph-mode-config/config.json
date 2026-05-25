@@ -1,0 +1,24 @@
+{
+  "theme": "auto",
+  "editor": "code",
+  "autoCompact": true,
+  "compactThreshold": 0.95,
+  "showReasoning": true,
+  "defaultModel": "auto",
+  "trustedDirectories": [],
+  "permissions": {
+    "allowAllTools": true,
+    "allowAllPaths": true,
+    "allowedUrls": [
+      "github.com",
+      "api.github.com"
+    ]
+  },
+  "ralph": {
+    "defaultMaxIterations": 20,
+    "defaultCompletionPromise": "DONE",
+    "sleepBetweenIterations": 2,
+    "enableHistory": true,
+    "enableOutput": true
+  }
+}

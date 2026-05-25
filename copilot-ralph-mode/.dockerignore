@@ -1,0 +1,67 @@
+# =============================================================================
+# .dockerignore - Files to exclude from Docker build context
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+env
+.eggs
+*.egg-info
+*.egg
+dist
+build
+
+# Testing
+.pytest_cache
+.hypothesis
+.coverage
+htmlcov
+.tox
+.nox
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Dev Container (don't recursively copy)
+.devcontainer
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ralph Mode runtime files (we want clean slate in container)
+.ralph-mode
+
+# Benchmarks
+.benchmarks
+
+# MyPy cache
+.mypy_cache
+
+# Documentation builds
+docs/_build
+site
+
+# Logs
+*.log
+logs
+
+# Temporary files
+tmp
+temp
+*.tmp
