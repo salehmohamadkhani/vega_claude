@@ -33,7 +33,7 @@ Nothing — all Phase 2 deliverables are complete. Items explicitly deferred:
 - No FCC smoke adapter (Phase 3)
 - No critic/arbiter skeleton (Phase 3)
 - No task library/context builder (Phase 3)
-- No Admin UI (Phase 4)
+- No Admin UI (Phase 7+)
 - No Claude Code execution (Phase 5)
 - No Playwright (Phase 6)
 
@@ -193,9 +193,9 @@ Rationale:
 | No verification command execution | Plans are modeled but not run | Phase 3 |
 | No critic/arbiter | Multi-agent deliberation not yet implemented | Phase 3 |
 | No task library/context builder | Tasks must be created manually or via planner | Phase 3 |
-| No Admin UI | Run status visible only via Python API | Phase 4 |
+| No Admin UI | Run status visible only via Python API | Phase 7+ |
 | No Claude Code launch | Ralph Loop does not exist yet | Phase 5 |
-| No Playwright | Browser-based KPI verification not possible | Phase 6 |
+| No Playwright | Browser-based KPI verification not possible | Phase 9 |
 
 ---
 

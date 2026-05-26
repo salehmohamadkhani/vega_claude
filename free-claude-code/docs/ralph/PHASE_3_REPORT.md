@@ -36,9 +36,9 @@ Phase 3 moved Ralph Runtime from planned-but-unexecuted verification into an act
 Nothing — all Phase 3 deliverables are complete. Items explicitly deferred:
 - No task library / context builder (Phase 4)
 - No memory store (Phase 4)
-- No Admin UI (Phase 5)
+- No Admin UI (Phase 7+)
 - No Claude Code execution (Phase 6)
-- No Playwright (Phase 7)
+- No Playwright (Phase 9)
 
 ---
 
@@ -220,8 +220,8 @@ Rationale:
 | No persistent memory | Quality gate state is in-memory only | Phase 4 |
 | No task library / context builder | Tasks must be created manually or via planner | Phase 4 |
 | No Claude Code launch | Ralph Loop does not exist yet | Phase 6 |
-| No Admin UI | Run status visible only via Python API | Phase 5 |
-| No Playwright | Browser-based KPI verification not possible | Phase 7 |
+| No Admin UI | Run status visible only via Python API | Phase 7+ |
+| No Playwright | Browser-based KPI verification not possible | Phase 9 |
 
 ---
 

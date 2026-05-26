@@ -196,8 +196,8 @@ would create a bad dependency direction from `core/ralph/` to `smoke/`.
 | No persistent memory | Quality gate state is in-memory only | Phase 4 |
 | No task library / context builder | Tasks must be created manually or via planner | Phase 4 |
 | No Claude Code execution | Ralph Loop does not exist yet | Phase 6 |
-| No Admin UI | Run status visible only via Python API | Phase 5 |
-| No Playwright | Browser-based KPI verification not possible | Phase 7 |
+| No Admin UI | Run status visible only via Python API | Phase 7+ |
+| No Playwright | Browser-based KPI verification not possible | Phase 9 |
 
 ---
 

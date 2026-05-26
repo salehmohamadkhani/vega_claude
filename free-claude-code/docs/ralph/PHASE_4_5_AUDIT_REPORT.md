@@ -7,7 +7,7 @@
 
 ## Summary
 
-Phase 4.5 is an intermediate audit and hardening layer between Phase 4 (Persistence and Context Layer) and Phase 5 (Admin UI). No new product features were
+Phase 4.5 is an intermediate audit and hardening layer between Phase 4 (Persistence and Context Layer) and Phase 6 (CLI). No new product features were
 added. The scope was limited to:
 
 1. **Audit** all Phase 4 persistence/context/memory modules for bugs, vulnerabilities, and dependency issues
@@ -170,14 +170,14 @@ cleaner `id: TASK-001-test`.
 
 ## Phase 5 Safety Assessment
 
-Phase 4.5 hardening makes Phase 5 (Admin UI) safer by:
+Phase 4.5 hardening makes future UI layers safer (Phase 7+) by:
 
 1. **Eliminating the PyYAML dependency** — Admin UI will not inherit an undeclared dependency
 2. **Securing workspace I/O** — Admin UI file operations (run data display, task browsing) cannot escape workspace root
 3. **Validating task lifecycle transitions** — Admin UI status buttons (approve/start/mark done) fail early on invalid state
 4. **Normalizing exception handling** — Consistent syntax across all modules, no fragile patterns
 
-No new blockers for Phase 5. Phase 4.5 introduced no new APIs, routes, or capabilities that Phase 5 must account for.
+No blockers for Phase 6. Phase 4.5 introduced no new APIs, routes, or capabilities that Phase 6 must account for.
 
 ---
 

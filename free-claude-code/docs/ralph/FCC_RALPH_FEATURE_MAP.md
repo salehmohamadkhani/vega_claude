@@ -263,9 +263,10 @@ goal → questions → task list → human review/approval → execution
 | Claude Code adapter | `core/ralph/claude_execution.py` | ✅ | 5 |
 | Iteration runner | `core/ralph/iteration_runner.py` | ✅ | 5 |
 | Run executor | `core/ralph/run_executor.py` | ✅ | 5 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 7 |
-| Admin UI | `core/ralph/admin/` | — | 6 |
-| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 8 |
+| CLI — fcc-ralph | `core/ralph/cli.py` | — | 6 |
+| Admin UI | `core/ralph/admin/` | — | 7 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
+| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
 
 ---
 
@@ -307,9 +308,10 @@ goal → questions → task list → human review/approval → execution
 | Memory store | `core/ralph/memory.py` | ✅ | 4 |
 | Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
 | Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ | 4 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 6 |
-| Admin UI | `core/ralph/admin/` | — | 6 |
-| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 8 |
+| CLI — fcc-ralph | `core/ralph/cli.py` | — | 6 |
+| Admin UI | `core/ralph/admin/` | — | 7 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
+| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
 
 ---
 
@@ -361,7 +363,7 @@ All `core/ralph/` imports remain relative and within-module. No imports from
 | Context builder | `core/ralph/context_builder.py` | — | 4 |
 | Memory store | `core/ralph/memory.py` | — | 4 |
 | Agent profiles | `core/ralph/profiles/` | — | 4 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 4+ |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
 
 ---
 
@@ -478,4 +480,4 @@ Task generation injects metadata based on goal keywords:
 | Context builder | `core/ralph/context_builder.py` | — | 4 |
 | Memory store | `core/ralph/memory.py` | — | 4 |
 | Agent profiles | `core/ralph/profiles/` | — | 4 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 4+ |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 8 |

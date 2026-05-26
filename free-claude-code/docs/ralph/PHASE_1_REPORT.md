@@ -51,7 +51,7 @@ Nothing — all Phase 1 deliverables are complete. Items explicitly deferred:
 - No verification command execution (Phase 3)
 - No critic/arbiter agents (Phase 3)
 - No memory store (Phase 3)
-- No Admin UI (Phase 4)
+- No Admin UI (Phase 7+)
 - No Playwright (Phase 5)
 
 ---
@@ -244,8 +244,8 @@ Rationale:
 | No real execution | Run table entries are created manually; no task planner | Phase 2 |
 | No model calls | Scoring is deterministic; no actual LLM evaluation | Phase 2 |
 | No verification command execution | Plans are modeled but not run | Phase 3 |
-| No Playwright | Browser-based KPI verification not possible | Phase 5 |
-| No Admin UI | Run status visible only via Python API | Phase 4 |
+| No Playwright | Browser-based KPI verification not possible | Phase 9 |
+| No Admin UI | Run status visible only via Python API | Phase 7+ |
 | In-memory only | No persistence across restarts | Phase 2+ |
 | No critic/arbiter | Multi-agent deliberation not yet implemented | Phase 3 |
 

@@ -132,9 +132,10 @@ Phase 9             Playwright KPI verifier, browser-based acceptance testing
 
 | Capability | Phase | Dependencies |
 |---|---|---|
-| Admin UI — Ralph tab in FCC admin | 6 | FCC `api/admin_routes.py` |
-| Full Ralph Loop — Async Claude Code loop | 7 | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
-| Playwright KPI Verifier | 8 | Playwright, FCC smoke tests |
+| CLI — fcc-ralph plan/review/approve/run/status/report | 6 | `core/ralph/cli.py`, `pyproject.toml` entry point |
+| Admin UI — Ralph tab in FCC admin | 7 | FCC `api/admin_routes.py` |
+| Full Ralph Loop — Async Claude Code loop | 8 | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
+| Playwright KPI Verifier | 9 | Playwright, FCC smoke tests |
 
 ---
 
@@ -407,7 +408,13 @@ Phase 5.5 [DONE]    Execution safety audit — approval gate, command fallback, 
                         ↓
 Phase 5.6 [DONE]    Execution lifecycle — IterationRunnerConfig, allowlist, config validation
                         ↓
-Phase 6             Full Ralph Loop with Claude Code via FCC proxy
+Phase 5.7 [DONE]    CLI-first audit — roadmap correction, execution contract audit, CLI plan
                         ↓
-Phase 7             Playwright KPI verifier, browser-based acceptance testing
+Phase 6             CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
+                        ↓
+Phase 7             Admin UI for Ralph Runtime, KPI dashboard (post-CLI, optional)
+                        ↓
+Phase 8             Full Ralph Loop with Claude Code via FCC proxy
+                        ↓
+Phase 9             Playwright KPI verifier, browser-based acceptance testing
 ```

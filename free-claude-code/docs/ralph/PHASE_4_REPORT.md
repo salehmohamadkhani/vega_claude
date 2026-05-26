@@ -281,7 +281,7 @@ provider/model.
 | No Admin UI | Run status visible only via Python API | Phase 5 |
 | Memory search is keyword-heuristic | May miss semantically similar records | Phase 6+ (embedding-based) |
 | Checkpoints are not yet used for resume | Utility is latent until Phase 6 loop | Phase 6 |
-| No Playwright | Browser-based KPI verification not possible | Phase 7 |
+| No Playwright | Browser-based KPI verification not possible | Phase 9 |
 | Task groups are not wired into lifecycle | Group-level orchestration needs Phase 6 | Phase 6 |
 
 ---
@@ -302,7 +302,7 @@ provider/model.
 
 ## Phase 5 Readiness
 
-Phase 4 prepares Phase 5 (Admin UI for Ralph Runtime) by providing:
+Phase 4 prepares the Ralph Loop (Phase 6+) by providing:
 
 1. **Persistent run data** — `RalphWorkspace` I/O methods for reading/writing run state via the admin dashboard
 2. **Task library API** — `TaskLibrary.list_tasks()` for browsing tasks in the UI
@@ -310,7 +310,7 @@ Phase 4 prepares Phase 5 (Admin UI for Ralph Runtime) by providing:
 4. **Memory store** — `MemoryStore.list()` for reviewing run memory
 5. **Agent profile registry** — `AgentProfileRegistry.list_profiles()` for profile management UI
 
-Phase 4 does NOT implement any Admin UI, routes, or templates — those remain Phase 5.
+Phase 4 does NOT implement any Admin UI, routes, or templates — those remain Phase 7+.
 
 ---
 
