@@ -85,7 +85,7 @@ Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality 
                         ↓
 Phase 3.5 [DONE]    Stabilization audit — bugs fixed, hardened, test coverage +15
                         ↓
-Phase 4             Task library, context builder, memory store, agent profiles
+Phase 4 [DONE]      Task library, context builder, memory store, agent profiles, run lifecycle
                         ↓
 Phase 5             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
@@ -114,21 +114,69 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 4+
+## What Remains for Phase 5+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
-| `TaskLibrary` — Markdown task file loading | 4 | `core/ralph/models.py` |
-| `ContextBuilder` — Git-aware task context | 4 | `core/ralph/models.py` |
-| `MemoryStore` — Persistent task memory | 4 | FCC `~/.fcc/` config path |
-| Agent profiles | 4 | `core/ralph/roles.py` |
 | Admin UI — Ralph tab in FCC admin | 5 | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | 6 | `core/ralph/loop_guard.py`, FCC `cli/manager.py` |
 | Playwright KPI Verifier | 7 | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-26 — Phase 3.5 baseline*
+*Last updated: 2026-05-26 — Phase 4 complete*
+
+---
+
+## Phase 4 — Persistence and Context Layer
+
+### What Phase 4 Adds
+
+| Module | File | Status |
+|---|---|---|
+| Workspace Store | `core/ralph/workspace.py` | ✅ Safe filesystem I/O with path traversal protection and deterministic JSON |
+| Task Library | `core/ralph/task_library.py` | ✅ YAML frontmatter + markdown task persistence |
+| Task Groups | `core/ralph/task_groups.py` | ✅ Ordered task grouping with JSON persistence |
+| Context Builder | `core/ralph/context_builder.py` | ✅ Git-aware context snapshot builder (read-only, timeout=10s) |
+| Checkpoint Store | `core/ralph/checkpoint.py` | ✅ Resumable run state with iteration tracking |
+| Memory Store | `core/ralph/memory.py` | ✅ Four-level memory (working/episodic/semantic/procedural) |
+| Agent Profiles | `core/ralph/agent_profiles.py` | ✅ 8 FCC-native profiles, abstract model roles |
+| Run Lifecycle | `core/ralph/run_lifecycle.py` | ✅ Orchestration skeleton — no execution |
+
+### Architecture Integration
+
+```
+                        Ralph Runtime (core/ralph/) Phase 4
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        RunLifecycle                              │
+  │  create_run → prepare_run → approve_task → mark_running → result │
+  │                                                                   │
+  │  ┌──────────┐  ┌──────────────┐  ┌──────────┐  ┌────────────┐  │
+  │  │ Workspace │  │ TaskLibrary  │  │ TaskGroup│  │ Context    │  │
+  │  │ Store     │  │ .md files    │  │ Store    │  │ Builder    │  │
+  │  │ JSON I/O  │  │ YAML fm      │  │ JSON     │  │ Git snap   │  │
+  │  └──────────┘  └──────────────┘  └──────────┘  └────────────┘  │
+  │                                                                   │
+  │  ┌──────────┐  ┌──────────────┐  ┌──────────────────────────┐   │
+  │  │Checkpoint│  │ MemoryStore  │  │ AgentProfileRegistry     │   │
+  │  │ Store    │  │ 4-level      │  │ 8 profiles, model roles │   │
+  │  │ Resume   │  │ keyword srch │  │ no .github dependency   │   │
+  │  └──────────┘  └──────────────┘  └──────────────────────────┘   │
+  │                                                                   │
+  │  Shared: RalphWorkspace paths at .fcc-ralph/{tasks,runs,...}    │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+### Safety Properties
+
+- **Workspace**: path traversal prevention on all user-supplied paths; deterministic JSON (stable diffs)
+- **Task Library**: no execution — pure I/O with YAML parsing; `TaskParseError` on malformed frontmatter
+- **Context Builder**: read-only git commands only; 10-second timeout; graceful non-git fallback (empty strings)
+- **Checkpoint Store**: no mutation of existing checkpoints — always creates new; sorted by iteration_number
+- **Memory Store**: level validation (4 valid levels); importance range 0–100; `MemoryRecordNotFoundError` on missing update
+- **Run Lifecycle**: explicitly does NOT execute verification, launch Claude Code, or call providers; status progression enforced via RunStatus enum
+- **No provider imports**: all Phase 4 modules are `core/ralph/`-internal — no imports from `providers/`, `api/`, or external packages beyond stdlib and `pyyaml`
 
 ---
 
@@ -241,7 +289,7 @@ Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality 
                         ↓
 Phase 3.5 [DONE]    Stabilization audit — bugs fixed, hardened, test coverage +15
                         ↓
-Phase 4             Task library, context builder, memory store, agent profiles
+Phase 4 [DONE]      Task library, context builder, memory store, agent profiles, run lifecycle
                         ↓
 Phase 5             Admin UI for Ralph Runtime, KPI dashboard
                         ↓

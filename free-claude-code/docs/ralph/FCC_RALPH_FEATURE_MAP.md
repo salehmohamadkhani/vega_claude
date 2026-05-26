@@ -87,7 +87,51 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 3.5 baseline*
+*Last updated: 2026-05-26 — Phase 4 complete*
+
+---
+
+## Phase 4 — Persistence and Context Layer
+
+### What Phase 4 Adds
+
+| Module | File | Purpose |
+|---|---|---|
+| Workspace Store | `core/ralph/workspace.py` | Safe filesystem I/O with path traversal protection and deterministic JSON formatting |
+| Task Library | `core/ralph/task_library.py` | Persistent task storage using YAML frontmatter + markdown body files |
+| Task Groups | `core/ralph/task_groups.py` | Ordered task grouping with JSON persistence |
+| Context Builder | `core/ralph/context_builder.py` | Git-aware context snapshot builder (read-only commands, 10s timeout) |
+| Checkpoint Store | `core/ralph/checkpoint.py` | Resumable run state with per-run iteration tracking |
+| Memory Store | `core/ralph/memory.py` | Four-level memory persistence (working/episodic/semantic/procedural) with keyword search |
+| Agent Profiles | `core/ralph/agent_profiles.py` | 8 FCC-native agent profile templates (no `.github/agents` dependency) |
+| Run Lifecycle | `core/ralph/run_lifecycle.py` | Run orchestration skeleton — create, prepare, approve, execute, result (no execution) |
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Agent/Model roles | `core/ralph/roles.py` | ✅ | 1 |
+| Run table | `core/ralph/run_table.py` | ✅ (hardened) | 1 |
+| Scoring | `core/ralph/scoring.py` | ✅ | 1 |
+| Verification plans | `core/ralph/verification.py` | ✅ | 1 |
+| Loop guard | `core/ralph/loop_guard.py` | ✅ | 1 |
+| Model role routing | `core/ralph/model_router.py` | ✅ | 2 |
+| Task planner | `core/ralph/planner.py` | ✅ (fixed) | 2 |
+| Verification runner | `core/ralph/verification_runner.py` | ✅ | 3 |
+| Smoke adapter | `core/ralph/smoke_adapter.py` | ✅ (hardened) | 3 |
+| Critic/arbiter | `core/ralph/critic.py`, `arbiter.py` | ✅ (hardened) | 3 |
+| Quality gate | `core/ralph/quality_gate.py` | ✅ (hardened) | 3 |
+| Workspace store | `core/ralph/workspace.py` | ✅ | 4 |
+| Task library | `core/ralph/task_library.py` | ✅ | 4 |
+| Task groups | `core/ralph/task_groups.py` | ✅ | 4 |
+| Context builder | `core/ralph/context_builder.py` | ✅ | 4 |
+| Checkpoint store | `core/ralph/checkpoint.py` | ✅ | 4 |
+| Memory store | `core/ralph/memory.py` | ✅ | 4 |
+| Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
+| Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ | 4 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 6 |
+| Admin UI | `core/ralph/admin/` | — | 5 |
+| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 7 |
 
 ---
 

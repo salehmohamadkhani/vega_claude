@@ -9,9 +9,13 @@ CLI launcher, Admin UI, and messaging. The Ralph Runtime builds on top
 of FCC without duplicating those concerns.
 """
 
+from .agent_profiles import AgentProfile, AgentProfileRegistry
 from .arbiter import ArbiterAction, ArbiterDecision, ArbiterEngine
+from .checkpoint import Checkpoint, CheckpointStore
+from .context_builder import ContextBuilder, GitContext, RalphContextSnapshot
 from .critic import CriticEngine, CriticReview
 from .loop_guard import LoopAction, LoopGuard, LoopGuardDecision
+from .memory import MemoryRecord, MemoryStore
 from .model_router import ModelRoleResolution, ModelRoleRouter, ModelRoleRoutingPolicy
 from .models import (
     CriticDecision,
@@ -35,9 +39,12 @@ from .roles import (
     AgentRole,
     ModelRole,
 )
+from .run_lifecycle import RunLifecycle, RunLifecycleResult
 from .run_table import RunTable, RunTableEntry
 from .scoring import HallucinationRisk, ScoreCard
 from .smoke_adapter import FCCSmokeAdapter, SmokePlan
+from .task_groups import TaskGroup, TaskGroupStore
+from .task_library import TaskLibrary, TaskLibraryEntry, TaskLibraryError
 from .verification import (
     VerificationPlan,
     VerificationResult,
@@ -49,41 +56,65 @@ from .verification_runner import (
     VerificationRunner,
     VerificationRunnerConfig,
 )
+from .workspace import (
+    PathTraversalError,
+    RalphWorkspace,
+    RalphWorkspacePaths,
+)
 
 __all__ = [
     "AGENT_ROLE_LABELS",
     "AGENT_TO_MODEL_ROLE",
+    "AgentProfile",
+    "AgentProfileRegistry",
     "AgentRole",
     "ArbiterAction",
     "ArbiterDecision",
     "ArbiterEngine",
+    "Checkpoint",
+    "CheckpointStore",
     "ClarifyingQuestion",
     "CommandExecutionResult",
+    "ContextBuilder",
     "CriticDecision",
     "CriticEngine",
     "CriticReview",
     "FCCSmokeAdapter",
+    "GitContext",
     "HallucinationRisk",
     "IterationStatus",
     "LoopAction",
     "LoopGuard",
     "LoopGuardDecision",
+    "MemoryRecord",
+    "MemoryStore",
     "ModelRole",
     "ModelRoleResolution",
     "ModelRoleRouter",
     "ModelRoleRoutingPolicy",
+    "PathTraversalError",
     "ProjectGoal",
     "ProjectSpec",
     "QualityGate",
     "QualityGateResult",
+    "RalphContextSnapshot",
     "RalphIteration",
     "RalphRun",
     "RalphTask",
+    "RalphWorkspace",
+    "RalphWorkspacePaths",
+    "RunLifecycle",
+    "RunLifecycleResult",
     "RunStatus",
     "RunTable",
     "RunTableEntry",
     "ScoreCard",
     "SmokePlan",
+    "TaskGroup",
+    "TaskGroupStore",
+    "TaskLibrary",
+    "TaskLibraryEntry",
+    "TaskLibraryError",
     "TaskPlan",
     "TaskPlanner",
     "TaskStatus",

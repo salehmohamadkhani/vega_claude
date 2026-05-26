@@ -57,6 +57,14 @@ AGENT_TO_MODEL_ROLE: Final[dict[AgentRole, ModelRole]] = {
 }
 
 # Human-readable labels for AgentRole values.
+def agent_role_from_str(value: str) -> AgentRole:
+    """Parse an AgentRole from its string value. Case-insensitive."""
+    for member in AgentRole:
+        if member.value == value.lower():
+            return member
+    raise ValueError(f"Unknown AgentRole: {value!r}")
+
+
 AGENT_ROLE_LABELS: Final[dict[AgentRole, str]] = {
     AgentRole.PLANNER: "Planner",
     AgentRole.ARCHITECT: "Architect",
