@@ -87,6 +87,9 @@ Phase 3.5 [DONE]    Stabilization audit — bugs fixed, hardened, test coverage 
                         ↓
 Phase 4 [DONE]      Task library, context builder, memory store, agent profiles, run lifecycle
                         ↓
+Phase 4.5 [DONE]    Persistence layer audit — PyYAML removed, path traversal hardened,
+                    RunLifecycle validation, 8 new tests, 299 passing
+                        ↓
 Phase 5             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
 Phase 6             Full Ralph Loop with Claude Code via FCC proxy
@@ -124,7 +127,7 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 
 ---
 
-*Last updated: 2026-05-26 — Phase 4 complete*
+*Last updated: 2026-05-26 — Phase 4.5 complete*
 
 ---
 
@@ -176,7 +179,29 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 - **Checkpoint Store**: no mutation of existing checkpoints — always creates new; sorted by iteration_number
 - **Memory Store**: level validation (4 valid levels); importance range 0–100; `MemoryRecordNotFoundError` on missing update
 - **Run Lifecycle**: explicitly does NOT execute verification, launch Claude Code, or call providers; status progression enforced via RunStatus enum
-- **No provider imports**: all Phase 4 modules are `core/ralph/`-internal — no imports from `providers/`, `api/`, or external packages beyond stdlib and `pyyaml`
+- **No provider imports**: all Phase 4 modules are `core/ralph/`-internal — no imports from `providers/`, `api/`, or external packages beyond stdlib. PyYAML dependency removed in Phase 4.5.
+
+---
+
+## Phase 4.5 — Persistence Layer Audit & Hardening
+
+### What Phase 4.5 Fixed
+
+| Issue | Module | Detail |
+|---|---|---|
+| PyYAML dependency not declared | `task_library.py` | Created `core/ralph/_frontmatter.py` — internal replacement, no external dep |
+| Path traversal string-prefix check | `workspace.py` | `Path.relative_to()` blocks sibling-prefix attacks like `.fcc-ralph-evil/` |
+| RunLifecycle stub creation | `run_lifecycle.py` | Existence validation before status transitions; raises `RunLifecycleError` |
+| Python 2 except syntax (3 locations) | `context_builder.py`, `memory.py` | `except (Exc1, Exc2):` tuple form |
+| Frontmatter quoting on hyphens | `_frontmatter.py` | Only quote strings with `:`, `#`, or leading `*` |
+
+### Test Growth
+
+299 tests total (+8 from Phase 4). All checks passing: ruff, ty, pytest, smoke collect.
+
+### Architecture Note
+
+`_frontmatter.py` is a `core/ralph/`-internal utility module with no external dependencies. It is not intended to replace general YAML parsing — it handles only the subset needed for task-file frontmatter (scalars, lists, nested dicts).
 
 ---
 
@@ -290,6 +315,9 @@ Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality 
 Phase 3.5 [DONE]    Stabilization audit — bugs fixed, hardened, test coverage +15
                         ↓
 Phase 4 [DONE]      Task library, context builder, memory store, agent profiles, run lifecycle
+                        ↓
+Phase 4.5 [DONE]    Persistence layer audit — PyYAML removed, path traversal hardened,
+                    RunLifecycle validation, 8 new tests, 299 passing
                         ↓
 Phase 5             Admin UI for Ralph Runtime, KPI dashboard
                         ↓

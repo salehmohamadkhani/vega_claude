@@ -1,4 +1,5 @@
 """Tests for core.ralph.checkpoint."""
+
 from __future__ import annotations
 
 from core.ralph.checkpoint import (
@@ -90,3 +91,34 @@ class TestCheckpointStore:
         store.save_checkpoint(cp)
         assert store.delete_checkpoint("delcp") is True
         assert store.delete_checkpoint("delcp") is False
+
+    def test_from_run_state_round_trip(self, tmp_path) -> None:
+        """Ensure from_run_state checkpoint round-trips via save/load."""
+        store = self.make_store(tmp_path)
+        score = ScoreCard(
+            implementation_score=85, test_score=90, kpi_score=75,
+            risk_score=15, confidence_score=80,
+        )
+        cp = Checkpoint.from_run_state(
+            run_id="r-round",
+            task_id="t-round",
+            iteration_number=3,
+            run_status=RunStatus.RUNNING,
+            task_status=TaskStatus.PASSED,
+            score_card=score,
+            arbiter_action="approve",
+            next_action="finish",
+            extra_meta="preserved",
+        )
+        store.save_checkpoint(cp)
+        loaded = store.load_checkpoint(cp.id)
+        assert loaded.run_id == "r-round"
+        assert loaded.task_id == "t-round"
+        assert loaded.iteration_number == 3
+        assert loaded.run_status == "running"
+        assert loaded.task_status == "passed"
+        assert loaded.score.get("implementation_score") == 85
+        assert loaded.score.get("final_weighted_score") is not None
+        assert loaded.arbiter_action == "approve"
+        assert loaded.next_action == "finish"
+        assert loaded.metadata.get("extra_meta") == "preserved"

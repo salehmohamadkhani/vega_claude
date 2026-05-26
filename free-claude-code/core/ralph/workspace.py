@@ -98,12 +98,15 @@ class RalphWorkspace:
         """Resolve a relative path inside the workspace root.
 
         Raises ``PathTraversalError`` if the resolved path escapes the workspace.
+        Uses ``Path.relative_to()`` for robust subpath checking.
         """
         resolved = (self._workspace_root / relative_path).resolve()
-        if not str(resolved).startswith(str(self._workspace_root)):
+        try:
+            resolved.relative_to(self._workspace_root)
+        except ValueError as exc:
             raise PathTraversalError(
                 f"Path {relative_path} escapes workspace root {self._workspace_root}"
-            )
+            ) from exc
         return resolved
 
     def write_json(self, relative_path: str | Path, data: dict) -> Path:

@@ -47,12 +47,8 @@ class MemoryRecord:
     tags: list[str] = field(default_factory=list)
     source: str = ""
     importance: int = 0
-    created_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
-    updated_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -97,7 +93,7 @@ class MemoryStore:
         try:
             data = self._workspace.read_json(relative)
             return self._dict_to_record(data)
-        except (FileNotFoundError, json.JSONDecodeError, OSError):
+        except FileNotFoundError, json.JSONDecodeError, OSError:
             return None
 
     def list_records(
@@ -115,7 +111,7 @@ class MemoryStore:
             try:
                 data = self._workspace.read_json(f"{self._memory_dir}/{p.name}")
                 record = self._dict_to_record(data)
-            except (FileNotFoundError, json.JSONDecodeError, OSError):
+            except FileNotFoundError, json.JSONDecodeError, OSError:
                 continue
 
             if level is not None and record.level != level:

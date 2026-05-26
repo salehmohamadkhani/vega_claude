@@ -173,19 +173,34 @@ class RunLifecycle:
         )
 
     def approve_task(self, task_id: str) -> RalphTask:
-        """Mark a task as APPROVED in the run table."""
+        """Mark a task as APPROVED in the run table.
+
+        Raises ``RunLifecycleError`` if the task is not in the run table.
+        """
+        if self._run_table.get_entry(task_id) is None:
+            raise RunLifecycleError(f"Task {task_id!r} not found in run table")
         self._run_table.update_status(task_id, TaskStatus.APPROVED)
         return self._make_task_stub(task_id, TaskStatus.APPROVED)
 
     def mark_task_running(self, task_id: str) -> RalphTask:
-        """Mark a task as RUNNING."""
+        """Mark a task as RUNNING.
+
+        Raises ``RunLifecycleError`` if the task is not in the run table.
+        """
+        if self._run_table.get_entry(task_id) is None:
+            raise RunLifecycleError(f"Task {task_id!r} not found in run table")
         self._run_table.update_status(task_id, TaskStatus.RUNNING)
         return self._make_task_stub(task_id, TaskStatus.RUNNING)
 
     def mark_task_result(
         self, task_id: str, passed: bool, reason: str = ""
     ) -> RalphTask:
-        """Mark a task as PASSED or FAILED."""
+        """Mark a task as PASSED or FAILED.
+
+        Raises ``RunLifecycleError`` if the task is not in the run table.
+        """
+        if self._run_table.get_entry(task_id) is None:
+            raise RunLifecycleError(f"Task {task_id!r} not found in run table")
         status = TaskStatus.PASSED if passed else TaskStatus.FAILED
         self._run_table.update_status(task_id, status)
         if not passed and reason:
@@ -196,9 +211,7 @@ class RunLifecycle:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _save_run_metadata(
-        self, run: RalphRun, tasks: list[RalphTask]
-    ) -> Path:
+    def _save_run_metadata(self, run: RalphRun, tasks: list[RalphTask]) -> Path:
         """Persist run metadata to the workspace."""
         data: dict[str, Any] = {
             "id": run.id,
@@ -210,9 +223,7 @@ class RunLifecycle:
         }
         return self._workspace.write_json(f"runs/{run.id}.json", data)
 
-    def _make_task_stub(
-        self, task_id: str, status: TaskStatus
-    ) -> RalphTask:
+    def _make_task_stub(self, task_id: str, status: TaskStatus) -> RalphTask:
         """Return a task stub with the given ID and status."""
         entry = self._run_table.get_entry(task_id)
         if entry is None:

@@ -1,4 +1,5 @@
 """Tests for core.ralph.run_lifecycle."""
+
 from __future__ import annotations
 
 from core.ralph.checkpoint import CheckpointStore
@@ -131,3 +132,23 @@ class TestRunLifecycle:
         lifecycle = self.make_lifecycle(tmp_path)
         result = lifecycle.prepare_run(self.make_goal(), self.make_tasks())
         assert result.run.status == RunStatus.WAITING_FOR_APPROVAL
+
+    def test_prepare_run_with_empty_tasks(self, tmp_path) -> None:
+        """prepare_run must handle empty task list gracefully."""
+        lifecycle = self.make_lifecycle(tmp_path)
+        result = lifecycle.prepare_run(self.make_goal(), [])
+        assert result.run_table.entry_count == 0
+        assert len(result.paths) >= 1  # at least run metadata
+        assert result.run.status == RunStatus.WAITING_FOR_APPROVAL
+
+    def test_nonexistent_task_approval_raises(self, tmp_path) -> None:
+        lifecycle = self.make_lifecycle(tmp_path)
+        lifecycle.prepare_run(self.make_goal(), self.make_tasks())
+        with __import__("pytest").raises(Exception):
+            lifecycle.approve_task("NONEXISTENT")
+
+    def test_nonexistent_task_running_raises(self, tmp_path) -> None:
+        lifecycle = self.make_lifecycle(tmp_path)
+        lifecycle.prepare_run(self.make_goal(), self.make_tasks())
+        with __import__("pytest").raises(Exception):
+            lifecycle.mark_task_running("NONEXISTENT")

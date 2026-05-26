@@ -48,9 +48,7 @@ class RalphContextSnapshot:
     files: FileContext = field(default_factory=FileContext)
     task_summary: str = ""
     verification_summary: str = ""
-    created_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 _GIT_TIMEOUT_SECONDS = 10
@@ -131,7 +129,9 @@ class ContextBuilder:
             "verification_summary": snapshot.verification_summary,
             "created_at": snapshot.created_at,
         }
-        relative = f"context/{snapshot.run_id}_{snapshot.task_id}_{snapshot.goal_id[:8]}.json"
+        relative = (
+            f"context/{snapshot.run_id}_{snapshot.task_id}_{snapshot.goal_id[:8]}.json"
+        )
         return self._workspace.write_json(relative, data)
 
     # ------------------------------------------------------------------
@@ -162,11 +162,11 @@ class ContextBuilder:
             if proc.returncode == 0:
                 return proc.stdout.strip()
             return ""
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        except subprocess.TimeoutExpired, FileNotFoundError, OSError:
             return ""
 
     def _safe_git_log(self) -> list[str]:
-        """Run ``git log --oneline -5`` and return lines or []. """
+        """Run ``git log --oneline -5`` and return lines or []."""
         try:
             proc = subprocess.run(
                 ["git", "log", "--oneline", "-5"],
@@ -177,7 +177,9 @@ class ContextBuilder:
                 timeout=_GIT_TIMEOUT_SECONDS,
             )
             if proc.returncode == 0:
-                return [line.strip() for line in proc.stdout.split("\n") if line.strip()]
+                return [
+                    line.strip() for line in proc.stdout.split("\n") if line.strip()
+                ]
             return []
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        except subprocess.TimeoutExpired, FileNotFoundError, OSError:
             return []

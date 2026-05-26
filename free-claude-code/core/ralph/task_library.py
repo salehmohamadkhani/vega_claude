@@ -23,7 +23,7 @@ Markdown format::
     uv run pytest tests -q
     ```
 
-PyYAML (6.x) must be available.
+	Uses _frontmatter internally — no PyYAML dependency.
 """
 
 from __future__ import annotations
@@ -32,8 +32,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml
-
+from ._frontmatter import FrontmatterError
+from ._frontmatter import dumps as _yaml_dumps
+from ._frontmatter import safe_load as _yaml_safe_load
 from .models import RalphTask, TaskStatus, task_status_from_str
 from .roles import agent_role_from_str
 from .workspace import RalphWorkspace
@@ -117,14 +118,9 @@ class TaskLibrary:
 
         body = "\n".join(body_parts).rstrip() + "\n"
 
-        yaml_str = yaml.dump(
-            frontmatter,
-            default_flow_style=False,
-            sort_keys=False,
-            allow_unicode=True,
-        )
+        frontmatter_str = _yaml_dumps(frontmatter)
 
-        content = f"{_FRONTMATTER_DELIM}\n{yaml_str}{_FRONTMATTER_DELIM}\n{body}"
+        content = f"{_FRONTMATTER_DELIM}\n{frontmatter_str}{_FRONTMATTER_DELIM}\n{body}"
         relative = f"{self._tasks_dir}/{task.id}.md"
         return self._workspace.write_text(relative, content)
 
@@ -194,8 +190,8 @@ class TaskLibrary:
         body_text = stripped[end_idx + 3 :].strip()
 
         try:
-            frontmatter: dict[str, Any] = yaml.safe_load(yaml_text) or {}
-        except yaml.YAMLError as exc:
+            frontmatter: dict[str, Any] = _yaml_safe_load(yaml_text) or {}
+        except FrontmatterError as exc:
             raise TaskParseError(f"Invalid YAML frontmatter: {exc}") from exc
 
         if not isinstance(frontmatter, dict):

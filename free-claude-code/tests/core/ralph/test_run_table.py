@@ -156,7 +156,9 @@ class TestRunTable:
     def test_completion_accurate_after_duplicate_add(self) -> None:
         table = RunTable()
         table.add_entry(_entry("t1", run_id="r1", status=TaskStatus.PASSED))
-        table.add_entry(_entry("t1", run_id="r1", status=TaskStatus.PASSED))  # duplicate
+        table.add_entry(
+            _entry("t1", run_id="r1", status=TaskStatus.PASSED)
+        )  # duplicate
         table.add_entry(_entry("t2", run_id="r1", status=TaskStatus.PENDING))
         pct = table.completion_percentage("r1")
         assert pct == 50.0, "Duplicate must not inflate denominator"

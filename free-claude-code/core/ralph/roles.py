@@ -56,6 +56,7 @@ AGENT_TO_MODEL_ROLE: Final[dict[AgentRole, ModelRole]] = {
     AgentRole.SUMMARIZER: ModelRole.SUMMARIZER,
 }
 
+
 # Human-readable labels for AgentRole values.
 def agent_role_from_str(value: str) -> AgentRole:
     """Parse an AgentRole from its string value. Case-insensitive."""

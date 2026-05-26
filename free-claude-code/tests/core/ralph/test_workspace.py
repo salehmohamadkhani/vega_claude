@@ -1,4 +1,5 @@
 """Tests for core.ralph.workspace."""
+
 from __future__ import annotations
 
 from core.ralph.workspace import (
@@ -40,6 +41,27 @@ class TestRalphWorkspace:
         ws.initialize()
         with __import__("pytest").raises(PathTraversalError):
             ws.safe_path("../etc/passwd")
+
+    def test_prevents_sibling_prefix_traversal(self, tmp_path) -> None:
+        """Block paths like .fcc-ralph-evil/file.txt."""
+        ws = RalphWorkspace(tmp_path)
+        ws.initialize()
+        with __import__("pytest").raises(PathTraversalError):
+            ws.safe_path("../.fcc-ralph-evil/file.txt")
+
+    def test_prevents_deep_traversal(self, tmp_path) -> None:
+        """Block paths that traverse outside then back in."""
+        ws = RalphWorkspace(tmp_path)
+        ws.initialize()
+        with __import__("pytest").raises(PathTraversalError):
+            ws.safe_path("tasks/../../../etc/shadow")
+
+    def test_allows_internal_path(self, tmp_path) -> None:
+        """Allow valid paths inside .fcc-ralph/."""
+        ws = RalphWorkspace(tmp_path)
+        ws.initialize()
+        path = ws.safe_path("tasks/test.md")
+        assert ".fcc-ralph" in str(path)
 
     def test_write_and_read_json(self, tmp_path) -> None:
         ws = RalphWorkspace(tmp_path)

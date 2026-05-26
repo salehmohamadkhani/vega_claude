@@ -1,4 +1,5 @@
 """Tests for core.ralph.task_library."""
+
 from __future__ import annotations
 
 from core.ralph.models import RalphTask, TaskStatus

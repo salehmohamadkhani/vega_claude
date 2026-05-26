@@ -38,9 +38,7 @@ class Checkpoint:
     score: dict[str, float] = field(default_factory=dict)
     arbiter_action: str = ""
     next_action: str = ""
-    created_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod

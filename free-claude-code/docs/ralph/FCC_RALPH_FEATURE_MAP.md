@@ -87,7 +87,51 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 4 complete*
+*Last updated: 2026-05-26 — Phase 4.5 complete*
+
+---
+
+## Phase 4.5 — Persistence Layer Audit & Hardening
+
+### What Phase 4.5 Fixed
+
+| Issue | Module | Fix |
+|---|---|---|
+| PyYAML dependency not in `pyproject.toml` | `task_library.py` | Created `core/ralph/_frontmatter.py` — internal serializer/parser |
+| Path traversal used string-prefix check | `workspace.py` | Replaced with `Path.relative_to()` — blocks sibling-prefix attacks |
+| RunLifecycle created stubs for nonexistent tasks | `run_lifecycle.py` | Added existence validation with `RunLifecycleError` |
+| Python 2 comma-syntax in 3 `except` clauses | `context_builder.py`, `memory.py` | Parenthesized tuple form |
+| Spurious frontmatter quoting on hyphens | `_frontmatter.py` | Removed `-` from quoting triggers |
+
+### Tests Added (8)
+
+| File | Tests Added |
+|---|---|
+| `test_workspace.py` | 4 — traversal safety (sibling-prefix, deep, internal, subdir) |
+| `test_checkpoint.py` | 1 — from_run_state round-trip with all fields |
+| `test_run_lifecycle.py` | 2 — nonexistent task error cases |
+| `test_memory.py` | 1 — importance range validation |
+
+### Check Results
+
+299 tests passed, ruff clean, ty clean, smoke collect 76.
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Workspace store | `core/ralph/workspace.py` | ✅ (hardened) | 4 |
+| Task library | `core/ralph/task_library.py` | ✅ (hardened) | 4 |
+| Task groups | `core/ralph/task_groups.py` | ✅ | 4 |
+| Context builder | `core/ralph/context_builder.py` | ✅ | 4 |
+| Checkpoint store | `core/ralph/checkpoint.py` | ✅ | 4 |
+| Memory store | `core/ralph/memory.py` | ✅ | 4 |
+| Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
+| Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ (hardened) | 4 |
+| YAML frontmatter | `core/ralph/_frontmatter.py` | ✅ (NEW — replaced PyYAML) | 4.5 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 6 |
+| Admin UI | `core/ralph/admin/` | — | 5 |
+| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 7 |
 
 ---
 

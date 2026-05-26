@@ -1,4 +1,5 @@
 """Tests for core.ralph.agent_profiles."""
+
 from __future__ import annotations
 
 from core.ralph.agent_profiles import AgentProfile, AgentProfileRegistry
@@ -39,7 +40,11 @@ class TestAgentProfileRegistry:
         registry = self.make_registry()
         for profile in registry.default_profiles():
             assert profile.model_role in {
-                "planner", "doer", "critic", "debugger", "summarizer"
+                "planner",
+                "doer",
+                "critic",
+                "debugger",
+                "summarizer",
             }
 
     def test_no_copied_github_agents_dependency(self) -> None:

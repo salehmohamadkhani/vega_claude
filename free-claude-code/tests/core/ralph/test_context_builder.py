@@ -1,4 +1,5 @@
 """Tests for core.ralph.context_builder."""
+
 from __future__ import annotations
 
 import json
@@ -15,9 +16,7 @@ class TestContextBuilder:
 
     def test_handles_non_git_directory_gracefully(self, tmp_path) -> None:
         builder = self.make_builder(tmp_path)
-        snapshot = builder.build_snapshot(
-            goal_id="g1", run_id="r1", task_id="t1"
-        )
+        snapshot = builder.build_snapshot(goal_id="g1", run_id="r1", task_id="t1")
         assert snapshot.git.branch == ""
         assert snapshot.git.commit == ""
         assert snapshot.goal_id == "g1"
@@ -82,6 +81,8 @@ class TestContextBuilder:
         builder = self.make_builder(tmp_path)
         task = RalphTask(id="TASK-001", title="My Task")
         vr = VerificationResult(status=VerificationStatus.PASSED)
-        snapshot = builder.build_snapshot("g1", "r1", "t1", task=task, verification_result=vr)
+        snapshot = builder.build_snapshot(
+            "g1", "r1", "t1", task=task, verification_result=vr
+        )
         assert "My Task" in snapshot.task_summary
         assert "passed" in snapshot.verification_summary.lower()

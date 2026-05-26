@@ -1,4 +1,5 @@
 """Tests for core.ralph.task_groups."""
+
 from __future__ import annotations
 
 from core.ralph.task_groups import TaskGroup, TaskGroupNotFoundError, TaskGroupStore

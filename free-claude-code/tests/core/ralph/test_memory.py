@@ -1,4 +1,5 @@
 """Tests for core.ralph.memory."""
+
 from __future__ import annotations
 
 from core.ralph.memory import (
@@ -96,6 +97,14 @@ class TestMemoryStore:
         store.add(self.make_record(id="lv"))
         with __import__("pytest").raises(InvalidMemoryLevelError):
             store.update("lv", level="invalid_level")
+
+    def test_update_importance_validation(self, tmp_path) -> None:
+        store = self.make_store(tmp_path)
+        store.add(self.make_record(id="im"))
+        with __import__("pytest").raises(ValueError):
+            store.update("im", importance=200)
+        with __import__("pytest").raises(ValueError):
+            store.update("im", importance=-1)
 
     def test_delete_record(self, tmp_path) -> None:
         store = self.make_store(tmp_path)
