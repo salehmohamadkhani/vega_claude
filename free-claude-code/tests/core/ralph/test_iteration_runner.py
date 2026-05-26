@@ -5,7 +5,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from core.ralph.execution import ExecutionMode, ExecutionResult, ExecutionStatus
-from core.ralph.iteration_runner import IterationRunner, IterationRunResult
+from core.ralph.iteration_runner import (
+    IterationRunner,
+    IterationRunnerConfig,
+    IterationRunResult,
+)
 from core.ralph.models import RalphRun, RalphTask, RunStatus, TaskStatus
 from core.ralph.quality_gate import QualityGateResult
 
@@ -125,3 +129,71 @@ class TestIterationRunner:
         saved = mock_cp.save_checkpoint.call_args[0][0]
         assert saved.metadata.get("execution_skipped") is True
         assert saved.metadata.get("execution_mode") == "dry_run"
+
+    # ------------------------------------------------------------------
+    # IterationRunnerConfig
+    # ------------------------------------------------------------------
+
+    def test_iteration_runner_config_defaults(self) -> None:
+        """Default config uses DRY_RUN mode."""
+        config = IterationRunnerConfig()
+        assert config.execution_mode == ExecutionMode.DRY_RUN
+
+    def test_default_runner_uses_dry_run(self) -> None:
+        """Runner with no config defaults to DRY_RUN mode."""
+        mock_adapter = MagicMock()
+        mock_adapter.execute.return_value = ExecutionResult.skipped("dry")
+        runner = IterationRunner(execution_adapter=mock_adapter)
+        runner.run_iteration(self.run, self.task)
+        call_args = mock_adapter.execute.call_args[0][0]
+        assert call_args.mode == ExecutionMode.DRY_RUN
+
+    def test_config_dry_run_mode(self) -> None:
+        """Explicit dry-run config produces SKIPPED execution."""
+        config = IterationRunnerConfig(execution_mode=ExecutionMode.DRY_RUN)
+        mock_adapter = MagicMock()
+        mock_adapter.execute.return_value = ExecutionResult.skipped("dry")
+        runner = IterationRunner(
+            config=config, execution_adapter=mock_adapter
+        )
+        runner.run_iteration(self.run, self.task)
+        call_args = mock_adapter.execute.call_args[0][0]
+        assert call_args.mode == ExecutionMode.DRY_RUN
+
+    def test_real_mode_config(self) -> None:
+        """REAL execution mode is passed through to the execution request."""
+        config = IterationRunnerConfig(execution_mode=ExecutionMode.REAL)
+        mock_adapter = MagicMock()
+        mock_adapter.execute.return_value = ExecutionResult(
+            status=ExecutionStatus.SUCCEEDED,
+            exit_code=0,
+            mode=ExecutionMode.REAL,
+        )
+        runner = IterationRunner(
+            config=config, execution_adapter=mock_adapter
+        )
+        runner.run_iteration(self.run, self.task)
+        call_args = mock_adapter.execute.call_args[0][0]
+        assert call_args.mode == ExecutionMode.REAL
+
+    def test_checkpoint_includes_execution_metadata(self) -> None:
+        """Checkpoint metadata includes execution_status, exit_code, timed_out."""
+        mock_cp = MagicMock()
+        runner = IterationRunner(checkpoint_store=mock_cp)
+        runner.run_iteration(self.run, self.task)
+        saved = mock_cp.save_checkpoint.call_args[0][0]
+        assert "execution_status" in saved.metadata
+        assert saved.metadata["execution_status"] == "skipped"
+        assert "execution_exit_code" in saved.metadata
+        assert "execution_timed_out" in saved.metadata
+        assert saved.metadata["execution_timed_out"] is False
+        assert "quality_gate_action" in saved.metadata
+        assert "execution_mode" in saved.metadata
+
+    def test_checkpoint_includes_quality_gate_action(self) -> None:
+        """Checkpoint metadata includes the quality_gate_action."""
+        mock_cp = MagicMock()
+        runner = IterationRunner(checkpoint_store=mock_cp)
+        runner.run_iteration(self.run, self.task)
+        saved = mock_cp.save_checkpoint.call_args[0][0]
+        assert saved.metadata.get("quality_gate_action") is not None

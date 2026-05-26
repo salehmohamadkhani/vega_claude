@@ -87,7 +87,7 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 5.5 complete*
+*Last updated: 2026-05-26 — Phase 5.6 complete*
 
 
 ---
@@ -134,6 +134,43 @@ goal → questions → task list → human review/approval → execution
 | Execution approval gate | `core/ralph/run_executor.py` — `RunExecutorConfig` | (hardened) | 5.5 |
 | Command fallback safety | `core/ralph/claude_execution.py` — `CommandBuilderError` | (hardened) | 5.5 |
 | Prompt safety instructions | `core/ralph/prompt_builder.py` | (hardened) | 5.5 |
+
+---
+
+## Phase 5.6 — Execution Lifecycle Hardening Before CLI
+
+### Six Risks Fixed
+
+| # | Risk | Fix |
+|---|---|---|
+| 1 | `max_iterations_per_task` not enforced | Per-task iteration counter in `run_until_blocked()`, checked before each iteration |
+| 2 | `stop_on_debug`/`stop_on_escalate`/RETRY unhandled | Structured arbiter action handling: `debug_required`, `escalation_required`, `retry_required` result fields |
+| 3 | `IterationRunner` hardcodes `DRY_RUN` | `IterationRunnerConfig(execution_mode=ExecutionMode.DRY_RUN)` — configurable |
+| 4 | Echo fallback + real execution unsafe | `validate_for_execution()` raises `ExecutionConfigError` when both enabled |
+| 5 | Command allowlist weak for Windows | `_is_command_allowed` accepts `list[str]` (no quoting), `.exe` variants added to allowlist |
+| 6 | Approval order policy implicit | Policy A documented and enforced: first PENDING blocks all later tasks |
+
+### Tests Added (22)
+
+| File | Tests |
+|---|---|
+| `test_run_executor.py` | 10 — debug/escalate/retry/stop handling, Policy A, blocked_task_id, max_tasks |
+| `test_iteration_runner.py` | 8 — IterationRunnerConfig, dry-run/real modes, checkpoint enrichment |
+| `test_claude_execution.py` | 10 — allowlist basename/prefix/Windows/Unix/empty, config validation rejection |
+| `test_execution.py` | 4 — validate_for_execution() passes/blocks, validate_for_test_fallback() passes/blocks |
+
+### Check Results
+
+391 tests, all clean.
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Execution mode config | `core/ralph/iteration_runner.py` — `IterationRunnerConfig` | (hardened) | 5.6 |
+| Config validation | `core/ralph/execution.py` — `ExecutionConfigError` | (hardened) | 5.6 |
+| Command allowlist | `core/ralph/claude_execution.py` — `_is_command_allowed` | (hardened) | 5.6 |
+| Arbiter action handling | `core/ralph/run_executor.py` | (hardened) | 5.6 |
 
 ---
 

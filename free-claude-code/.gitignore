@@ -5,6 +5,7 @@ __pycache__
 .ruff_cache
 .serena
 .venv
+.fcc-ralph
 agent_workspace
 .env
 /logs/

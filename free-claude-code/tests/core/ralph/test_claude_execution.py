@@ -84,6 +84,7 @@ class TestClaudeCodeExecutionAdapter:
         assert self.adapter.config.dry_run is True
         assert self.adapter.config.allow_real_execution is False
         assert "fcc-claude" in self.adapter.config.command_allowlist
+        assert "claude" in self.adapter.config.command_allowlist
 
     def test_no_shell_true(self) -> None:
         """Verify subprocess is never called with shell=True."""
@@ -251,22 +252,74 @@ class TestClaudeCodeExecutionAdapter:
             assert result.status == ExecutionStatus.SKIPPED
             mock_run.assert_not_called()
 
-    def test_echo_fallback_allowed_when_configured(self) -> None:
-        """Echo fallback runs only when allow_test_fallback is explicitly set."""
-        with (
-            patch.object(
-                ClaudeCodeCommandBuilder,
-                "build_command",
-                return_value=["echo", "claude", "--print", "test"],
-            ),
-        ):
-            config = ExecutionConfig(
-                allow_real_execution=True,
-                allow_test_fallback=True,
-                command_allowlist=["echo"],
-            )
-            adapter = ClaudeCodeExecutionAdapter(config=config)
-            request = _make_request(mode=ExecutionMode.REAL, prompt="test")
-            result = adapter.execute(request)
-            # echo succeeds, so exit_code should be 0
-            assert result.status == ExecutionStatus.SUCCEEDED
+    def test_real_with_test_fallback_rejected_by_validation(self) -> None:
+        """Real execution with echo fallback is rejected by config validation."""
+        config = ExecutionConfig(
+            allow_real_execution=True,
+            allow_test_fallback=True,
+        )
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        request = _make_request(mode=ExecutionMode.REAL, prompt="test")
+        result = adapter.execute(request)
+        assert result.status == ExecutionStatus.FAILED
+        assert "allow_test_fallback" in result.failure_reason
+
+    # ------------------------------------------------------------------
+    # Command allowlist hardening
+    # ------------------------------------------------------------------
+
+    def test_allowlist_allows_fcc_claude(self) -> None:
+        """fcc-claude basename is allowed by default."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert adapter._is_command_allowed(["fcc-claude", "--print", "prompt"])
+
+    def test_allowlist_allows_claude(self) -> None:
+        """claude basename is allowed by default."""
+        config = ExecutionConfig(command_allowlist=["claude"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert adapter._is_command_allowed(["claude", "--print", "prompt"])
+
+    def test_allowlist_rejects_malicious_prefix(self) -> None:
+        """Prefix-matching attack: fcc-claude-malicious must not match fcc-claude."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert not adapter._is_command_allowed(
+            ["fcc-claude-malicious", "--print", "prompt"]
+        )
+
+    def test_allowlist_rejects_unrelated_command(self) -> None:
+        """Completely unrelated command must be rejected."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert not adapter._is_command_allowed(["/usr/bin/malicious", "evil"])
+
+    def test_allowlist_handles_quoted_windows_path(self) -> None:
+        """Windows path with spaces extracts basename correctly."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude.exe"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert adapter._is_command_allowed(
+            ["C:\\Program Files\\fcc-claude.exe", "--print", "prompt"]
+        )
+
+    def test_allowlist_handles_windows_path(self) -> None:
+        """Windows backslash path extracts basename correctly."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude.exe"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert adapter._is_command_allowed(
+            ["C:\\tools\\fcc-claude.exe", "--print", "prompt"]
+        )
+
+    def test_allowlist_handles_unix_path(self) -> None:
+        """Unix full path extracts basename correctly."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert adapter._is_command_allowed(
+            ["/usr/local/bin/fcc-claude", "--print", "prompt"]
+        )
+
+    def test_allowlist_handles_empty_list(self) -> None:
+        """Empty command list must not crash the allowlist check."""
+        config = ExecutionConfig(command_allowlist=["fcc-claude"])
+        adapter = ClaudeCodeExecutionAdapter(config=config)
+        assert not adapter._is_command_allowed([])

@@ -29,6 +29,17 @@ from .workspace import RalphWorkspace
 
 
 @dataclass
+class IterationRunnerConfig:
+    """Configuration for IterationRunner behavior.
+
+    Safe default: dry-run only. Real execution requires explicit
+    opt-in via ``execution_mode=ExecutionMode.REAL``.
+    """
+
+    execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
+
+
+@dataclass
 class IterationRunResult:
     """Structured outcome of a single iteration."""
 
@@ -55,6 +66,7 @@ class IterationRunner:
 
     def __init__(
         self,
+        config: IterationRunnerConfig | None = None,
         workspace: RalphWorkspace | None = None,
         task_library: TaskLibrary | None = None,
         execution_adapter: ClaudeCodeExecutionAdapter | None = None,
@@ -64,6 +76,7 @@ class IterationRunner:
         context_builder: ContextBuilder | None = None,
         run_table: RunTable | None = None,
     ) -> None:
+        self._config = config or IterationRunnerConfig()
         self._workspace = workspace or RalphWorkspace()
         self._task_library = task_library or TaskLibrary(self._workspace)
         self._adapter = execution_adapter or ClaudeCodeExecutionAdapter()
@@ -121,7 +134,7 @@ class IterationRunner:
             task_title=task.title,
             prompt=prompt,
             workspace_path=str(self._workspace.paths().root),
-            mode=ExecutionMode.DRY_RUN,
+            mode=self._config.execution_mode,
             allowed_files=list(task.allowed_files),
             forbidden_files=list(task.forbidden_files),
         )
@@ -171,6 +184,10 @@ class IterationRunner:
             next_action=next_action,
             execution_skipped=(exec_result.status == ExecutionStatus.SKIPPED),
             execution_mode=exec_result.mode.value,
+            execution_status=exec_result.status.value,
+            execution_exit_code=exec_result.exit_code,
+            execution_timed_out=exec_result.timed_out,
+            quality_gate_action=next_action,
         )
         self._checkpoint_store.save_checkpoint(checkpoint)
 

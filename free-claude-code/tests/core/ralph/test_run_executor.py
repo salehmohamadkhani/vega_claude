@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, create_autospec
 
-from core.ralph.execution import ExecutionStatus
+from core.ralph.arbiter import ArbiterAction, ArbiterDecision
+from core.ralph.execution import ExecutionResult, ExecutionStatus
+from core.ralph.iteration_runner import IterationRunResult
 from core.ralph.models import RalphRun, RalphTask, RunStatus, TaskStatus
+from core.ralph.quality_gate import QualityGateResult
 from core.ralph.run_executor import RunExecutor, RunExecutorConfig
 from core.ralph.run_lifecycle import RunLifecycle
 
@@ -197,3 +200,213 @@ class TestRunExecutor:
         assert config.max_iterations_per_task == 1
         assert config.stop_on_debug is True
         assert config.stop_on_escalate is True
+
+    # ------------------------------------------------------------------
+    # Arbiter action handling
+    # ------------------------------------------------------------------
+
+    def test_stop_on_debug_returns_debug_required(self) -> None:
+        """When arbiter returns DEBUG and stop_on_debug=True, executor stops."""
+        tasks = [_make_task("task-1", TaskStatus.APPROVED)]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "task-1", ArbiterAction.DEBUG
+        )
+        executor = RunExecutor(
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.debug_required is True
+        assert result.completed is False
+        assert "DEBUG" in result.stopped_reason or "debug" in result.stopped_reason
+
+    def test_stop_on_debug_false_continues(self) -> None:
+        """When arbiter returns DEBUG and stop_on_debug=False, executor continues."""
+        tasks = [
+            _make_task("task-1", TaskStatus.APPROVED),
+            _make_task("task-2", TaskStatus.APPROVED),
+        ]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.side_effect = [
+            _make_dry_fail("task-1", ArbiterAction.DEBUG),
+            _make_dry_fail("task-2", ArbiterAction.APPROVE),
+        ]
+        config = RunExecutorConfig(stop_on_debug=False)
+        executor = RunExecutor(
+            config=config,
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.debug_required is False
+        assert len(result.task_results) == 2
+
+    def test_stop_on_escalate_returns_escalation_required(self) -> None:
+        """When arbiter returns ESCALATE and stop_on_escalate=True, executor fails."""
+        tasks = [_make_task("task-1", TaskStatus.APPROVED)]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "task-1", ArbiterAction.ESCALATE
+        )
+        executor = RunExecutor(
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.escalation_required is True
+        assert result.failed is True
+        assert "ESCALATE" in result.stopped_reason or "escalate" in result.stopped_reason
+
+    def test_stop_on_escalate_false_continues(self) -> None:
+        """When arbiter returns ESCALATE and stop_on_escalate=False, continues."""
+        tasks = [
+            _make_task("task-1", TaskStatus.APPROVED),
+            _make_task("task-2", TaskStatus.APPROVED),
+        ]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.side_effect = [
+            _make_dry_fail("task-1", ArbiterAction.ESCALATE),
+            _make_dry_fail("task-2", ArbiterAction.APPROVE),
+        ]
+        config = RunExecutorConfig(stop_on_escalate=False)
+        executor = RunExecutor(
+            config=config,
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.escalation_required is False
+        assert result.failed is False
+        assert len(result.task_results) == 2
+
+    def test_retry_returns_retry_required(self) -> None:
+        """When arbiter returns RETRY, executor reports retry_required."""
+        tasks = [_make_task("task-1", TaskStatus.APPROVED)]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "task-1", ArbiterAction.RETRY
+        )
+        executor = RunExecutor(
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.retry_required is True
+        assert result.completed is False
+        assert "RETRY" in result.stopped_reason or "retry" in result.stopped_reason
+
+    def test_stop_returns_failed(self) -> None:
+        """When arbiter returns STOP, executor reports failed."""
+        tasks = [_make_task("task-1", TaskStatus.APPROVED)]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "task-1", ArbiterAction.STOP
+        )
+        executor = RunExecutor(
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.failed is True
+        assert "STOP" in result.stopped_reason or "stop" in result.stopped_reason
+
+    # ------------------------------------------------------------------
+    # Approval order (Policy A)
+    # ------------------------------------------------------------------
+
+    def test_policy_a_blocks_on_first_pending(self) -> None:
+        """First PENDING task blocks even if later tasks are APPROVED."""
+        tasks = [
+            _make_task("task-1", TaskStatus.APPROVED),
+            _make_task("task-2", TaskStatus.PENDING),
+            _make_task("task-3", TaskStatus.APPROVED),
+        ]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "task-1", ArbiterAction.APPROVE
+        )
+        executor = RunExecutor(
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert result.approval_required is True
+        assert result.blocked_task_id == "task-2"
+        assert len(result.task_results) == 1  # only task-1 ran
+
+    def test_run_until_blocked_returns_blocked_task_id(self) -> None:
+        """blocked_task_id identifies the first pending task blocking execution."""
+        tasks = [
+            _make_task("task-a", TaskStatus.PENDING),
+            _make_task("task-b", TaskStatus.PENDING),
+        ]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        executor = RunExecutor(run_lifecycle=lifecycle)
+        result = executor.run_until_blocked(run)
+        assert result.blocked_task_id == "task-a"
+        assert result.approval_required is True
+
+    def test_max_tasks_limit(self) -> None:
+        """max_tasks parameter limits the number of tasks executed."""
+        tasks = [
+            _make_task("task-1", TaskStatus.APPROVED),
+            _make_task("task-2", TaskStatus.APPROVED),
+            _make_task("task-3", TaskStatus.APPROVED),
+        ]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "any", ArbiterAction.APPROVE
+        )
+        executor = RunExecutor(
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run, max_tasks=2)
+        assert result.completed is False
+        assert len(result.task_results) == 2
+        assert "max_tasks" in result.stopped_reason
+
+
+# --------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------
+
+
+def _make_dry_fail(
+    task_id: str, arbiter_action: ArbiterAction
+) -> IterationRunResult:
+    """Create a dry-run IterationRunResult with a specific arbiter action.
+
+    The result is always ``passed=False`` (dry-run semantics).
+    """
+    return IterationRunResult(
+        run_id="run-1",
+        task_id=task_id,
+        iteration=1,
+        execution_result=ExecutionResult(
+            status=ExecutionStatus.SKIPPED,
+        ),
+        quality_gate_result=QualityGateResult(
+            task_id=task_id,
+            arbiter_decision=ArbiterDecision(action=arbiter_action),
+        ),
+        passed=False,
+    )

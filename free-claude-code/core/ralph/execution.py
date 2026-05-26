@@ -15,6 +15,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 
+class ExecutionConfigError(Exception):
+    """Raised when ExecutionConfig is invalid for the requested operation."""
+
+
 class ExecutionMode(enum.Enum):
     """Whether execution is real or simulated."""
 
@@ -115,10 +119,36 @@ class ExecutionConfig:
     max_output_chars: int = 50000
     allow_real_execution: bool = False
     command_allowlist: list[str] = field(
-        default_factory=lambda: ["fcc-claude", "claude"]
+        default_factory=lambda: ["fcc-claude", "fcc-claude.exe", "claude", "claude.exe"]
     )
     dry_run: bool = True
     allow_test_fallback: bool = False
+
+    def validate_for_execution(self) -> None:
+        """Validate config for real execution.
+
+        Raises ``ExecutionConfigError`` if the config is unsafe.
+        """
+        if self.allow_real_execution and self.allow_test_fallback:
+            raise ExecutionConfigError(
+                "allow_test_fallback=True is not allowed with "
+                "allow_real_execution=True. The echo/testing fallback "
+                "would silently substitute for a real Claude Code CLI."
+            )
+
+    def validate_for_test_fallback(self) -> None:
+        """Validate config for test-fallback execution.
+
+        Warns if ``allow_test_fallback`` is True without real execution:
+        that's fine for testing, but the test fallback must not be used
+        in production with real execution enabled.
+        """
+        if self.allow_real_execution and self.allow_test_fallback:
+            raise ExecutionConfigError(
+                "allow_test_fallback=True with allow_real_execution=True "
+                "is unsafe. The echo/testing fallback should never be "
+                "used for real execution."
+            )
 
 
 def _now_iso() -> str:

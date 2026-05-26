@@ -145,6 +145,19 @@ Phase 5.5 (completed immediately after Phase 5) hardened the execution layer bas
 - **Tests**: 19 new tests (364 total).
 - **Report**: See `PHASE_5_5_EXECUTION_SAFETY_REPORT.md` for full details.
 
+## Phase 5.6 — Execution Lifecycle Hardening Before CLI
+
+Phase 5.6 (completed immediately after Phase 5.5) resolved six lifecycle risks before CLI development:
+
+- **IterationRunnerConfig**: Added configurable execution mode — replaces hardcoded `ExecutionMode.DRY_RUN`
+- **max_iterations enforcement**: Per-task iteration counter in `run_until_blocked()`
+- **Arbiter action handling**: DEBUG/ESCALATE/RETRY produce structured results with `debug_required`/`escalation_required`/`retry_required` flags
+- **Config validation**: `ExecutionConfigError` and `validate_for_execution()` block unsafe echo+real combinations
+- **Allowlist hardening**: `_is_command_allowed` takes `list[str]`, `.exe` variants added, Windows path safety
+- **Policy A**: Strict ordered execution — first PENDING blocks all later tasks
+- **Tests**: 22 new, 391 total
+- **Report**: See `PHASE_5_6_EXECUTION_LIFECYCLE_AUDIT.md` for full details.
+
 ## What's Next
 
 - **Phase 6**: CLI surface for Ralph Runtime — `fcc-ralph plan/review/approve/run/status/report`

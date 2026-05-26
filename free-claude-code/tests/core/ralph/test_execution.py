@@ -3,8 +3,11 @@ ExecutionRequest, ExecutionResult, ExecutionConfig."""
 
 from __future__ import annotations
 
+import pytest
+
 from core.ralph.execution import (
     ExecutionConfig,
+    ExecutionConfigError,
     ExecutionMode,
     ExecutionRequest,
     ExecutionResult,
@@ -117,7 +120,9 @@ class TestExecutionConfig:
         assert config.timeout_seconds == 300
         assert config.max_output_chars == 50000
         assert "fcc-claude" in config.command_allowlist
+        assert "fcc-claude.exe" in config.command_allowlist
         assert "claude" in config.command_allowlist
+        assert "claude.exe" in config.command_allowlist
 
     def test_custom_config(self) -> None:
         config = ExecutionConfig(
@@ -134,3 +139,25 @@ class TestExecutionConfig:
         assert config.allow_real_execution is True
         assert config.dry_run is False
         assert config.allow_test_fallback is True
+
+    def test_validate_for_execution_passes_with_safe_config(self) -> None:
+        """validate_for_execution does not raise for safe config."""
+        config = ExecutionConfig(allow_real_execution=True, allow_test_fallback=False)
+        config.validate_for_execution()  # no raise
+
+    def test_validate_for_execution_blocks_echo_with_real(self) -> None:
+        """validate_for_execution raises when real+test_fallback are both enabled."""
+        config = ExecutionConfig(allow_real_execution=True, allow_test_fallback=True)
+        with pytest.raises(ExecutionConfigError):
+            config.validate_for_execution()
+
+    def test_validate_for_test_fallback_passes_with_safe_config(self) -> None:
+        """validate_for_test_fallback does not raise for safe config."""
+        config = ExecutionConfig(allow_real_execution=False, allow_test_fallback=True)
+        config.validate_for_test_fallback()  # no raise
+
+    def test_validate_for_test_fallback_blocks_echo_with_real(self) -> None:
+        """validate_for_test_fallback raises when real+test_fallback are both enabled."""
+        config = ExecutionConfig(allow_real_execution=True, allow_test_fallback=True)
+        with pytest.raises(ExecutionConfigError):
+            config.validate_for_test_fallback()

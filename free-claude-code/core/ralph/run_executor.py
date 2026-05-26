@@ -52,6 +52,10 @@ class RunExecutorResult:
     stopped_reason: str = ""
     approval_required: bool = False
     pending_task_ids: list[str] = field(default_factory=list)
+    blocked_task_id: str = ""
+    retry_required: bool = False
+    debug_required: bool = False
+    escalation_required: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -155,14 +159,23 @@ class RunExecutor:
         """Execute tasks until blocked, stopped, or max_tasks reached.
 
         Loops through runnable tasks, running one iteration per task.
+        Respects ``RunExecutorConfig`` for stop-on-debug, stop-on-escalate,
+        max-iterations-per-task, and auto-approve settings.
+
         Stops when:
         - No more runnable tasks
-        - Arbiter returns STOP or ESCALATE
+        - Approval is required (Policy A: first pending blocks)
+        - Arbiter returns STOP
+        - Arbiter returns DEBUG and ``stop_on_debug=True``
+        - Arbiter returns ESCALATE and ``stop_on_escalate=True``
+        - Arbiter returns RETRY (multi-iteration not yet implemented)
         - Loop guard returns STOP
-        - max_tasks limit is reached
+        - ``max_tasks`` limit is reached
         """
         task_results: list[IterationRunResult] = []
         tasks_run = 0
+        # Track iterations per task for max_iterations_per_task enforcement
+        task_iterations: dict[str, int] = {}
 
         while True:
             # Check max_tasks limit
@@ -190,7 +203,7 @@ class RunExecutor:
                         task_results=task_results,
                         completed=True,
                     )
-                # Check if approval is needed
+                # Check if approval is needed (Policy A: strict ordered)
                 pending_ids = [
                     t.id for t in (run.tasks or [])
                     if t.status == TaskStatus.PENDING
@@ -202,10 +215,12 @@ class RunExecutor:
                         completed=False,
                         approval_required=True,
                         pending_task_ids=pending_ids,
+                        blocked_task_id=pending_ids[0],
                         stopped_reason=(
                             f"Approval required for {len(pending_ids)} pending "
                             f"task(s). Set auto_approve_pending_tasks=True or "
-                            f"approve tasks via RunLifecycle.approve_task()."
+                            f"approve tasks via RunLifecycle.approve_task(). "
+                            f"First blocking task: {pending_ids[0]}"
                         ),
                     )
                 return RunExecutorResult(
@@ -215,7 +230,8 @@ class RunExecutor:
                     stopped_reason="No runnable tasks found.",
                 )
 
-            # Approval gate: PENDING tasks require explicit approval or config
+            # Policy A: strict ordered execution — first PENDING blocks
+            # even if later tasks are APPROVED
             if task.status == TaskStatus.PENDING:
                 if not self._config.auto_approve_pending_tasks:
                     pending_ids = [
@@ -228,6 +244,7 @@ class RunExecutor:
                         completed=False,
                         approval_required=True,
                         pending_task_ids=pending_ids,
+                        blocked_task_id=task.id,
                         stopped_reason=(
                             f"Approval required for task {task.id}. "
                             f"Set auto_approve_pending_tasks=True or approve "
@@ -241,11 +258,27 @@ class RunExecutor:
             self._run_lifecycle.mark_task_running(task.id)
             task.status = TaskStatus.RUNNING
 
+            # Track iteration count for max_iterations_per_task enforcement
+            task_iterations[task.id] = task_iterations.get(task.id, 0) + 1
+            iteration_number = task_iterations[task.id]
+
+            # Enforce max_iterations_per_task
+            if iteration_number > self._config.max_iterations_per_task:
+                return RunExecutorResult(
+                    run=run,
+                    task_results=task_results,
+                    completed=False,
+                    stopped_reason=(
+                        f"Task {task.id} reached max iterations "
+                        f"({self._config.max_iterations_per_task})."
+                    ),
+                )
+
             # Run one iteration
             result = self._iteration_runner.run_iteration(
                 run=run,
                 task=task,
-                iteration_number=1,
+                iteration_number=iteration_number,
                 goal=goal,
             )
             task_results.append(result)
@@ -260,6 +293,8 @@ class RunExecutor:
 
             # Check arbiter decision for stop signals
             action = result.quality_gate_result.arbiter_decision.action
+
+            # STOP always stops
             if action == ArbiterAction.STOP:
                 run.status = RunStatus.FAILED
                 return RunExecutorResult(
@@ -272,17 +307,52 @@ class RunExecutor:
                     ),
                 )
 
-            if action == ArbiterAction.ESCALATE:
-                run.status = RunStatus.FAILED
+            # RETRY: multi-iteration not yet implemented — stop safely
+            if action == ArbiterAction.RETRY:
                 return RunExecutorResult(
                     run=run,
                     task_results=task_results,
-                    failed=True,
+                    completed=False,
+                    retry_required=True,
                     stopped_reason=(
-                        f"Arbiter escalated on task {task.id}: "
-                        f"{result.quality_gate_result.arbiter_decision.reason}"
+                        f"Arbiter requested retry on task {task.id}: "
+                        f"{result.quality_gate_result.arbiter_decision.reason}. "
+                        f"Multi-iteration not yet implemented."
                     ),
                 )
+
+            # DEBUG: stop if configured
+            if action == ArbiterAction.DEBUG:
+                if self._config.stop_on_debug:
+                    return RunExecutorResult(
+                        run=run,
+                        task_results=task_results,
+                        completed=False,
+                        debug_required=True,
+                        stopped_reason=(
+                            f"Arbiter requested debug on task {task.id}: "
+                            f"{result.quality_gate_result.arbiter_decision.reason}"
+                        ),
+                    )
+                # If not stopping on debug, continue to next task
+                continue
+
+            # ESCALATE: stop if configured
+            if action == ArbiterAction.ESCALATE:
+                if self._config.stop_on_escalate:
+                    run.status = RunStatus.FAILED
+                    return RunExecutorResult(
+                        run=run,
+                        task_results=task_results,
+                        failed=True,
+                        escalation_required=True,
+                        stopped_reason=(
+                            f"Arbiter escalated on task {task.id}: "
+                            f"{result.quality_gate_result.arbiter_decision.reason}"
+                        ),
+                    )
+                # If not stopping on escalate, continue
+                continue
 
             # Check loop guard
             lg_action = result.quality_gate_result.loop_guard_decision.action

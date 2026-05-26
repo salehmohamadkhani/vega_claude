@@ -96,6 +96,9 @@ Phase 5 [DONE]      First execution layer — execution models, prompt builder,
 Phase 5.5 [DONE]    Execution safety audit — approval gate hardening, no auto-approve,
                     command fallback hardening, dry-run semantics, safety prompts
                         ↓
+Phase 5.6 [DONE]    Execution lifecycle hardening — IterationRunnerConfig, max_iterations,
+                    DEBUG/ESCALATE/RETRY handling, allowlist hardening, config validation
+                        ↓
 Phase 6             CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
                         ↓
 Phase 7             Admin UI for Ralph Runtime, KPI dashboard
@@ -135,7 +138,7 @@ Phase 9             Playwright KPI verifier, browser-based acceptance testing
 
 ---
 
-*Last updated: 2026-05-26 — Phase 5 complete*
+*Last updated: 2026-05-26 — Phase 5.6 complete*
 
 ---
 
@@ -397,7 +400,12 @@ Phase 4 [DONE]      Task library, context builder, memory store, agent profiles,
 Phase 4.5 [DONE]    Persistence layer audit — PyYAML removed, path traversal hardened,
                     RunLifecycle validation, 8 new tests, 299 passing
                         ↓
-Phase 5             Admin UI for Ralph Runtime, KPI dashboard
+Phase 5 [DONE]      First execution layer — dry-run execution models, prompt builder,
+                    Claude Code adapter, iteration runner, run executor
+                        ↓
+Phase 5.5 [DONE]    Execution safety audit — approval gate, command fallback, dry-run semantics
+                        ↓
+Phase 5.6 [DONE]    Execution lifecycle — IterationRunnerConfig, allowlist, config validation
                         ↓
 Phase 6             Full Ralph Loop with Claude Code via FCC proxy
                         ↓

@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 
 from .execution import (
     ExecutionConfig,
+    ExecutionConfigError,
     ExecutionMode,
     ExecutionRequest,
     ExecutionResult,
@@ -106,6 +107,16 @@ class ClaudeCodeExecutionAdapter:
                 ),
             )
 
+        # Validate config for real execution
+        try:
+            self._config.validate_for_execution()
+        except ExecutionConfigError as exc:
+            return ExecutionResult(
+                status=ExecutionStatus.FAILED,
+                mode=request.mode,
+                failure_reason=str(exc),
+            )
+
         # Build command
         try:
             command = ClaudeCodeCommandBuilder.build_command(
@@ -122,7 +133,7 @@ class ClaudeCodeExecutionAdapter:
         command_str = shlex.join(command)
 
         # Validate command against allowlist
-        if not self._is_command_allowed(command_str):
+        if not self._is_command_allowed(command):
             return ExecutionResult(
                 status=ExecutionStatus.FAILED,
                 mode=request.mode,
@@ -205,16 +216,16 @@ class ClaudeCodeExecutionAdapter:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _is_command_allowed(self, command_str: str) -> bool:
+    def _is_command_allowed(self, command: list[str]) -> bool:
         """Check if the command's executable is in the allowlist.
 
-        Extracts the basename from the first token of the joined command,
-        handling both Unix and Windows paths (including quoted Windows
-        paths produced by ``shlex.join``).
+        Extracts the basename from the first element of the argv list,
+        handling both Unix and Windows paths. Avoids shell-style parsing
+        (``shlex.split``) which mishandles backslashes in Windows paths.
         """
-        executable = command_str.split()[0] if command_str else ""
-        # Strip surrounding quotes (shlex.join may quote paths on Windows)
-        executable = executable.strip("\"'")
+        if not command:
+            return False
+        executable = command[0]
         exec_name = executable.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
         return any(exec_name == allowed for allowed in self._config.command_allowlist)
 

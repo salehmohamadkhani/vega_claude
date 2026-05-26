@@ -27,7 +27,7 @@ from .execution import (
     ExecutionResult,
     ExecutionStatus,
 )
-from .iteration_runner import IterationRunner, IterationRunResult
+from .iteration_runner import IterationRunner, IterationRunnerConfig, IterationRunResult
 from .loop_guard import LoopAction, LoopGuard, LoopGuardDecision
 from .memory import MemoryRecord, MemoryStore
 from .model_router import ModelRoleResolution, ModelRoleRouter, ModelRoleRoutingPolicy
@@ -109,6 +109,7 @@ __all__ = [
     "HallucinationRisk",
     "IterationRunResult",
     "IterationRunner",
+    "IterationRunnerConfig",
     "IterationStatus",
     "LoopAction",
     "LoopGuard",
