@@ -9,6 +9,8 @@ CLI launcher, Admin UI, and messaging. The Ralph Runtime builds on top
 of FCC without duplicating those concerns.
 """
 
+from .arbiter import ArbiterAction, ArbiterDecision, ArbiterEngine
+from .critic import CriticEngine, CriticReview
 from .loop_guard import LoopAction, LoopGuard, LoopGuardDecision
 from .model_router import ModelRoleResolution, ModelRoleRouter, ModelRoleRoutingPolicy
 from .models import (
@@ -26,6 +28,7 @@ from .models import (
     task_status_from_str,
 )
 from .planner import ClarifyingQuestion, ProjectSpec, TaskPlan, TaskPlanner
+from .quality_gate import QualityGate, QualityGateResult
 from .roles import (
     AGENT_ROLE_LABELS,
     AGENT_TO_MODEL_ROLE,
@@ -34,19 +37,32 @@ from .roles import (
 )
 from .run_table import RunTable, RunTableEntry
 from .scoring import HallucinationRisk, ScoreCard
+from .smoke_adapter import FCCSmokeAdapter, SmokePlan
 from .verification import (
     VerificationPlan,
     VerificationResult,
     VerificationStatus,
     build_verification_plan_for_task,
 )
+from .verification_runner import (
+    CommandExecutionResult,
+    VerificationRunner,
+    VerificationRunnerConfig,
+)
 
 __all__ = [
     "AGENT_ROLE_LABELS",
     "AGENT_TO_MODEL_ROLE",
     "AgentRole",
+    "ArbiterAction",
+    "ArbiterDecision",
+    "ArbiterEngine",
     "ClarifyingQuestion",
+    "CommandExecutionResult",
     "CriticDecision",
+    "CriticEngine",
+    "CriticReview",
+    "FCCSmokeAdapter",
     "HallucinationRisk",
     "IterationStatus",
     "LoopAction",
@@ -58,6 +74,8 @@ __all__ = [
     "ModelRoleRoutingPolicy",
     "ProjectGoal",
     "ProjectSpec",
+    "QualityGate",
+    "QualityGateResult",
     "RalphIteration",
     "RalphRun",
     "RalphTask",
@@ -65,11 +83,14 @@ __all__ = [
     "RunTable",
     "RunTableEntry",
     "ScoreCard",
+    "SmokePlan",
     "TaskPlan",
     "TaskPlanner",
     "TaskStatus",
     "VerificationPlan",
     "VerificationResult",
+    "VerificationRunner",
+    "VerificationRunnerConfig",
     "VerificationStatus",
     "_new_id",
     "_now_utc",

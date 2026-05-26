@@ -77,17 +77,19 @@ These are fundamentally **orchestration concerns**, not provider concerns. They 
 ## Phase Roadmap
 
 ```
-Phase 1 [NOW]      Core models, roles, run table, scoring, verification plans, loop guard
+Phase 1 [DONE]      Core models, roles, run table, scoring, verification plans, loop guard
                         ↓
-Phase 2            Task planner, model role router, context builder, task library
+Phase 2 [DONE]      Model role router, task planner foundation
                         ↓
-Phase 3            Critic/arbiter, verifier command runner, memory store
+Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality gate
                         ↓
-Phase 4            Admin UI for Ralph Runtime, KPI dashboard
+Phase 4             Task library, context builder, memory store, agent profiles
                         ↓
-Phase 5            Playwright KPI verifier, browser-based acceptance testing
+Phase 5             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
-Phase 6            Full Ralph Loop with Claude Code via FCC proxy
+Phase 6             Full Ralph Loop with Claude Code via FCC proxy
+                        ↓
+Phase 7             Playwright KPI verifier, browser-based acceptance testing
 ```
 
 ## What Phase 1 Implements Now
@@ -110,27 +112,60 @@ Phase 6            Full Ralph Loop with Claude Code via FCC proxy
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 2+
+## What Remains for Phase 4+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
-| `TaskLibrary` — Markdown task file loading | 2 | `core/ralph/models.py` |
-| `ContextBuilder` — Git-aware task context | 2 | `core/ralph/models.py` |
-| `ModelRoleRouter` — Maps AgentRole → FCC provider/model | 2 | `core/ralph/roles.py`, FCC `config/settings.py` |
-| `TaskPlanner` — Breaks goal into tasks | 2 | `core/ralph/models.py`, `core/ralph/roles.py` |
-| `DirectModelAdapter` — LLM calls for planning (no Claude Code) | 2 | `core/ralph/model_router.py`, FCC `providers/` |
-| `CommandRunner` — Executes verification commands | 3 | `core/ralph/verification.py` |
-| `Critic` — Reviews task output | 3 | `core/ralph/roles.py`, `core/ralph/scoring.py` |
-| `Arbiter` — Resolves Doer↔Critic disputes | 3 | `core/ralph/roles.py`, `core/ralph/scoring.py` |
-| `MemoryStore` — Persistent task memory | 3 | FCC `~/.fcc/` config path |
-| Admin UI — Ralph tab in FCC admin | 4 | FCC `api/admin_routes.py` |
-| Full Ralph Loop — Async Claude Code loop | 5 | `core/ralph/loop_guard.py`, FCC `cli/manager.py` |
-| Playwright KPI Verifier | 5 | Playwright, FCC smoke tests |
-| Agent profiles | 3 | `core/ralph/roles.py` |
+| `TaskLibrary` — Markdown task file loading | 4 | `core/ralph/models.py` |
+| `ContextBuilder` — Git-aware task context | 4 | `core/ralph/models.py` |
+| `MemoryStore` — Persistent task memory | 4 | FCC `~/.fcc/` config path |
+| Agent profiles | 4 | `core/ralph/roles.py` |
+| Admin UI — Ralph tab in FCC admin | 5 | FCC `api/admin_routes.py` |
+| Full Ralph Loop — Async Claude Code loop | 6 | `core/ralph/loop_guard.py`, FCC `cli/manager.py` |
+| Playwright KPI Verifier | 7 | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-26 — Phase 2 baseline*
+*Last updated: 2026-05-26 — Phase 3 baseline*
+
+---
+
+## Phase 3 — Verification Quality Gate Layer
+
+### What Phase 3 Adds
+
+| Module | File | Status |
+|---|---|---|
+| VerificationRunner | `core/ralph/verification_runner.py` | ✅ Safe command execution with timeout, truncation, prefix allowlist |
+| FCCSmokeAdapter | `core/ralph/smoke_adapter.py` | ✅ Maps smoke targets to pytest commands |
+| CriticEngine | `core/ralph/critic.py` | ✅ Deterministic review of verification + scoring |
+| ArbiterEngine | `core/ralph/arbiter.py` | ✅ Rule-based dispute resolution |
+| QualityGate | `core/ralph/quality_gate.py` | ✅ Orchestrates plan→runner→scoring→critic→arbiter |
+
+### Architecture Integration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  QualityGate (Phase 3)                       │
+│                                                             │
+│  RalphTask → build_verification_plan → VerificationRunner   │
+│       ↓                                                     │
+│  ScoreCard ← _compute_score_from_verification               │
+│       ↓                                                     │
+│  CriticEngine.review_verification + review_scoring           │
+│       ↓                                                     │
+│  LoopGuard.evaluate                                         │
+│       ↓                                                     │
+│  ArbiterEngine.decide → QualityGateResult                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Safety Properties
+
+- VerificationRunner: execution disabled by default; shlex.split; prefix allowlist; timeout; output truncation
+- CriticEngine: no LLM calls, no subprocesses — pure heuristic/arithmetic
+- ArbiterEngine: 9-rule priority system, no random/ML/network
+- QualityGate: composes existing modules without adding new capabilities
 
 ---
 
@@ -181,11 +216,13 @@ Phase 1 [DONE]      Core models, roles, run table, scoring, verification plans, 
                         ↓
 Phase 2 [DONE]      Model role router, task planner foundation
                         ↓
-Phase 3             Verification runner, FCC smoke adapter, critic/arbiter skeleton, task library
+Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality gate
                         ↓
-Phase 4             Admin UI for Ralph Runtime, KPI dashboard
+Phase 4             Task library, context builder, memory store, agent profiles
                         ↓
-Phase 5             Full Ralph Loop with Claude Code via FCC proxy
+Phase 5             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
-Phase 6             Playwright KPI verifier, browser-based acceptance testing
+Phase 6             Full Ralph Loop with Claude Code via FCC proxy
+                        ↓
+Phase 7             Playwright KPI verifier, browser-based acceptance testing
 ```

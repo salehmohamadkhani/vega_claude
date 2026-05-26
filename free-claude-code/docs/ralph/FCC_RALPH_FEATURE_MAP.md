@@ -87,7 +87,52 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 2 baseline*
+*Last updated: 2026-05-26 — Phase 3 baseline*
+
+---
+
+## Phase 3 — Verification Quality Gate Layer
+
+### What Phase 3 Adds
+
+| Module | File | Purpose |
+|---|---|---|
+| VerificationRunner | `core/ralph/verification_runner.py` | Safe, bounded command execution for verification plans |
+| FCCSmokeAdapter | `core/ralph/smoke_adapter.py` | Maps smoke target labels to FCC-compatible pytest commands |
+| CriticEngine | `core/ralph/critic.py` | Deterministic review of verification results, scoring, and acceptance criteria |
+| ArbiterEngine | `core/ralph/arbiter.py` | Rule-based dispute resolution (approve/retry/debug/escalate/stop) |
+| QualityGate | `core/ralph/quality_gate.py` | Orchestrates plan→runner→scoring→critic→loop guard→arbiter |
+
+### VerificationRunner
+
+Executes verification commands with strict safety controls:
+
+- **Disabled by default** — `allow_command_execution=False`
+- **shlex.split** — explicit argv parsing, no `shell=True`
+- **Allowed prefix matching** — only commands matching registered prefixes execute
+- **Timeout enforcement** — configurable per-command timeout
+- **Output truncation** — bounded stdout/stderr capture
+- **Structured results** — `CommandExecutionResult` with status, exit code, duration, output
+
+### FCCSmokeAdapter
+
+Maps Ralph smoke targets to FCC smoke commands. Known targets: `providers`, `api`, `cli`, `clients`, `nvidia_nim_cli`, `openrouter_free_cli`, `config`, `messaging`, `tools`, `voice`, `rate_limit`, `auth`, `extensibility`, `lmstudio`, `llamacpp`, `ollama`.
+
+### CriticEngine & ArbiterEngine
+
+Both are deterministic (no LLM calls):
+
+- **CriticEngine** — reviews verification command pass/fail counts, smoke target results, acceptance criteria (keyword heuristics), ScoreCard results, and estimates confidence
+- **ArbiterEngine** — 9-rule priority system: loop guard overrides → critic approval check → low-confidence debug → rejection limits → retry escalation → fallback retry
+
+### QualityGate
+
+The orchestrator that ties Phase 3 together:
+
+```
+RalphTask → VerificationPlan → VerificationRunner → ScoreCard
+    → CriticReview → LoopGuard → Arbiter → QualityGateResult
+```
 
 ---
 
@@ -147,9 +192,12 @@ Task generation injects metadata based on goal keywords:
 | Loop guard | `core/ralph/loop_guard.py` | ✅ | 1 |
 | **Model role routing** | **`core/ralph/model_router.py`** | **✅** | **2** |
 | **Task planner** | **`core/ralph/planner.py`** | **✅** | **2** |
-| Task library | `core/ralph/task_library.py` | — | 3 |
-| Context builder | `core/ralph/context_builder.py` | — | 3 |
-| Memory store | `core/ralph/memory.py` | — | 3 |
-| Critic/arbiter | `core/ralph/critic.py`, `arbiter.py` | — | 3 |
+| **Verification runner** | **`core/ralph/verification_runner.py`** | **✅** | **3** |
+| **Smoke adapter** | **`core/ralph/smoke_adapter.py`** | **✅** | **3** |
+| **Critic/arbiter** | **`core/ralph/critic.py`, `arbiter.py`** | **✅** | **3** |
+| **Quality gate** | **`core/ralph/quality_gate.py`** | **✅** | **3** |
+| Task library | `core/ralph/task_library.py` | — | 4 |
+| Context builder | `core/ralph/context_builder.py` | — | 4 |
+| Memory store | `core/ralph/memory.py` | — | 4 |
 | Agent profiles | `core/ralph/profiles/` | — | 4 |
 | Full Ralph Loop | `core/ralph/loop.py` | — | 4+ |
