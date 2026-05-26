@@ -179,7 +179,8 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 - **Checkpoint Store**: no mutation of existing checkpoints — always creates new; sorted by iteration_number
 - **Memory Store**: level validation (4 valid levels); importance range 0–100; `MemoryRecordNotFoundError` on missing update
 - **Run Lifecycle**: explicitly does NOT execute verification, launch Claude Code, or call providers; status progression enforced via RunStatus enum
-- **No provider imports**: all Phase 4 modules are `core/ralph/`-internal — no imports from `providers/`, `api/`, or external packages beyond stdlib. PyYAML dependency removed in Phase 4.5.
+- **No provider imports**: all Phase 4 modules are `core/ralph/`-internal — no imports from `providers/`, `api/`, or external packages beyond stdlib. PyYAML
+  dependency removed in Phase 4.5.
 
 ---
 
@@ -201,7 +202,8 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 
 ### Architecture Note
 
-`_frontmatter.py` is a `core/ralph/`-internal utility module with no external dependencies. It is not intended to replace general YAML parsing — it handles only the subset needed for task-file frontmatter (scalars, lists, nested dicts).
+`_frontmatter.py` is a `core/ralph/`-internal utility module with no external dependencies. It is not intended to replace general YAML parsing — it handles only
+the subset needed for task-file frontmatter (scalars, lists, nested dicts).
 
 ---
 
@@ -301,7 +303,8 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 
 ### Why Phase 2 Still Does Not Launch Claude Code
 
-Claude Code launch belongs in the execution layer (Phase 4+). Phase 2 builds the planning and routing foundation that tells future phases *which* model to use and *what* tasks to execute.
+Claude Code launch belongs in the execution layer (Phase 4+). Phase 2 builds the planning and routing foundation that tells future phases *which* model to use
+and *what* tasks to execute.
 
 ### Updated Phase Roadmap
 

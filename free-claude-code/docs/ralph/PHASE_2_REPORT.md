@@ -11,7 +11,8 @@
 
 Phase 2 moved Ralph Runtime from passive data models into an active planning and model-role-resolution foundation. Two new modules were built:
 
-1. **ModelRoleRouter** — bridges abstract Ralph `ModelRole` values to FCC's concrete provider/model configuration without importing providers or making network calls
+1. **ModelRoleRouter** — bridges abstract Ralph `ModelRole` values to FCC's concrete provider/model configuration without importing providers or making network
+   calls
 2. **TaskPlanner** — converts a `ProjectGoal` into clarifying questions, a project spec, and deterministic RalphTasks using heuristic rules
 
 ### What Was Completed
@@ -20,7 +21,8 @@ Phase 2 moved Ralph Runtime from passive data models into an active planning and
 - **`core/ralph/planner.py`** — `TaskPlanner`, `ClarifyingQuestion`, `ProjectSpec`, `TaskPlan`
 - **`core/ralph/__init__.py`** — updated exports with new symbols
 - **`tests/core/ralph/test_model_router.py`** — 25 tests covering tier resolution, agent_role mapping, thinking, safety, custom policies
-- **`tests/core/ralph/test_planner.py`** — 16 tests covering questions, spec building, task generation, determinism, keyword metadata injection, verification plan conversion
+- **`tests/core/ralph/test_planner.py`** — 16 tests covering questions, spec building, task generation, determinism, keyword metadata injection, verification
+  plan conversion
 - **`docs/ralph/FCC_RALPH_FEATURE_MAP.md`** — added Phase 2 section with mapping table and keyword metadata reference
 - **`docs/ralph/FCC_RALPH_RUNTIME_ARCHITECTURE.md`** — added Phase 2 section with architecture diagram and updated roadmap
 
@@ -157,7 +159,8 @@ Rationale:
 
 Rationale:
 1. `core/ralph/` should not depend on `api/` — that would create a bad dependency direction (core ← api is correct, not api ← core)
-2. FCC's `ModelRouter` is designed for incoming HTTP request routing (Claude model name → provider model). Ralph's router starts from `ModelRole` → Claude tier hint, then uses the same `Settings` methods
+2. FCC's `ModelRouter` is designed for incoming HTTP request routing (Claude model name → provider model). Ralph's router starts from `ModelRole` → Claude tier
+   hint, then uses the same `Settings` methods
 3. Keeping Ralph's router self-contained ensures it can be tested and imported without the API layer
 
 ### TaskPlanner is Heuristic, Not ML
@@ -227,16 +230,20 @@ tests/core/ralph/test_arbiter.py
 
 **Why this order:**
 
-1. **VerificationRunner** is the natural next step — Phase 1 modeled verification plans, Phase 2 plans tasks with verification commands. Phase 3 should be able to *run* those commands (safely, with timeouts and output capture, no LLM).
-2. **FCC Smoke Adapter** bridges Ralph smoke targets to FCC's existing smoke test runner — this is where Ralph Runtime touches FCC infrastructure for the first time.
-3. **Critic/Arbiter** add multi-agent deliberation — a deterministic critic that can review task output against acceptance criteria, and an arbiter that resolves disputes without real LLM calls.
+1. **VerificationRunner** is the natural next step — Phase 1 modeled verification plans, Phase 2 plans tasks with verification commands. Phase 3 should be able
+   to *run* those commands (safely, with timeouts and output capture, no LLM).
+2. **FCC Smoke Adapter** bridges Ralph smoke targets to FCC's existing smoke test runner — this is where Ralph Runtime touches FCC infrastructure for the first
+   time.
+3. **Critic/Arbiter** add multi-agent deliberation — a deterministic critic that can review task output against acceptance criteria, and an arbiter that
+   resolves disputes without real LLM calls.
 
 **What Phase 3 should NOT include:**
 - No Claude Code execution yet
 - No Admin UI yet
 - No Playwright yet
 
-Phase 3's Verifier should use `subprocess.run()` with timeouts (safe, bounded) for verification commands. The Critic should remain deterministic (pattern matching, acceptance criteria checking) — real LLM-based criticism can wait until Phase 4+.
+Phase 3's Verifier should use `subprocess.run()` with timeouts (safe, bounded) for verification commands. The Critic should remain deterministic (pattern
+matching, acceptance criteria checking) — real LLM-based criticism can wait until Phase 4+.
 
 ---
 

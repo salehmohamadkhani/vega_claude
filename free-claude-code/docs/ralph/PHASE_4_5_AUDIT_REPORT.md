@@ -7,7 +7,8 @@
 
 ## Summary
 
-Phase 4.5 is an intermediate audit and hardening layer between Phase 4 (Persistence and Context Layer) and Phase 5 (Admin UI). No new product features were added. The scope was limited to:
+Phase 4.5 is an intermediate audit and hardening layer between Phase 4 (Persistence and Context Layer) and Phase 5 (Admin UI). No new product features were
+added. The scope was limited to:
 
 1. **Audit** all Phase 4 persistence/context/memory modules for bugs, vulnerabilities, and dependency issues
 2. **Harden** path traversal checks, status transition validation, and exception syntax
@@ -53,7 +54,8 @@ Phase 4.5 is an intermediate audit and hardening layer between Phase 4 (Persiste
 
 ### 1. PyYAML Dependency Replacement
 
-**Problem:** `core/ralph/task_library.py` imported `import yaml` and used `yaml.dump()` and `yaml.safe_load()`, but `pyyaml` was not listed in `pyproject.toml`. A fresh `uv sync` would fail at runtime.
+**Problem:** `core/ralph/task_library.py` imported `import yaml` and used `yaml.dump()` and `yaml.safe_load()`, but `pyyaml` was not listed in `pyproject.toml`.
+A fresh `uv sync` would fail at runtime.
 
 **Fix:** Created `core/ralph/_frontmatter.py` — a 178-line internal serializer/deserializer that handles the exact YAML subset that Ralph task files need:
 
@@ -64,7 +66,8 @@ Phase 4.5 is an intermediate audit and hardening layer between Phase 4 (Persiste
 
 Unsupported types (not needed for task frontmatter): nested lists, flow-style YAML, tags, anchors, aliases, timestamps, floats, multi-line strings.
 
-**Trade-off accepted:** Slightly more code to maintain (178 lines) vs. a 500+ KB external dependency (PyYAML 6.x). The format is well-bounded and unlikely to grow.
+**Trade-off accepted:** Slightly more code to maintain (178 lines) vs. a 500+ KB external dependency (PyYAML 6.x). The format is well-bounded and unlikely to
+grow.
 
 ### 2. Path Traversal Vulnerability
 
@@ -92,7 +95,8 @@ except ValueError as exc:
 
 ### 3. RunLifecycle Task Existence Validation
 
-**Problem:** `approve_task()`, `mark_task_running()`, and `mark_task_result()` called `_make_task_stub()` which silently returned a stub `RalphTask(id=task_id, status=...)` for IDs not in the run table. This would mask programming errors.
+**Problem:** `approve_task()`, `mark_task_running()`, and `mark_task_result()` called `_make_task_stub()` which silently returned a stub `RalphTask(id=task_id,
+status=...)` for IDs not in the run table. This would mask programming errors.
 
 **Fix:** Added explicit existence check at the top of each method:
 
@@ -121,7 +125,8 @@ This works in Python 3.14 but is fragile, linter-unfriendly, and inconsistent wi
 
 ### 5. Frontmatter Quoting Normalization
 
-**Problem:** `_frontmatter._quote_if_needed()` was quoting strings containing hyphens (`-`), producing frontmatter like `id: 'TASK-001-test'` instead of the cleaner `id: TASK-001-test`.
+**Problem:** `_frontmatter._quote_if_needed()` was quoting strings containing hyphens (`-`), producing frontmatter like `id: 'TASK-001-test'` instead of the
+cleaner `id: TASK-001-test`.
 
 **Fix:** Removed `-` from the set of quoting triggers. Only strings with `:`, `#`, or starting with `*` are now quoted.
 

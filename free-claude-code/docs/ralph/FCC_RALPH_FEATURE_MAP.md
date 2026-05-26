@@ -256,14 +256,17 @@ Executes verification commands with strict safety controls:
 
 ### FCCSmokeAdapter
 
-Maps Ralph smoke targets to FCC smoke commands. Known targets: `providers`, `api`, `cli`, `clients`, `nvidia_nim_cli`, `openrouter_free_cli`, `config`, `messaging`, `tools`, `voice`, `rate_limit`, `auth`, `extensibility`, `lmstudio`, `llamacpp`, `ollama`.
+Maps Ralph smoke targets to FCC smoke commands. Known targets: `providers`, `api`, `cli`, `clients`, `nvidia_nim_cli`, `openrouter_free_cli`, `config`,
+`messaging`, `tools`, `voice`, `rate_limit`, `auth`, `extensibility`, `lmstudio`, `llamacpp`, `ollama`.
 
 ### CriticEngine & ArbiterEngine
 
 Both are deterministic (no LLM calls):
 
-- **CriticEngine** — reviews verification command pass/fail counts, smoke target results, acceptance criteria (keyword heuristics), ScoreCard results, and estimates confidence
-- **ArbiterEngine** — 9-rule priority system: loop guard overrides → critic approval check → low-confidence debug → rejection limits → retry escalation → fallback retry
+- **CriticEngine** — reviews verification command pass/fail counts, smoke target results, acceptance criteria (keyword heuristics), ScoreCard results, and
+  estimates confidence
+- **ArbiterEngine** — 9-rule priority system: loop guard overrides → critic approval check → low-confidence debug → rejection limits → retry escalation →
+  fallback retry
 
 ### QualityGate
 
@@ -287,7 +290,8 @@ RalphTask → VerificationPlan → VerificationRunner → ScoreCard
 
 ### ModelRoleRouter
 
-The router maps each `ModelRole` to a Claude-tier hint (`opus`/`sonnet`/`haiku`), then resolves it through FCC's existing `Settings.resolve_model()`, `Settings.resolve_thinking()`, `parse_provider_type()`, and `parse_model_name()`.
+The router maps each `ModelRole` to a Claude-tier hint (`opus`/`sonnet`/`haiku`), then resolves it through FCC's existing `Settings.resolve_model()`,
+`Settings.resolve_thinking()`, `parse_provider_type()`, and `parse_model_name()`.
 
 | ModelRole | Default Tier | Thinking |
 |---|---|---|

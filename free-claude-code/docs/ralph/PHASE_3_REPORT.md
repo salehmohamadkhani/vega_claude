@@ -64,7 +64,8 @@ Safety features:
 |---|---|
 | **Classes** | `SmokePlan` (frozen: targets, commands, unknown_targets, requires_live_provider), `FCCSmokeAdapter` (known_targets, is_known, validate_targets, build_smoke_plan) |
 
-Known targets (16): providers, api, cli, clients, nvidia_nim_cli, openrouter_free_cli, config, messaging, tools, voice, rate_limit, auth, extensibility, lmstudio, llamacpp, ollama.
+Known targets (16): providers, api, cli, clients, nvidia_nim_cli, openrouter_free_cli, config, messaging, tools, voice, rate_limit, auth, extensibility,
+lmstudio, llamacpp, ollama.
 
 ### `core/ralph/critic.py`
 
@@ -162,7 +163,8 @@ No regressions or collection errors.
 
 ### VerificationRunner Safety by Default
 
-**Decision:** Command execution is DISABLED by default. Every test that needs command execution must explicitly create a `VerificationRunnerConfig(allow_command_execution=True)` with allowed prefixes.
+**Decision:** Command execution is DISABLED by default. Every test that needs command execution must explicitly create a
+`VerificationRunnerConfig(allow_command_execution=True)` with allowed prefixes.
 
 Rationale:
 1. Prevents accidental command execution during import or initialization

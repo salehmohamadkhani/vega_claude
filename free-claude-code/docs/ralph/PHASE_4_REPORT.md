@@ -62,8 +62,10 @@ All Phase 4 deliverables are complete.
 
 Key design:
 - **Workspace layout**: `.fcc-ralph/` with subdirectories: goals, tasks, task-groups, runs, checkpoints, context, memory, agents, reports
-- **Path traversal prevention**: `safe_path()` resolves user-supplied relative paths against workspace root and verifies the result is within bounds — raises `PathTraversalError` if violated
-- **Deterministic JSON**: `write_json` uses `json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False)` with UTF-8 encoding — guaranteed stable output for checkpoint/run file comparison
+- **Path traversal prevention**: `safe_path()` resolves user-supplied relative paths against workspace root and verifies the result is within bounds — raises
+  `PathTraversalError` if violated
+- **Deterministic JSON**: `write_json` uses `json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False)` with UTF-8 encoding — guaranteed stable output for
+  checkpoint/run file comparison
 - **Error types**: `PathNotFoundError` for missing paths, `PathTraversalError` for security violations
 
 ### `core/ralph/task_library.py`
@@ -96,7 +98,8 @@ Key design:
 | **Classes** | `GitContext` (branch, commit, status_summary, recent_commits, diff_summary), `FileContext` (included_files, excluded_files, notes), `RalphContextSnapshot` (goal_id, run_id, task_id, git, files, task_summary, verification_summary, created_at), `ContextBuilder` (build_snapshot, save_snapshot) |
 
 Key design:
-- **Read-only git commands**: `_safe_git_cmd()` runs only read-only commands: `git branch --show-current`, `git rev-parse HEAD`, `git status --short`, `git log --oneline -10`, `git diff --stat`
+- **Read-only git commands**: `_safe_git_cmd()` runs only read-only commands: `git branch --show-current`, `git rev-parse HEAD`, `git status --short`, `git log
+  --oneline -10`, `git diff --stat`
 - **Timeout enforcement**: all git commands have a 10-second timeout via `subprocess.run(timeout=10)`
 - **Graceful fallback**: in non-git directories, all git fields return empty strings — no crash, no hang
 - **Snapshot serialization**: `save_snapshot()` writes to `.fcc-ralph/context/` as deterministic JSON
@@ -120,7 +123,8 @@ Key design:
 | **Classes** | `MemoryRecord` (id, level, content, tags, source, importance, created_at, updated_at, metadata), `MemoryStore` (add, get, list, search, update, delete) |
 
 Key design:
-- **Four memory levels**: `working` (current run), `episodic` (past runs), `semantic` (learned facts), `procedural` (how-to knowledge) — validated in `__post_init__`, raises `InvalidMemoryLevelError`
+- **Four memory levels**: `working` (current run), `episodic` (past runs), `semantic` (learned facts), `procedural` (how-to knowledge) — validated in
+  `__post_init__`, raises `InvalidMemoryLevelError`
 - **Importance range**: 0–100, validated in `__post_init__`, raises `ValueError`
 - **Keyword search**: token overlap scoring (intersection / union ratio), ordered by match score → importance desc → updated_at desc
 - **Persistence**: JSON file at `.fcc-ralph/memory/memory_store.json`, loaded on init, saved on every mutation
@@ -206,7 +210,8 @@ No regressions or collection errors.
 
 **Decision:** Workspace I/O validates all user-supplied paths by resolving them against the workspace root and checking the resolved path starts with the root.
 
-**Rationale:** Prevents path injection attacks where a task file or run data could reference `../../secrets/config.json`. Equivalent to FCC's existing path security patterns. The check is a simple `resolved.resolve().absolute() == root.resolve().absolute()` prefix comparison with `is_relative_to` for Python 3.9+.
+**Rationale:** Prevents path injection attacks where a task file or run data could reference `../../secrets/config.json`. Equivalent to FCC's existing path
+security patterns. The check is a simple `resolved.resolve().absolute() == root.resolve().absolute()` prefix comparison with `is_relative_to` for Python 3.9+.
 
 ### YAML Frontmatter + Markdown Body for Tasks
 
@@ -243,11 +248,13 @@ No regressions or collection errors.
 
 **Decision:** `latest_for_run` sorts by `iteration_number` (descending), then `created_at` (descending) as tiebreaker.
 
-**Rationale:** Within a single iteration there should be only one checkpoint, but if multiple exist (e.g., from partial saves), the latest creation timestamp picks the most recent. The iteration_number is the primary ordering because it maps directly to the task loop counter.
+**Rationale:** Within a single iteration there should be only one checkpoint, but if multiple exist (e.g., from partial saves), the latest creation timestamp
+picks the most recent. The iteration_number is the primary ordering because it maps directly to the task loop counter.
 
 ### 8 Agent Profiles Matching AgentRole Enum
 
-**Decision:** One profile per `AgentRole` value (7 roles + Planner from the planning phase), each with an abstract `model_role` instead of a concrete provider/model.
+**Decision:** One profile per `AgentRole` value (7 roles + Planner from the planning phase), each with an abstract `model_role` instead of a concrete
+provider/model.
 
 **Rationale:**
 1. Complete coverage — every role has defaults ready for Phase 6

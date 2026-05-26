@@ -9,7 +9,9 @@
 
 ### What Phase 1 Attempted
 
-Phase 1 established the first real FCC-native Ralph Runtime foundation inside FCC. The goal was to extract the useful architecture from the external Ralf project (copilot-ralph-mode) and rebuild the right parts natively inside FCC — without copying Copilot-specific logic, without adding a GitHub Copilot dependency, and without modifying any existing FCC functionality.
+Phase 1 established the first real FCC-native Ralph Runtime foundation inside FCC. The goal was to extract the useful architecture from the external Ralf
+project (copilot-ralph-mode) and rebuild the right parts natively inside FCC — without copying Copilot-specific logic, without adding a GitHub Copilot
+dependency, and without modifying any existing FCC functionality.
 
 ### What Was Completed
 
@@ -198,7 +200,8 @@ No issues encountered. The FCC project environment was fully functional:
 
 ### Module Path: `core/ralph/`
 
-FCC already has `core/` as "Neutral shared application core" (see `core/__init__.py`). The Ralph Runtime is a core orchestration capability, not a plugin or integration — it belongs in `core/`. Alternative paths considered:
+FCC already has `core/` as "Neutral shared application core" (see `core/__init__.py`). The Ralph Runtime is a core orchestration capability, not a plugin or
+integration — it belongs in `core/`. Alternative paths considered:
 
 | Path | Rejected Because |
 |---|---|
@@ -273,7 +276,8 @@ tests/core/ralph/test_planner.py
 - No Admin UI yet
 - No Playwright yet
 
-Phase 2's ModelRoleRouter should read `RALPH_PLANNER_MODEL`, `RALPH_DOER_MODEL`, etc. from FCC Settings (extending the fields added conceptually in Phase 1) and resolve them through `config/settings.py`'s existing model resolution logic.
+Phase 2's ModelRoleRouter should read `RALPH_PLANNER_MODEL`, `RALPH_DOER_MODEL`, etc. from FCC Settings (extending the fields added conceptually in Phase 1) and
+resolve them through `config/settings.py`'s existing model resolution logic.
 
 ---
 
@@ -296,7 +300,8 @@ Phase 2's ModelRoleRouter should read `RALPH_PLANNER_MODEL`, `RALPH_DOER_MODEL`,
 
 ### Trigger
 
-Phase 1 was re-audited from scratch to confirm the implementation fully satisfies requirements, no Copilot-specific code leaked in, no FCC provider/config/API files were modified, and all tests pass in a clean run.
+Phase 1 was re-audited from scratch to confirm the implementation fully satisfies requirements, no Copilot-specific code leaked in, no FCC provider/config/API
+files were modified, and all tests pass in a clean run.
 
 ### Audit Scope
 

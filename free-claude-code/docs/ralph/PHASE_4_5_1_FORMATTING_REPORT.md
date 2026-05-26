@@ -7,7 +7,8 @@
 
 ## Summary
 
-Phase 4.5.1 verified and normalized the raw line-ending formatting of all Python files under `core/ralph/` and `tests/core/ralph/` for correct display in GitHub raw view, diffs, and review tools.
+Phase 4.5.1 verified and normalized the raw line-ending formatting of all Python files under `core/ralph/` and `tests/core/ralph/` for correct display in GitHub
+raw view, diffs, and review tools.
 
 ## Files Inspected
 
@@ -37,7 +38,8 @@ All 44 files were already LF-only. No CRLF or CR-only line-ending contamination 
 
 ### Note on Exception Syntax
 
-ruff 0.15.4 targeting Python 3.14 normalizes `except (Exc1, Exc2):` to `except Exc1, Exc2:` (bare comma syntax, valid since Python 3.14 via PEP 760). The Phase 4.5 fix that parenthesized these was correct for Python ≤3.13; the formatter restores the bare comma form for the project's target version.
+ruff 0.15.4 targeting Python 3.14 normalizes `except (Exc1, Exc2):` to `except Exc1, Exc2:` (bare comma syntax, valid since Python 3.14 via PEP 760). The Phase
+4.5 fix that parenthesized these was correct for Python ≤3.13; the formatter restores the bare comma form for the project's target version.
 
 ## After-Audit Results
 
