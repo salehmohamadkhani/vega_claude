@@ -142,3 +142,29 @@ class TestCriticEngine:
             acceptance_criteria=["provider integration works"],
         )
         assert review.approved is True
+
+    def test_skipped_verification_does_not_approve(self) -> None:
+        """A skipped verification with no commands must not be approved."""
+        engine = self.make_engine()
+        result = VerificationResult(
+            status=VerificationStatus.SKIPPED,
+            command_results={},
+        )
+        review = engine.review_verification(result)
+        assert review.approved is False
+        assert "no verification" in review.decision.reason.lower()
+
+    def test_high_hallucination_risk_blocks_scoring_approval(self) -> None:
+        """High hallucination risk must cause scoring review to fail."""
+        engine = self.make_engine()
+        score = ScoreCard(
+            implementation_score=95,
+            test_score=90,
+            kpi_score=85,
+            risk_score=10,
+            confidence_score=92,
+            hallucination_risk=HallucinationRisk.HIGH,
+        )
+        review = engine.review_scoring(score)
+        assert review.approved is False
+        assert any("hallucination" in w.lower() for w in review.warnings)

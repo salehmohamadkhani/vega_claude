@@ -170,9 +170,7 @@ class TestVerificationRunner:
             timeout_seconds=1,
         )
         runner = VerificationRunner(config)
-        result = runner.run_command(
-            "python -c 'import time; time.sleep(10)'"
-        )
+        result = runner.run_command("python -c 'import time; time.sleep(10)'")
         assert result.timed_out is True
         assert result.status == VerificationStatus.FAILED
         assert "timed out" in (result.failure_reason or "").lower()

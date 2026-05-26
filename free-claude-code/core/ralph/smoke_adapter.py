@@ -10,23 +10,26 @@ from dataclasses import dataclass
 
 # Known FCC smoke targets extracted from smoke/features.py.
 # Each maps to the pytest command(s) that exercise it.
+# Keep in sync with FEATURE_INVENTORY smoke_targets in smoke/features.py.
 _KNOWN_SMOKE_TARGETS: dict[str, str] = {
-    "providers": "pytest smoke/prereq -m providers --co -q",
-    "api": "pytest smoke/prereq -m api --co -q",
-    "cli": "pytest smoke/prereq -m cli --co -q",
-    "clients": "pytest smoke/prereq -m clients --co -q",
-    "nvidia_nim_cli": "pytest smoke/prereq -m nvidia_nim_cli --co -q",
-    "openrouter_free_cli": "pytest smoke/prereq -m openrouter_free_cli --co -q",
-    "config": "pytest smoke/prereq -m config --co -q",
-    "messaging": "pytest smoke/prereq -m messaging --co -q",
-    "tools": "pytest smoke/prereq -m tools --co -q",
-    "voice": "pytest smoke/prereq -m voice --co -q",
-    "rate_limit": "pytest smoke/prereq -m rate_limit --co -q",
-    "auth": "pytest smoke/prereq -m auth --co -q",
-    "extensibility": "pytest smoke/prereq -m extensibility --co -q",
-    "lmstudio": "pytest smoke/prereq -m lmstudio --co -q",
-    "llamacpp": "pytest smoke/prereq -m llamacpp --co -q",
-    "ollama": "pytest smoke/prereq -m ollama --co -q",
+    "providers": "uv run pytest smoke/prereq -m providers --collect-only -q",
+    "api": "uv run pytest smoke/prereq -m api --collect-only -q",
+    "cli": "uv run pytest smoke/prereq -m cli --collect-only -q",
+    "clients": "uv run pytest smoke/prereq -m clients --collect-only -q",
+    "nvidia_nim_cli": "uv run pytest smoke/prereq -m nvidia_nim_cli --collect-only -q",
+    "openrouter_free_cli": "uv run pytest smoke/prereq -m openrouter_free_cli --collect-only -q",
+    "config": "uv run pytest smoke/prereq -m config --collect-only -q",
+    "messaging": "uv run pytest smoke/prereq -m messaging --collect-only -q",
+    "tools": "uv run pytest smoke/prereq -m tools --collect-only -q",
+    "voice": "uv run pytest smoke/prereq -m voice --collect-only -q",
+    "rate_limit": "uv run pytest smoke/prereq -m rate_limit --collect-only -q",
+    "auth": "uv run pytest smoke/prereq -m auth --collect-only -q",
+    "extensibility": "uv run pytest smoke/prereq -m extensibility --collect-only -q",
+    "lmstudio": "uv run pytest smoke/prereq -m lmstudio --collect-only -q",
+    "llamacpp": "uv run pytest smoke/prereq -m llamacpp --collect-only -q",
+    "ollama": "uv run pytest smoke/prereq -m ollama --collect-only -q",
+    "telegram": "uv run pytest smoke/prereq -m telegram --collect-only -q",
+    "discord": "uv run pytest smoke/prereq -m discord --collect-only -q",
 }
 
 
@@ -47,7 +50,7 @@ class FCCSmokeAdapter:
 
         adapter = FCCSmokeAdapter()
         plan = adapter.build_smoke_plan(["providers", "api"])
-        # plan.commands -> ("pytest smoke/prereq -m providers --co -q", ...)
+        # plan.commands -> ("uv run pytest smoke/prereq -m providers --collect-only -q", ...)
     """
 
     def __init__(self, known_targets: dict[str, str] | None = None) -> None:
@@ -74,7 +77,17 @@ class FCCSmokeAdapter:
         """Convert smoke targets into a SmokePlan with commands.
 
         Unknown targets are collected but not mapped to commands.
+        When targets is empty, a collect-only command is returned so all
+        smoke tests are at least validated as parseable.
         """
+        if not targets:
+            return SmokePlan(
+                targets=(),
+                commands=("uv run pytest smoke --collect-only -q",),
+                unknown_targets=(),
+                requires_live_provider=False,
+            )
+
         known, unknown = self.validate_targets(targets)
         commands: list[str] = []
         requires_live = False

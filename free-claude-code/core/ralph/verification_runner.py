@@ -96,8 +96,7 @@ class VerificationRunner:
             VerificationStatus.PASSED if all_passed else VerificationStatus.FAILED
         )
         stdout_lines = [
-            f"{'PASS' if ok else 'FAIL'}: {cmd}"
-            for cmd, ok in command_results.items()
+            f"{'PASS' if ok else 'FAIL'}: {cmd}" for cmd, ok in command_results.items()
         ]
 
         return VerificationResult(
@@ -146,9 +145,7 @@ class VerificationRunner:
                 command=argv,
                 status=VerificationStatus.SKIPPED,
                 skipped=True,
-                failure_reason=(
-                    f"Command prefix not in allowed list: {argv[:2]}"
-                ),
+                failure_reason=(f"Command prefix not in allowed list: {argv[:2]}"),
             )
 
         # Safe execution
@@ -184,9 +181,7 @@ class VerificationRunner:
             timed_out = True
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
-            failure_reason = (
-                f"Command timed out after {self._config.timeout_seconds}s"
-            )
+            failure_reason = f"Command timed out after {self._config.timeout_seconds}s"
         except FileNotFoundError:
             failure_reason = f"Command not found: {argv[0]}"
         except PermissionError:

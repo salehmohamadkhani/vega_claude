@@ -17,9 +17,7 @@ from core.ralph.verification_runner import (
 
 
 class TestQualityGate:
-    def make_gate(
-        self, runner: VerificationRunner | None = None
-    ) -> QualityGate:
+    def make_gate(self, runner: VerificationRunner | None = None) -> QualityGate:
         return QualityGate(
             verification_runner=runner,
             critic=CriticEngine(),
@@ -148,3 +146,40 @@ class TestQualityGate:
         result = gate.evaluate(task)
         assert len(result.summary) > 0
         assert "gate=" in result.summary
+
+    def test_skipped_verification_does_not_result_in_passed(self) -> None:
+        """Default runner (execution disabled) must NOT produce PASSED final_status."""
+        gate = self.make_gate()
+        task = self.make_simple_task()
+        result = gate.evaluate(task)
+        assert result.final_status != TaskStatus.PASSED
+        assert result.all_passed is False
+
+    def test_high_hallucination_risk_blocks_approval(self) -> None:
+        """A score card with HIGH hallucination risk must not result in PASSED."""
+        from core.ralph.scoring import HallucinationRisk
+
+        gate = self.make_gate()
+        task = self.make_simple_task()
+        score = ScoreCard(
+            implementation_score=95,
+            test_score=90,
+            kpi_score=85,
+            risk_score=10,
+            confidence_score=92,
+            hallucination_risk=HallucinationRisk.HIGH,
+        )
+        result = gate.evaluate(task, score_card=score)
+        assert result.final_status != TaskStatus.PASSED
+
+    def test_arbiter_loop_guard_stop_overrides_critic_approval(self) -> None:
+        """Even when critic approves, a STOP from loop guard must result in STOP."""
+        from core.ralph.arbiter import ArbiterAction
+        from core.ralph.loop_guard import LoopGuard
+
+        gate = self.make_gate()
+        task = self.make_simple_task()
+        loop_guard = LoopGuard(max_iterations=1)
+        loop_guard.evaluate(current_iteration=1)  # hits STOP
+        result = gate.evaluate(task, loop_guard=loop_guard)
+        assert result.arbiter_decision.action == ArbiterAction.STOP

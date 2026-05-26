@@ -134,7 +134,9 @@ class ModelRoleRouter:
         try:
             model_role = AGENT_TO_MODEL_ROLE[agent_role]
         except KeyError:
-            role_name = agent_role.name if hasattr(agent_role, "name") else str(agent_role)
+            role_name = (
+                agent_role.name if hasattr(agent_role, "name") else str(agent_role)
+            )
             msg = f"No ModelRole mapping for AgentRole.{role_name}"
             raise ModelRoleRoutingError(msg) from None
         return self.resolve(model_role)

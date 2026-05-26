@@ -40,9 +40,7 @@ class VerificationPlan:
     def is_empty(self) -> bool:
         """Return True if the plan has no verification steps at all."""
         return (
-            not self.commands
-            and not self.smoke_targets
-            and not self.kpi_descriptions
+            not self.commands and not self.smoke_targets and not self.kpi_descriptions
         )
 
 
@@ -84,7 +82,11 @@ class VerificationResult:
         if total_kpi:
             parts.append(f"kpis: {passed_kpi}/{total_kpi}")
         status = "PASS" if self.all_passed() else "FAIL"
-        return f"[{status}] {' | '.join(parts)}" if parts else f"[{self.status.value.upper()}]"
+        return (
+            f"[{status}] {' | '.join(parts)}"
+            if parts
+            else f"[{self.status.value.upper()}]"
+        )
 
 
 # ---- Plan builder ----

@@ -33,9 +33,7 @@ class QualityGateResult:
     verification_result: VerificationResult = field(default_factory=VerificationResult)
     score_card: ScoreCard = field(default_factory=ScoreCard)
     critic_reviews: list[CriticReview] = field(default_factory=list)
-    loop_guard_decision: LoopGuardDecision = field(
-        default_factory=LoopGuardDecision
-    )
+    loop_guard_decision: LoopGuardDecision = field(default_factory=LoopGuardDecision)
     arbiter_decision: ArbiterDecision = field(default_factory=ArbiterDecision)
     final_status: TaskStatus = TaskStatus.PENDING
     summary: str = ""
@@ -73,7 +71,9 @@ def _compute_score_from_verification(
     # Risk score: inverse of pass rate, higher = more risk
     total_checks = total_cmd + total_smoke + total_kpi
     total_passed = passed_cmd + passed_smoke + passed_kpi
-    risk_score = 100 - _rate_to_score(total_passed, total_checks) if total_checks > 0 else 0
+    risk_score = (
+        100 - _rate_to_score(total_passed, total_checks) if total_checks > 0 else 0
+    )
 
     # Confidence: how many checks were actually run vs expected
     confidence_score = _rate_to_score(total_checks, max(total_checks, 1))
@@ -181,9 +181,7 @@ class QualityGate:
                 loop_guard.record_verification_failure(
                     verification_result.failure_reason or "Verification failed"
                 )
-            loop_guard_decision = loop_guard.evaluate(
-                current_iteration=retry_count + 1
-            )
+            loop_guard_decision = loop_guard.evaluate(current_iteration=retry_count + 1)
         else:
             loop_guard_decision = LoopGuardDecision()
 
@@ -200,9 +198,7 @@ class QualityGate:
             total_command_count=verifier_review.total_command_count,
             passed_smoke_count=verifier_review.passed_smoke_count,
             total_smoke_count=verifier_review.total_smoke_count,
-            failed_criteria=(
-                verifier_review.failed_criteria + scoring_review.warnings
-            ),
+            failed_criteria=(verifier_review.failed_criteria + scoring_review.warnings),
             warnings=verifier_review.warnings + scoring_review.warnings,
         )
 

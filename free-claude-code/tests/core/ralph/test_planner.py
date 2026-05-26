@@ -18,7 +18,9 @@ class TestTaskPlanner:
         return TaskPlanner()
 
     def test_generates_clarifying_questions(self) -> None:
-        goal = ProjectGoal(title="Add model routing", description="Support multiple providers")
+        goal = ProjectGoal(
+            title="Add model routing", description="Support multiple providers"
+        )
         planner = self.make_planner()
         questions = planner.generate_questions(goal)
         assert len(questions) >= 2
@@ -76,9 +78,36 @@ class TestTaskPlanner:
         tasks2 = planner.generate_tasks(spec)
         assert len(tasks1) == len(tasks2)
         for t1, t2 in zip(tasks1, tasks2, strict=True):
+            assert t1.id == t2.id, f"Task ID mismatch: {t1.id} != {t2.id}"
             assert t1.title == t2.title
             assert len(t1.acceptance_criteria) == len(t2.acceptance_criteria)
             assert t1.agent_role == t2.agent_role
+
+    def test_task_ids_are_stable_across_instances(self) -> None:
+        """Two independent TaskPlanner instances must produce identical IDs."""
+        spec = ProjectSpec(title="Stable IDs", target_areas=["api"])
+        p1 = self.make_planner()
+        p2 = self.make_planner()
+        tasks1 = p1.generate_tasks(spec)
+        tasks2 = p2.generate_tasks(spec)
+        for t1, t2 in zip(tasks1, tasks2, strict=True):
+            assert t1.id == t2.id, f"Cross-instance ID mismatch: {t1.id} != {t2.id}"
+
+    def test_task_ids_start_at_001(self) -> None:
+        """First task should always be TASK-001-context-map."""
+        spec = ProjectSpec(title="Fresh start")
+        planner = self.make_planner()
+        tasks = planner.generate_tasks(spec)
+        assert tasks[0].id == "TASK-001-context-map"
+
+    def test_plan_ids_stable_across_repeated_calls(self) -> None:
+        """The full plan() pipeline must produce stable IDs."""
+        goal = ProjectGoal(title="Stable planning")
+        planner = self.make_planner()
+        plan1 = planner.plan(goal)
+        plan2 = planner.plan(goal)
+        for t1, t2 in zip(plan1.tasks, plan2.tasks, strict=True):
+            assert t1.id == t2.id
 
     def test_tasks_are_pending_not_approved(self) -> None:
         spec = ProjectSpec(title="New feature")
@@ -118,7 +147,9 @@ class TestTaskPlanner:
         tasks = planner.generate_tasks(spec)
         impl_task = tasks[1]
         kpis_text = " ".join(impl_task.kpis).lower()
-        assert any("ui" in kpis_text or "render" in kpis_text for kpis_text in [kpis_text])
+        assert any(
+            "ui" in kpis_text or "render" in kpis_text for kpis_text in [kpis_text]
+        )
 
     def test_messaging_goal_adds_smoke_metadata(self) -> None:
         spec = ProjectSpec(title="Add Discord bot", target_areas=["messaging"])
@@ -147,9 +178,7 @@ class TestTaskPlanner:
             assert plan is not None
             # The plan should have commands from the task
             if task.verification_commands:
-                assert any(
-                    cmd in plan.commands for cmd in task.verification_commands
-                )
+                assert any(cmd in plan.commands for cmd in task.verification_commands)
 
     def test_no_subprocess_commands_in_planner(self) -> None:
 

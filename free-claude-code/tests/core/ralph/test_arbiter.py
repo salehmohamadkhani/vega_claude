@@ -16,9 +16,7 @@ class TestArbiterEngine:
     def make_approving_review(self) -> CriticReview:
         return CriticReview(
             approved=True,
-            decision=CriticDecision(
-                approved=True, reason="All good", confidence=0.95
-            ),
+            decision=CriticDecision(approved=True, reason="All good", confidence=0.95),
         )
 
     def make_rejecting_review(self, confidence: float = 0.65) -> CriticReview:
@@ -49,6 +47,7 @@ class TestArbiterEngine:
         loop_guard = LoopGuardDecision(action="stop")  # string to check compat
         # Use dataclass properly
         from dataclasses import replace
+
         loop_guard = replace(
             LoopGuardDecision(),
             action=__import__(
@@ -57,6 +56,7 @@ class TestArbiterEngine:
             reason="Max iterations reached.",
         )
         from core.ralph.loop_guard import LoopAction
+
         loop_guard = LoopGuardDecision(
             action=LoopAction.STOP, reason="Max iterations reached."
         )
@@ -95,9 +95,7 @@ class TestArbiterEngine:
     def test_stop_after_too_many_critic_rejections(self) -> None:
         engine = ArbiterEngine(max_critic_rejections_before_stop=2)
         review = self.make_rejecting_review()
-        decision = engine.decide(
-            critic_review=review, critic_rejection_count=2
-        )
+        decision = engine.decide(critic_review=review, critic_rejection_count=2)
         assert decision.action == ArbiterAction.STOP
         assert "rejected" in decision.reason.lower()
 
@@ -125,9 +123,7 @@ class TestArbiterEngine:
             risk_score=90,
             confidence_score=20,
         )
-        decision = engine.decide(
-            critic_review=review, score_card=score
-        )
+        decision = engine.decide(critic_review=review, score_card=score)
         # Score below threshold → retry even though critic approved
         assert decision.action != ArbiterAction.APPROVE
 
@@ -143,6 +139,22 @@ class TestArbiterEngine:
         decision = engine.decide(critic_review=review)
         assert len(decision.suggested_fixes) > 0
         assert "fix tests" in decision.suggested_fixes[0]
+
+    def test_loop_guard_stop_overrides_critic_approval(self) -> None:
+        """Loop guard STOP must stop even when the critic approved."""
+        engine = self.make_engine()
+        from core.ralph.loop_guard import LoopAction
+
+        review = self.make_approving_review()
+        loop_guard = LoopGuardDecision(
+            action=LoopAction.STOP, reason="Max iterations reached."
+        )
+        decision = engine.decide(
+            critic_review=review,
+            loop_guard_decision=loop_guard,
+        )
+        assert decision.action == ArbiterAction.STOP
+        assert "loop guard" in decision.reason.lower()
 
     def test_arbiter_action_enum_values(self) -> None:
         assert ArbiterAction.APPROVE.value == "approve"

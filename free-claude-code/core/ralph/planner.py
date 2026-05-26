@@ -78,20 +78,6 @@ def _classify_goal(goal: ProjectGoal) -> set[str]:
 
 
 # ---------------------------------------------------------------------------
-# Task ID generation
-# ---------------------------------------------------------------------------
-
-_TASK_COUNTER: int = 0
-
-
-def _next_task_id(prefix: str) -> str:
-    """Return a stable, readable task ID."""
-    global _TASK_COUNTER
-    _TASK_COUNTER += 1
-    return f"TASK-{_TASK_COUNTER:03d}-{prefix}"
-
-
-# ---------------------------------------------------------------------------
 # Planner
 # ---------------------------------------------------------------------------
 
@@ -99,9 +85,21 @@ def _next_task_id(prefix: str) -> str:
 class TaskPlanner:
     """Deterministic, heuristic-based project task planner.
 
+    Each instance has its own task counter, ensuring that repeated calls
+    with the same input produce identical task IDs. Two independent
+    TaskPlanner instances also produce identical IDs for the same input.
+
     Phase 2 implements rule-based planning only. Future phases may add
     LLM-driven planning that calls this as a fallback.
     """
+
+    def __init__(self) -> None:
+        self._task_counter: int = 0
+
+    def _next_task_id(self, prefix: str) -> str:
+        """Return a stable, readable task ID using the instance counter."""
+        self._task_counter += 1
+        return f"TASK-{self._task_counter:03d}-{prefix}"
 
     def generate_questions(self, goal: ProjectGoal) -> list[ClarifyingQuestion]:
         """Generate clarifying questions about a goal."""
@@ -183,11 +181,10 @@ class TaskPlanner:
         categories = _classify_goal(goal)
 
         # Summary — derive from goal title + matched categories
-        area_hints = ", ".join(sorted(categories)) if categories else "general development"
-        summary = (
-            f"Project: {goal.title or 'Untitled'}. "
-            f"Covers {area_hints}."
+        area_hints = (
+            ", ".join(sorted(categories)) if categories else "general development"
         )
+        summary = f"Project: {goal.title or 'Untitled'}. Covers {area_hints}."
 
         # Assumptions
         assumptions: list[str] = [
@@ -231,7 +228,11 @@ class TaskPlanner:
 
         Always produces at least four tasks. Metadata is injected based on
         the spec's target areas and constraints.
+
+        The task counter is reset at the start of each call so that calling
+        this method multiple times with the same input produces identical IDs.
         """
+        self._task_counter = 0
         categories = set(spec.target_areas)
         all_text = f"{spec.title} {spec.summary} {' '.join(spec.constraints)}".lower()
         # Also scan constraints text for keywords
@@ -260,7 +261,7 @@ class TaskPlanner:
 
         tasks.append(
             RalphTask(
-                id=_next_task_id("context-map"),
+                id=self._next_task_id("context-map"),
                 title="Architecture and context mapping",
                 description="Analyze the codebase and document the context for this goal.",
                 status=TaskStatus.PENDING,
@@ -299,7 +300,7 @@ class TaskPlanner:
 
         tasks.append(
             RalphTask(
-                id=_next_task_id("implementation"),
+                id=self._next_task_id("implementation"),
                 title="Implementation",
                 description=f"Implement the core changes for: {spec.title or 'the goal'}.",
                 status=TaskStatus.PENDING,
@@ -342,7 +343,7 @@ class TaskPlanner:
 
         tasks.append(
             RalphTask(
-                id=_next_task_id("verification"),
+                id=self._next_task_id("verification"),
                 title="Verification and testing",
                 description="Write and run tests to verify the implementation.",
                 status=TaskStatus.PENDING,
@@ -370,7 +371,7 @@ class TaskPlanner:
 
         tasks.append(
             RalphTask(
-                id=_next_task_id("docs-report"),
+                id=self._next_task_id("docs-report"),
                 title="Documentation and report",
                 description="Document the implementation, decisions, and results.",
                 status=TaskStatus.PENDING,

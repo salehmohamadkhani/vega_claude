@@ -77,9 +77,7 @@ class CriticEngine:
         failed_criteria = self._check_criteria(criteria, verification_result)
 
         # Determine pass/fail
-        cmd_ok = total_cmd == 0 or (
-            passed_cmd / total_cmd >= _COMMAND_PASS_THRESHOLD
-        )
+        cmd_ok = total_cmd == 0 or (passed_cmd / total_cmd >= _COMMAND_PASS_THRESHOLD)
         smoke_ok = total_smoke == 0 or (
             passed_smoke / total_smoke >= _SMOKE_PASS_THRESHOLD
         )
@@ -89,13 +87,9 @@ class CriticEngine:
         # Build warnings
         warnings: list[str] = []
         if not cmd_ok:
-            warnings.append(
-                f"Command verification: {passed_cmd}/{total_cmd} passed"
-            )
+            warnings.append(f"Command verification: {passed_cmd}/{total_cmd} passed")
         if not smoke_ok:
-            warnings.append(
-                f"Smoke verification: {passed_smoke}/{total_smoke} passed"
-            )
+            warnings.append(f"Smoke verification: {passed_smoke}/{total_smoke} passed")
         if not criteria_ok:
             warnings.append(
                 f"Acceptance criteria not met: {len(failed_criteria)} failed"
@@ -159,9 +153,7 @@ class CriticEngine:
                 f"Hallucination risk: {score_card.hallucination_risk.value}"
             )
         if final_score < min_passing_score:
-            warnings.append(
-                f"Score {final_score} below threshold {min_passing_score}"
-            )
+            warnings.append(f"Score {final_score} below threshold {min_passing_score}")
 
         decision = CriticDecision(
             approved=passing,

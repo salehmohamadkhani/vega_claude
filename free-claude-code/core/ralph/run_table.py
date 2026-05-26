@@ -73,9 +73,15 @@ class RunTable:
     # ---- Mutation ----
 
     def add_entry(self, entry: RunTableEntry) -> None:
-        """Add a new entry to the table."""
+        """Add or update an entry in the table.
+
+        If an entry with the same task_id already exists, it is replaced
+        (updated). The task_id is not duplicated in the run's entry list.
+        """
         self._entries[entry.task_id] = entry
-        self._run_entries.setdefault(entry.run_id, []).append(entry.task_id)
+        self._run_entries.setdefault(entry.run_id, [])
+        if entry.task_id not in self._run_entries[entry.run_id]:
+            self._run_entries[entry.run_id].append(entry.task_id)
 
     def update_status(self, task_id: str, new_status: TaskStatus) -> bool:
         """Update the status of an entry by task_id.

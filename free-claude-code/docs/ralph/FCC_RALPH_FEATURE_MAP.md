@@ -87,7 +87,59 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 3 baseline*
+*Last updated: 2026-05-26 — Phase 3.5 baseline*
+
+---
+
+## Phase 3.5 — Stabilization Audit
+
+### What Phase 3.5 Fixed
+
+| Issue | Module | Fix |
+|---|---|---|
+| Global counter broke determinism | `planner.py` | Moved to instance-level counter with per-call reset |
+| Duplicate task IDs inflated completion | `run_table.py` | Existence check before appending to run entry list |
+| Bare `pytest` not `uv run pytest` | `smoke_adapter.py` | All commands prefixed with `uv run` |
+| `telegram`/`discord` targets missing | `smoke_adapter.py` | Added to known targets |
+| Empty targets returned no command | `smoke_adapter.py` | Returns collect-only fallback |
+| `def self._next_task_id` syntax error | `planner.py` | Fixed stray `self.` prefix |
+
+### Regression Tests Added (15)
+
+| Area | Tests |
+|---|---|
+| Planner determinism | Cross-instance IDs, plan pipeline stability, ID format |
+| RunTable duplicates | Dedup, update behavior, completion accuracy |
+| Critic edge cases | Skipped verification, hallucination risk blocking |
+| QualityGate edge cases | Skipped feedback, hallucination blocking, loop guard override |
+| Arbiter edge cases | Loop guard overrides critic approval |
+| SmokeAdapter | Features inventory sync, uv run pytest prefix, collect-only |
+
+### No Architecture Drift
+
+All `core/ralph/` imports remain relative and within-module. No imports from
+`providers/`, Admin UI, or Claude Code modules.
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Agent/Model roles | `core/ralph/roles.py` | ✅ | 1 |
+| Run table | `core/ralph/run_table.py` | ✅ (hardened) | 1 |
+| Scoring | `core/ralph/scoring.py` | ✅ | 1 |
+| Verification plans | `core/ralph/verification.py` | ✅ | 1 |
+| Loop guard | `core/ralph/loop_guard.py` | ✅ | 1 |
+| Model role routing | `core/ralph/model_router.py` | ✅ | 2 |
+| Task planner | `core/ralph/planner.py` | ✅ (fixed) | 2 |
+| Verification runner | `core/ralph/verification_runner.py` | ✅ | 3 |
+| Smoke adapter | `core/ralph/smoke_adapter.py` | ✅ (hardened) | 3 |
+| Critic/arbiter | `core/ralph/critic.py`, `arbiter.py` | ✅ (hardened) | 3 |
+| Quality gate | `core/ralph/quality_gate.py` | ✅ (hardened) | 3 |
+| Task library | `core/ralph/task_library.py` | — | 4 |
+| Context builder | `core/ralph/context_builder.py` | — | 4 |
+| Memory store | `core/ralph/memory.py` | — | 4 |
+| Agent profiles | `core/ralph/profiles/` | — | 4 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 4+ |
 
 ---
 

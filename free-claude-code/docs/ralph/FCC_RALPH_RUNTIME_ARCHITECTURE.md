@@ -83,6 +83,8 @@ Phase 2 [DONE]      Model role router, task planner foundation
                         ↓
 Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality gate
                         ↓
+Phase 3.5 [DONE]    Stabilization audit — bugs fixed, hardened, test coverage +15
+                        ↓
 Phase 4             Task library, context builder, memory store, agent profiles
                         ↓
 Phase 5             Admin UI for Ralph Runtime, KPI dashboard
@@ -126,7 +128,26 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 
 ---
 
-*Last updated: 2026-05-26 — Phase 3 baseline*
+*Last updated: 2026-05-26 — Phase 3.5 baseline*
+
+---
+
+## Phase 3.5 — Stabilization Audit
+
+### What Was Fixed
+
+| Issue | Module | Detail |
+|---|---|---|
+| Global counter | `planner.py` | Moved to instance level with per-call reset |
+| Duplicate entries | `run_table.py` | Guard in `add_entry` |
+| Bare pytest commands | `smoke_adapter.py` | `uv run pytest` with `--collect-only` |
+| Missing targets | `smoke_adapter.py` | Added `telegram`, `discord` |
+| Syntax error | `planner.py` | `def self._next_task_id` → `def _next_task_id` |
+| Skipped verification | quality_gate + critic | Edge-case regression tests |
+
+### Test Growth
+
+217 tests total (+15 from Phase 3). All checks passing: ruff, ty, pytest, smoke collect.
 
 ---
 
@@ -217,6 +238,8 @@ Phase 1 [DONE]      Core models, roles, run table, scoring, verification plans, 
 Phase 2 [DONE]      Model role router, task planner foundation
                         ↓
 Phase 3 [DONE]      Verification runner, smoke adapter, critic/arbiter, quality gate
+                        ↓
+Phase 3.5 [DONE]    Stabilization audit — bugs fixed, hardened, test coverage +15
                         ↓
 Phase 4             Task library, context builder, memory store, agent profiles
                         ↓

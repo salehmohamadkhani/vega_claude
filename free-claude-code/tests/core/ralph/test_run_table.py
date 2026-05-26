@@ -135,3 +135,28 @@ class TestRunTable:
         assert len(r1_entries) == 2
         r2_entries = table.get_entries_for_run("r2")
         assert len(r2_entries) == 1
+
+    def test_duplicate_task_id_does_not_duplicate_entry(self) -> None:
+        table = RunTable()
+        entry = _entry("t1", run_id="r1")
+        table.add_entry(entry)
+        table.add_entry(entry)  # same task_id again
+        entries = table.get_entries_for_run("r1")
+        assert len(entries) == 1, "Duplicate task_id must not create duplicate entries"
+
+    def test_duplicate_task_id_updates_not_duplicates(self) -> None:
+        table = RunTable()
+        table.add_entry(_entry("t1", run_id="r1", status=TaskStatus.PENDING))
+        # Re-add same task_id with different status
+        table.add_entry(_entry("t1", run_id="r1", status=TaskStatus.PASSED))
+        entries = table.get_entries_for_run("r1")
+        assert len(entries) == 1
+        assert entries[0].status == TaskStatus.PASSED
+
+    def test_completion_accurate_after_duplicate_add(self) -> None:
+        table = RunTable()
+        table.add_entry(_entry("t1", run_id="r1", status=TaskStatus.PASSED))
+        table.add_entry(_entry("t1", run_id="r1", status=TaskStatus.PASSED))  # duplicate
+        table.add_entry(_entry("t2", run_id="r1", status=TaskStatus.PENDING))
+        pct = table.completion_percentage("r1")
+        assert pct == 50.0, "Duplicate must not inflate denominator"

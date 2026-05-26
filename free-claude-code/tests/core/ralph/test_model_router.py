@@ -190,21 +190,19 @@ class TestModelRoleRouter:
     def test_no_provider_modules_imported(self) -> None:
         import sys
 
-        provider_modules = [
-            mod for mod in sys.modules if mod.startswith("providers.")
-        ]
-        assert not any(
-            mod.startswith("providers.") for mod in provider_modules
-        ), f"Provider modules should not be imported: {provider_modules}"
+        provider_modules = [mod for mod in sys.modules if mod.startswith("providers.")]
+        assert not any(mod.startswith("providers.") for mod in provider_modules), (
+            f"Provider modules should not be imported: {provider_modules}"
+        )
 
     def test_no_api_modules_imported(self) -> None:
         import sys
 
         api_modules = [mod for mod in sys.modules if mod.startswith("api.")]
         # Settings from config is fine; api/model_router should NOT be imported
-        assert not any(
-            mod.startswith("api.") for mod in api_modules
-        ), f"API modules should not be imported from ralph: {api_modules}"
+        assert not any(mod.startswith("api.") for mod in api_modules), (
+            f"API modules should not be imported from ralph: {api_modules}"
+        )
 
     # --- custom policy ---
 
