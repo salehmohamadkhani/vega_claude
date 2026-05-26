@@ -113,6 +113,7 @@ class TestExecutionConfig:
         config = ExecutionConfig()
         assert config.dry_run is True
         assert config.allow_real_execution is False
+        assert config.allow_test_fallback is False
         assert config.timeout_seconds == 300
         assert config.max_output_chars == 50000
         assert "fcc-claude" in config.command_allowlist
@@ -125,9 +126,11 @@ class TestExecutionConfig:
             max_output_chars=1000,
             allow_real_execution=True,
             dry_run=False,
+            allow_test_fallback=True,
         )
         assert config.workspace_path == "/custom/ws"
         assert config.timeout_seconds == 120
         assert config.max_output_chars == 1000
         assert config.allow_real_execution is True
         assert config.dry_run is False
+        assert config.allow_test_fallback is True

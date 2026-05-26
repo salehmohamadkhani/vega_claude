@@ -118,6 +118,7 @@ class ExecutionConfig:
         default_factory=lambda: ["fcc-claude", "claude"]
     )
     dry_run: bool = True
+    allow_test_fallback: bool = False
 
 
 def _now_iso() -> str:

@@ -134,8 +134,20 @@ $ pytest                → 345 passed
 | `docs/ralph/FCC_RALPH_RUNTIME_ARCHITECTURE.md` | Updated roadmap, Phase 5 section |
 | `docs/ralph/FCC_RALPH_FEATURE_MAP.md` | Updated mapping table, Phase 5 section |
 
+## Phase 5.5 — Execution Safety Audit
+
+Phase 5.5 (completed immediately after Phase 5) hardened the execution layer based on an external review:
+
+- **Bug fix**: RunExecutor no longer auto-approves PENDING tasks by default. Added `RunExecutorConfig(auto_approve_pending_tasks=False)`.
+- **Hardening**: Echo/testing CLI fallback requires explicit `allow_test_fallback=True`. No CLI found = clean error in real mode.
+- **Dry-run**: Checkpoint records `execution_skipped=True` metadata. Enum-based status comparison.
+- **Safety prompts**: Scoped-change, forbidden-files, and changed-files report instructions added to prompts.
+- **Tests**: 19 new tests (364 total).
+- **Report**: See `PHASE_5_5_EXECUTION_SAFETY_REPORT.md` for full details.
+
 ## What's Next
 
-- **Phase 6**: Admin UI for Ralph Runtime — run table browser, task status dashboard, KPI visualization
-- **Phase 7**: Full Ralph Loop — connects RunExecutor to Claude Code through FCC proxy, end-to-end task execution
-- **Phase 8**: Playwright KPI verifier — browser-based acceptance testing and KPI measurement
+- **Phase 6**: CLI surface for Ralph Runtime — `fcc-ralph plan/review/approve/run/status/report`
+- **Phase 7**: Admin UI for Ralph Runtime — run table browser, task status dashboard, KPI visualization
+- **Phase 8**: Full Ralph Loop — connects RunExecutor to Claude Code through FCC proxy, end-to-end task execution
+- **Phase 9**: Playwright KPI verifier — browser-based acceptance testing and KPI measurement

@@ -93,11 +93,16 @@ Phase 4.5 [DONE]    Persistence layer audit — PyYAML removed, path traversal h
 Phase 5 [DONE]      First execution layer — execution models, prompt builder,
                     Claude Code execution adapter (dry-run), iteration runner, run executor
                         ↓
-Phase 6             Admin UI for Ralph Runtime, KPI dashboard
+Phase 5.5 [DONE]    Execution safety audit — approval gate hardening, no auto-approve,
+                    command fallback hardening, dry-run semantics, safety prompts
                         ↓
-Phase 7             Full Ralph Loop with Claude Code via FCC proxy
+Phase 6             CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
                         ↓
-Phase 8             Playwright KPI verifier, browser-based acceptance testing
+Phase 7             Admin UI for Ralph Runtime, KPI dashboard
+                        ↓
+Phase 8             Full Ralph Loop with Claude Code via FCC proxy
+                        ↓
+Phase 9             Playwright KPI verifier, browser-based acceptance testing
 ```
 
 ## What Phase 1 Implements Now

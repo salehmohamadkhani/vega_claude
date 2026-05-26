@@ -87,8 +87,53 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 5 complete*
+*Last updated: 2026-05-26 — Phase 5.5 complete*
 
+
+---
+
+## Phase 5.5 — Execution Safety Audit & Approval-Gate Hardening
+
+### Bug Fixed: RunExecutor Auto-Approval
+
+`RunExecutor._find_next_task()` treated PENDING tasks as runnable, and `run_next_task()` auto-approved them before execution. This violated the product flow:
+
+```
+goal → questions → task list → human review/approval → execution
+```
+
+**Fix**: Added `RunExecutorConfig(auto_approve_pending_tasks=False)`. PENDING tasks are now skipped by default. Only APPROVED tasks execute unless auto-approval is explicitly enabled.
+
+### Hardening
+
+| Area | Change |
+|---|---|
+| Command fallback | `ClaudeCodeCommandBuilder.build_command()` requires `allow_fallback=True` for echo fallback; raises `CommandBuilderError` otherwise |
+| Dry-run semantics | Iteration checkpoint records `execution_skipped=True`; uses enum comparison (not string) |
+| Prompt safety | Added scoped-change, forbidden-files, and changed-files report instructions |
+| Config | `ExecutionConfig(allow_test_fallback=False)` — echo fallback opt-in |
+
+### Tests Added (19)
+
+| File | Tests |
+|---|---|
+| `test_run_executor.py` | 10 — approval gate, pending/approved selection, auto-approve config, blocked results |
+| `test_iteration_runner.py` | 3 — dry-run failure reason, skipped execution, checkpoint metadata |
+| `test_claude_execution.py` | 5 — no-CLI failure, echo fallback disabled, dry-run skips I/O |
+| `test_prompt_builder.py` | 3 — scoped changes, forbidden files, changed files instructions |
+| `test_execution.py` | 1 — `allow_test_fallback` default |
+
+### Check Results
+
+364 tests, ruff clean, ty clean.
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Execution approval gate | `core/ralph/run_executor.py` — `RunExecutorConfig` | (hardened) | 5.5 |
+| Command fallback safety | `core/ralph/claude_execution.py` — `CommandBuilderError` | (hardened) | 5.5 |
+| Prompt safety instructions | `core/ralph/prompt_builder.py` | (hardened) | 5.5 |
 
 ---
 

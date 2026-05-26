@@ -190,3 +190,83 @@ class TestClaudeCodeExecutionAdapter:
             result = adapter.execute(request)
             assert result.status == ExecutionStatus.FAILED
             assert "allowlist" in result.failure_reason
+
+    # ------------------------------------------------------------------
+    # Command fallback hardening
+    # ------------------------------------------------------------------
+
+    def test_real_execution_fails_when_no_cli_found(self) -> None:
+        """Real execution fails cleanly when no Claude CLI is found on system."""
+        with patch("shutil.which", return_value=None):
+            config = ExecutionConfig(
+                allow_real_execution=True,
+                allow_test_fallback=False,
+                command_allowlist=["echo"],
+            )
+            adapter = ClaudeCodeExecutionAdapter(config=config)
+            request = _make_request(mode=ExecutionMode.REAL, prompt="test")
+            result = adapter.execute(request)
+            assert result.status == ExecutionStatus.FAILED
+            assert "No Claude Code CLI found" in result.failure_reason
+
+    def test_echo_fallback_not_allowed_in_real_mode(self) -> None:
+        """Echo/testing fallback must not execute real tasks."""
+        with patch("shutil.which", return_value=None):
+            config = ExecutionConfig(
+                allow_real_execution=True,
+                allow_test_fallback=False,
+                command_allowlist=["echo"],
+            )
+            adapter = ClaudeCodeExecutionAdapter(config=config)
+            request = _make_request(mode=ExecutionMode.REAL, prompt="test")
+            result = adapter.execute(request)
+            assert result.status == ExecutionStatus.FAILED
+            assert "No Claude Code CLI found" in result.failure_reason
+
+    def test_dry_run_does_not_call_shutil_which(self) -> None:
+        """Dry-run must not call shutil.which (avoids unnecessary I/O)."""
+        with patch("shutil.which") as mock_which:
+            adapter = ClaudeCodeExecutionAdapter()
+            request = _make_request(mode=ExecutionMode.DRY_RUN)
+            result = adapter.execute(request)
+            assert result.status == ExecutionStatus.SKIPPED
+            mock_which.assert_not_called()
+
+    def test_dry_run_does_not_call_subprocess(self) -> None:
+        """Dry-run must never call subprocess.run."""
+        with patch("subprocess.run") as mock_run:
+            adapter = ClaudeCodeExecutionAdapter()
+            request = _make_request(mode=ExecutionMode.DRY_RUN)
+            result = adapter.execute(request)
+            assert result.status == ExecutionStatus.SKIPPED
+            mock_run.assert_not_called()
+
+    def test_real_execution_disabled_does_not_call_subprocess(self) -> None:
+        """When real execution disabled, never call subprocess.run."""
+        with patch("subprocess.run") as mock_run:
+            config = ExecutionConfig(allow_real_execution=False)
+            adapter = ClaudeCodeExecutionAdapter(config=config)
+            request = _make_request(mode=ExecutionMode.REAL)
+            result = adapter.execute(request)
+            assert result.status == ExecutionStatus.SKIPPED
+            mock_run.assert_not_called()
+
+    def test_echo_fallback_allowed_when_configured(self) -> None:
+        """Echo fallback runs only when allow_test_fallback is explicitly set."""
+        with (
+            patch.object(
+                ClaudeCodeCommandBuilder,
+                "build_command",
+                return_value=["echo", "claude", "--print", "test"],
+            ),
+        ):
+            config = ExecutionConfig(
+                allow_real_execution=True,
+                allow_test_fallback=True,
+                command_allowlist=["echo"],
+            )
+            adapter = ClaudeCodeExecutionAdapter(config=config)
+            request = _make_request(mode=ExecutionMode.REAL, prompt="test")
+            result = adapter.execute(request)
+            # echo succeeds, so exit_code should be 0
+            assert result.status == ExecutionStatus.SUCCEEDED

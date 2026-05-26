@@ -41,15 +41,19 @@ class ClaudeCodeCommandBuilder:
     """
 
     @staticmethod
-    def build_command(request: ExecutionRequest) -> list[str]:
+    def build_command(
+        request: ExecutionRequest,
+        allow_fallback: bool = False,
+    ) -> list[str]:
         """Build the argv list for running Claude Code.
 
         Resolution order:
         1. ``fcc-claude`` (FCC's Claude Code launcher)
         2. ``claude`` (raw Claude Code CLI)
-        3. ``echo`` (testing fallback)
+        3. ``echo`` (testing fallback — only when ``allow_fallback=True``)
 
-        Raises ``CommandBuilderError`` if no CLI is found.
+        Raises ``CommandBuilderError`` if no CLI is found and
+        fallback is not allowed.
         """
         fcc_claude = shutil.which("fcc-claude")
         if fcc_claude is not None:
@@ -59,8 +63,13 @@ class ClaudeCodeCommandBuilder:
         if claude is not None:
             return [claude, "--print", request.prompt]
 
-        # Testing fallback — not for production use
-        return ["echo", "claude", "--print", request.prompt]
+        if allow_fallback:
+            return ["echo", "claude", "--print", request.prompt]
+
+        raise CommandBuilderError(
+            "No Claude Code CLI found (tried fcc-claude, claude). "
+            "Install Claude Code or set allow_fallback=True for testing."
+        )
 
 
 class ClaudeCodeExecutionAdapter:
@@ -99,7 +108,10 @@ class ClaudeCodeExecutionAdapter:
 
         # Build command
         try:
-            command = ClaudeCodeCommandBuilder.build_command(request)
+            command = ClaudeCodeCommandBuilder.build_command(
+                request,
+                allow_fallback=self._config.allow_test_fallback,
+            )
         except CommandBuilderError as exc:
             return ExecutionResult(
                 status=ExecutionStatus.FAILED,

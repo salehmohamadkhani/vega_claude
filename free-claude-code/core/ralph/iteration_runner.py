@@ -13,7 +13,7 @@ from typing import Any
 from .checkpoint import Checkpoint, CheckpointStore
 from .claude_execution import ClaudeCodeExecutionAdapter
 from .context_builder import ContextBuilder
-from .execution import ExecutionMode, ExecutionRequest, ExecutionResult
+from .execution import ExecutionMode, ExecutionRequest, ExecutionResult, ExecutionStatus
 from .models import (
     ProjectGoal,
     RalphRun,
@@ -140,7 +140,7 @@ class IterationRunner:
         if not passed:
             # In dry-run mode, the quality gate has no real verification
             # output, so it will not pass. Report this clearly.
-            if exec_result.status.value == "skipped":
+            if exec_result.status == ExecutionStatus.SKIPPED:
                 failure_reason = (
                     "Dry-run: execution was skipped. "
                     "No verification results to evaluate."
@@ -169,6 +169,8 @@ class IterationRunner:
             else None,
             arbiter_action=next_action,
             next_action=next_action,
+            execution_skipped=(exec_result.status == ExecutionStatus.SKIPPED),
+            execution_mode=exec_result.mode.value,
         )
         self._checkpoint_store.save_checkpoint(checkpoint)
 

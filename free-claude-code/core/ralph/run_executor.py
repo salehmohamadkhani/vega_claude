@@ -29,6 +29,19 @@ from .workspace import RalphWorkspace
 
 
 @dataclass
+class RunExecutorConfig:
+    """Configuration for RunExecutor behavior.
+
+    Safe defaults: no auto-approval, stop on debug/escalate.
+    """
+
+    auto_approve_pending_tasks: bool = False
+    max_iterations_per_task: int = 1
+    stop_on_debug: bool = True
+    stop_on_escalate: bool = True
+
+
+@dataclass
 class RunExecutorResult:
     """Structured outcome of executing tasks in a run."""
 
@@ -37,6 +50,8 @@ class RunExecutorResult:
     completed: bool = False
     failed: bool = False
     stopped_reason: str = ""
+    approval_required: bool = False
+    pending_task_ids: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -51,6 +66,7 @@ class RunExecutor:
 
     def __init__(
         self,
+        config: RunExecutorConfig | None = None,
         workspace: RalphWorkspace | None = None,
         task_library: TaskLibrary | None = None,
         checkpoint_store: CheckpointStore | None = None,
@@ -60,6 +76,7 @@ class RunExecutor:
         loop_guard: LoopGuard | None = None,
         arbiter: ArbiterEngine | None = None,
     ) -> None:
+        self._config = config or RunExecutorConfig()
         ws = workspace or RalphWorkspace()
         self._workspace = ws
         self._task_library = task_library or TaskLibrary(ws)
@@ -91,16 +108,19 @@ class RunExecutor:
         run: RalphRun,
         goal: ProjectGoal | None = None,
     ) -> IterationRunResult | None:
-        """Find and run the next pending or approved task.
+        """Find and run the next approved task.
 
         Returns the iteration result, or None if no runnable task exists.
+        PENDING tasks are skipped unless ``auto_approve_pending_tasks=True``.
         """
         task = self._find_next_task(run)
         if task is None:
             return None
 
-        # Auto-approve pending tasks
+        # Approval gate: PENDING tasks require explicit approval or config
         if task.status == TaskStatus.PENDING:
+            if not self._config.auto_approve_pending_tasks:
+                return None
             self._run_lifecycle.approve_task(task.id)
             task.status = TaskStatus.APPROVED
 
@@ -170,6 +190,24 @@ class RunExecutor:
                         task_results=task_results,
                         completed=True,
                     )
+                # Check if approval is needed
+                pending_ids = [
+                    t.id for t in (run.tasks or [])
+                    if t.status == TaskStatus.PENDING
+                ]
+                if pending_ids and not self._config.auto_approve_pending_tasks:
+                    return RunExecutorResult(
+                        run=run,
+                        task_results=task_results,
+                        completed=False,
+                        approval_required=True,
+                        pending_task_ids=pending_ids,
+                        stopped_reason=(
+                            f"Approval required for {len(pending_ids)} pending "
+                            f"task(s). Set auto_approve_pending_tasks=True or "
+                            f"approve tasks via RunLifecycle.approve_task()."
+                        ),
+                    )
                 return RunExecutorResult(
                     run=run,
                     task_results=task_results,
@@ -177,8 +215,25 @@ class RunExecutor:
                     stopped_reason="No runnable tasks found.",
                 )
 
-            # Auto-approve pending
+            # Approval gate: PENDING tasks require explicit approval or config
             if task.status == TaskStatus.PENDING:
+                if not self._config.auto_approve_pending_tasks:
+                    pending_ids = [
+                        t.id for t in (run.tasks or [])
+                        if t.status == TaskStatus.PENDING
+                    ]
+                    return RunExecutorResult(
+                        run=run,
+                        task_results=task_results,
+                        completed=False,
+                        approval_required=True,
+                        pending_task_ids=pending_ids,
+                        stopped_reason=(
+                            f"Approval required for task {task.id}. "
+                            f"Set auto_approve_pending_tasks=True or approve "
+                            f"via RunLifecycle.approve_task()."
+                        ),
+                    )
                 self._run_lifecycle.approve_task(task.id)
                 task.status = TaskStatus.APPROVED
 
@@ -250,7 +305,12 @@ class RunExecutor:
     # ------------------------------------------------------------------
 
     def _find_next_task(self, run: RalphRun) -> RalphTask | None:
-        """Find the next task with PENDING or APPROVED status."""
+        """Find the next task eligible for execution.
+
+        Returns tasks with PENDING or APPROVED status. The caller
+        (run_next_task / run_until_blocked) enforces the approval gate:
+        PENDING tasks only proceed if ``auto_approve_pending_tasks`` is set.
+        """
         runnable_statuses = {TaskStatus.PENDING, TaskStatus.APPROVED}
         for task in run.tasks:
             if task.status in runnable_statuses:

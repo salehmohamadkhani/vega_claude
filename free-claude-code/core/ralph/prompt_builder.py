@@ -91,9 +91,13 @@ class TaskPromptBuilder:
             parts.append("### Allowed Files")
             parts.extend(f"- {f}" for f in task.allowed_files)
             parts.append("")
+            parts.append("Keep changes scoped to the allowed files listed above.")
+            parts.append("")
         if task.forbidden_files:
             parts.append("### Forbidden Files")
             parts.extend(f"- {f}" for f in task.forbidden_files)
+            parts.append("")
+            parts.append("Do NOT modify any forbidden files.")
             parts.append("")
 
     def _add_acceptance_criteria(
@@ -196,5 +200,10 @@ class TaskPromptBuilder:
             "1) What files were changed "
             "2) Whether verification passed "
             "3) Any issues encountered"
+        )
+        parts.append("")
+        parts.append(
+            "For each changed file, include a line starting with "
+            "'Changed: <filepath>' so changes can be tracked."
         )
         parts.append("")

@@ -127,3 +127,21 @@ class TestTaskPromptBuilder:
         ]
         for section in sections:
             assert section in prompt, f"Missing section: {section}"
+
+    def test_prompt_contains_scoped_changes_instruction(self) -> None:
+        ctx = _make_context()
+        prompt = self.builder.build_task_prompt(ctx)
+        assert "Keep changes scoped" in prompt
+        assert "allowed files" in prompt
+
+    def test_prompt_contains_forbidden_files_instruction(self) -> None:
+        ctx = _make_context()
+        prompt = self.builder.build_task_prompt(ctx)
+        assert "Do NOT modify" in prompt
+        assert "forbidden files" in prompt
+
+    def test_prompt_contains_changed_files_instruction(self) -> None:
+        ctx = _make_context()
+        prompt = self.builder.build_task_prompt(ctx)
+        assert "Changed:" in prompt
+        assert "filepath" in prompt or "changed" in prompt.lower()

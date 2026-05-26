@@ -93,3 +93,35 @@ class TestIterationRunner:
         runner = IterationRunner(run_table=mock_table)
         runner.run_iteration(self.run, self.task)
         assert mock_table.get_entry.called
+
+    # ------------------------------------------------------------------
+    # Dry-run semantics
+    # ------------------------------------------------------------------
+
+    def test_dry_run_has_failure_reason(self) -> None:
+        """Dry-run result must have clear failure_reason."""
+        result = self.runner.run_iteration(self.run, self.task)
+        assert result.failure_reason
+        assert "Dry-run" in result.failure_reason
+
+    def test_skipped_execution_has_clear_reason(self) -> None:
+        """Verify skipped execution produces clear failure reason."""
+        mock_adapter = MagicMock()
+        from core.ralph.execution import ExecutionResult, ExecutionStatus
+        mock_adapter.execute.return_value = ExecutionResult(
+            status=ExecutionStatus.SKIPPED,
+            failure_reason="Dry-run: execution was skipped.",
+        )
+        runner = IterationRunner(execution_adapter=mock_adapter)
+        result = runner.run_iteration(self.run, self.task)
+        assert result.passed is False
+        assert "Dry-run" in result.failure_reason
+
+    def test_checkpoint_records_skipped_state(self) -> None:
+        """Checkpoint metadata must record that execution was skipped."""
+        mock_cp = MagicMock()
+        runner = IterationRunner(checkpoint_store=mock_cp)
+        runner.run_iteration(self.run, self.task)
+        saved = mock_cp.save_checkpoint.call_args[0][0]
+        assert saved.metadata.get("execution_skipped") is True
+        assert saved.metadata.get("execution_mode") == "dry_run"

@@ -54,7 +54,7 @@ from .roles import (
     AgentRole,
     ModelRole,
 )
-from .run_executor import RunExecutor, RunExecutorResult
+from .run_executor import RunExecutor, RunExecutorConfig, RunExecutorResult
 from .run_lifecycle import RunLifecycle, RunLifecycleResult
 from .run_table import RunTable, RunTableEntry
 from .scoring import HallucinationRisk, ScoreCard
@@ -131,6 +131,7 @@ __all__ = [
     "RalphWorkspace",
     "RalphWorkspacePaths",
     "RunExecutor",
+    "RunExecutorConfig",
     "RunExecutorResult",
     "RunLifecycle",
     "RunLifecycleResult",
