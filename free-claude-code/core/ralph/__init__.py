@@ -10,6 +10,7 @@ of FCC without duplicating those concerns.
 """
 
 from .loop_guard import LoopAction, LoopGuard, LoopGuardDecision
+from .model_router import ModelRoleResolution, ModelRoleRouter, ModelRoleRoutingPolicy
 from .models import (
     CriticDecision,
     IterationStatus,
@@ -24,6 +25,7 @@ from .models import (
     run_status_from_str,
     task_status_from_str,
 )
+from .planner import ClarifyingQuestion, ProjectSpec, TaskPlan, TaskPlanner
 from .roles import (
     AGENT_ROLE_LABELS,
     AGENT_TO_MODEL_ROLE,
@@ -43,6 +45,7 @@ __all__ = [
     "AGENT_ROLE_LABELS",
     "AGENT_TO_MODEL_ROLE",
     "AgentRole",
+    "ClarifyingQuestion",
     "CriticDecision",
     "HallucinationRisk",
     "IterationStatus",
@@ -50,7 +53,11 @@ __all__ = [
     "LoopGuard",
     "LoopGuardDecision",
     "ModelRole",
+    "ModelRoleResolution",
+    "ModelRoleRouter",
+    "ModelRoleRoutingPolicy",
     "ProjectGoal",
+    "ProjectSpec",
     "RalphIteration",
     "RalphRun",
     "RalphTask",
@@ -58,6 +65,8 @@ __all__ = [
     "RunTable",
     "RunTableEntry",
     "ScoreCard",
+    "TaskPlan",
+    "TaskPlanner",
     "TaskStatus",
     "VerificationPlan",
     "VerificationResult",

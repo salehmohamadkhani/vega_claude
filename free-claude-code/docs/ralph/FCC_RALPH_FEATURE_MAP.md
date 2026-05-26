@@ -87,4 +87,69 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-25 — Phase 1 baseline*
+*Last updated: 2026-05-26 — Phase 2 baseline*
+
+---
+
+## Phase 2 — Model Role Router & Task Planner
+
+### What Phase 2 Adds
+
+| Module | File | Purpose |
+|---|---|---|
+| ModelRoleRouter | `core/ralph/model_router.py` | Resolves abstract `ModelRole` → FCC provider/model using `Settings` methods |
+| TaskPlanner | `core/ralph/planner.py` | Heuristic-based goal → clarifying questions → project spec → RalphTasks |
+
+### ModelRoleRouter
+
+The router maps each `ModelRole` to a Claude-tier hint (`opus`/`sonnet`/`haiku`), then resolves it through FCC's existing `Settings.resolve_model()`, `Settings.resolve_thinking()`, `parse_provider_type()`, and `parse_model_name()`.
+
+| ModelRole | Default Tier | Thinking |
+|---|---|---|
+| PLANNER | haiku | No |
+| DOER | sonnet | No |
+| CRITIC | opus | Yes |
+| DEBUGGER | sonnet | No |
+| SUMMARIZER | haiku | No |
+
+Safety properties:
+
+- No provider imports — router uses `Settings` static/instance methods, not provider modules
+- No network calls — purely local model-string resolution
+- No credential reads — `Settings` methods return configured model strings, not API keys
+- Deterministic — same policy + settings → same resolution
+
+### TaskPlanner
+
+The planner converts a `ProjectGoal` into:
+
+1. **ClarifyingQuestions** — heuristic-based, keyword-matched questions about scope, APIs, UI, messaging, testing, constraints
+2. **ProjectSpec** — structured spec with summary, constraints, KPIs, assumptions, risks, target areas
+3. **RalphTasks** — always 4+ tasks: architecture/context → implementation → verification/testing → docs/report
+
+Task generation injects metadata based on goal keywords:
+
+| Keyword Match | Effect |
+|---|---|
+| api/proxy/provider/model/routing | Adds API smoke targets, provider verification commands |
+| admin/ui/browser/dashboard | Adds UI rendering KPI, Admin UI notes |
+| messaging/telegram/discord | Adds messaging smoke targets |
+| tests/smoke/kpi/coverage | Adds smoke collection to verification commands |
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Agent/Model roles | `core/ralph/roles.py` | ✅ | 1 |
+| Run table | `core/ralph/run_table.py` | ✅ | 1 |
+| Scoring | `core/ralph/scoring.py` | ✅ | 1 |
+| Verification plans | `core/ralph/verification.py` | ✅ | 1 |
+| Loop guard | `core/ralph/loop_guard.py` | ✅ | 1 |
+| **Model role routing** | **`core/ralph/model_router.py`** | **✅** | **2** |
+| **Task planner** | **`core/ralph/planner.py`** | **✅** | **2** |
+| Task library | `core/ralph/task_library.py` | — | 3 |
+| Context builder | `core/ralph/context_builder.py` | — | 3 |
+| Memory store | `core/ralph/memory.py` | — | 3 |
+| Critic/arbiter | `core/ralph/critic.py`, `arbiter.py` | — | 3 |
+| Agent profiles | `core/ralph/profiles/` | — | 4 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 4+ |

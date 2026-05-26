@@ -130,4 +130,62 @@ Phase 6            Full Ralph Loop with Claude Code via FCC proxy
 
 ---
 
-*Last updated: 2026-05-25 — Phase 1 baseline*
+*Last updated: 2026-05-26 — Phase 2 baseline*
+
+---
+
+## Phase 2 — Model Role Router & Task Planner
+
+### What Phase 2 Adds
+
+| Module | File | Status |
+|---|---|---|
+| ModelRoleRouter | `core/ralph/model_router.py` | ✅ Resolves `ModelRole` → FCC provider/model |
+| TaskPlanner | `core/ralph/planner.py` | ✅ Heuristic goal → spec → RalphTasks |
+
+### Architecture Integration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Ralph Runtime (core/ralph/)               │
+│                                                             │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │  Models   │  │ ModelRouter   │  │ TaskPlanner          │  │
+│  │  Roles    │  │ (Phase 2)    │  │ (Phase 2)            │  │
+│  └──────────┘  └──────┬───────┘  └──────────┬───────────┘  │
+│                       │                      │              │
+│                       │  Settings.resolve    │  Goal + spec │
+│                       │  _model/tier         │  → RalphTasks│
+│                       ▼                      ▼              │
+│              ┌──────────────────────────────────┐           │
+│              │     FCC Settings (config/)        │           │
+│              │     resolve_model / parse_*       │           │
+│              └──────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why Phase 2 Still Does Not Call Providers
+
+- `ModelRoleRouter` resolves model intent using `Settings` methods only — no provider imports, no network, no credentials
+- `TaskPlanner` is purely heuristic — keyword matching, string concatenation, dataclass construction
+- Both are safe to import and test without any FCC infrastructure running
+
+### Why Phase 2 Still Does Not Launch Claude Code
+
+Claude Code launch belongs in the execution layer (Phase 4+). Phase 2 builds the planning and routing foundation that tells future phases *which* model to use and *what* tasks to execute.
+
+### Updated Phase Roadmap
+
+```
+Phase 1 [DONE]      Core models, roles, run table, scoring, verification plans, loop guard
+                        ↓
+Phase 2 [DONE]      Model role router, task planner foundation
+                        ↓
+Phase 3             Verification runner, FCC smoke adapter, critic/arbiter skeleton, task library
+                        ↓
+Phase 4             Admin UI for Ralph Runtime, KPI dashboard
+                        ↓
+Phase 5             Full Ralph Loop with Claude Code via FCC proxy
+                        ↓
+Phase 6             Playwright KPI verifier, browser-based acceptance testing
+```
