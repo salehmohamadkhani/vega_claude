@@ -1,6 +1,6 @@
 # Phase 1 Report — FCC-Native Ralph Runtime Foundation
 
-> Date: 2026-05-25
+> Date: 2026-05-25 (initial) / 2026-05-26 (clean-restart audit)
 > Status: Complete — all checks passing
 
 ---
@@ -289,6 +289,84 @@ Phase 2's ModelRoleRouter should read `RALPH_PLANNER_MODEL`, `RALPH_DOER_MODEL`,
 | **Import side effects** | ✅ No module-level `__init__` code beyond imports. No side effects. |
 | **FCC regression risk** | ✅ Zero risk — no existing FCC files were modified. All new files in new directories. |
 | **Future Pydantic migration** | Low. If needed, dataclasses can be wrapped in Pydantic models for API serialization (Phase 4). |
+
+---
+
+## Clean-Restart Audit (2026-05-26)
+
+### Trigger
+
+Phase 1 was re-audited from scratch to confirm the implementation fully satisfies requirements, no Copilot-specific code leaked in, no FCC provider/config/API files were modified, and all tests pass in a clean run.
+
+### Audit Scope
+
+| Area | Files Reviewed |
+|---|---|
+| Core modules | `core/ralph/roles.py`, `models.py`, `run_table.py`, `scoring.py`, `verification.py`, `loop_guard.py`, `__init__.py`, `README.md` |
+| Docs | `docs/ralph/FCC_RALPH_FEATURE_MAP.md`, `FCC_RALPH_RUNTIME_ARCHITECTURE.md`, `PHASE_1_REPORT.md` |
+| Tests | `tests/core/ralph/test_models.py`, `test_run_table.py`, `test_scoring.py`, `test_verification.py`, `test_loop_guard.py` |
+
+### Requirements Verification
+
+| Requirement | Status |
+|---|---|
+| FCC-native Ralph Runtime (not a fork) | ✅ `core/ralph/` under FCC project |
+| No Copilot CLI dependency | ✅ Zero references to Copilot CLI |
+| No provider/API/model ownership | ✅ Roles are abstract enums; no provider names, API keys, or model IDs |
+| No network calls from Ralph Runtime | ✅ Deterministic, no HTTP/socket calls |
+| No subprocess execution | ✅ No `subprocess`, `os.system`, or `Popen` in Ralph Runtime |
+| No Claude Code launch in Phase 1 | ✅ No CLI invocation |
+| No Playwright dependency | ✅ Not imported or referenced in Phase 1 code |
+| Deterministic models | ✅ Dataclasses with no side effects |
+| Deterministic scoring | ✅ Pure arithmetic, no AI calls |
+| Deterministic verification plans | ✅ Models only, no execution |
+| Deterministic loop guard | ✅ Rule-based, no AI/model calls |
+| Proper tests | ✅ 92 pytest tests covering all modules |
+
+### Changes Made During Audit
+
+| File | Change |
+|---|---|
+| `docs/ralph/PHASE_1_REPORT.md` | Added this audit section. No code changes needed. |
+
+**No code changes were required.** The existing Phase 1 implementation was already complete, correct, and consistent with all requirements.
+
+### Tests/Checks Run (clean pass)
+
+```
+uv run pytest tests/core/ralph -q       → 92 passed in 2.73s
+uv run ruff check core/ralph tests/core/ralph → All checks passed
+uv run ty check core/ralph              → All checks passed
+uv run pytest smoke --collect-only -q   → 76 tests collected, no regressions
+```
+
+### Design Decisions Reaffirmed
+
+1. **Dataclasses over Pydantic** — matches FCC `core/` conventions, avoids unnecessary coupling
+2. **Abstract roles** — `AgentRole`/`ModelRole` contain no provider-specific data
+3. **In-memory run table** — no persistence for Phase 1
+4. **Loop guard is rule-based** — no AI calls even for edge-case detection
+5. **`core/ralph/` path** — correctly placed in FCC's core layer, not as a plugin or top-level package
+
+### Risk Assessment
+
+| Category | Assessment |
+|---|---|
+| Type/lint | ✅ Clean (ruff 0 errors, ty 0 errors) |
+| FCC regression | ✅ Zero risk — all files are additive in new directories |
+| Copilot leak | ✅ No Copilot-specific code detected |
+| Python 3.14 compat | ✅ Verified (builtin generics, `datetime.UTC`, `X \| None` syntax) |
+| Import side effects | ✅ None — only imports and re-exports |
+
+### Recommended Phase 2
+
+Unchanged from original recommendation:
+
+1. **ModelRoleRouter** (`core/ralph/model_router.py`) — reads FCC Settings model config, resolves `ModelRole` → concrete provider/model
+2. **TaskPlanner skeleton** (`core/ralph/planner.py`) — breaks `ProjectGoal` into `RalphTask` list
+3. Corresponding tests with mock model config
+
+Phase 2 should still avoid: Claude Code execution, real provider calls, Admin UI, and Playwright.
 
 ---
 
