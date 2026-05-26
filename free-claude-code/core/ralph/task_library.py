@@ -23,7 +23,7 @@ Markdown format::
     uv run pytest tests -q
     ```
 
-	Uses _frontmatter internally — no PyYAML dependency.
+        Uses _frontmatter internally — no PyYAML dependency.
 """
 
 from __future__ import annotations
@@ -152,7 +152,7 @@ class TaskLibrary:
         try:
             content = self._workspace.read_text(relative)
             return self._parse_markdown(content)
-        except (TaskParseError, FileNotFoundError, OSError):
+        except TaskParseError, FileNotFoundError, OSError:
             return None
 
     def delete_task(self, task_id: str) -> bool:

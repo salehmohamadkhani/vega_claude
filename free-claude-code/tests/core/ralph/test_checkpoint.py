@@ -96,8 +96,11 @@ class TestCheckpointStore:
         """Ensure from_run_state checkpoint round-trips via save/load."""
         store = self.make_store(tmp_path)
         score = ScoreCard(
-            implementation_score=85, test_score=90, kpi_score=75,
-            risk_score=15, confidence_score=80,
+            implementation_score=85,
+            test_score=90,
+            kpi_score=75,
+            risk_score=15,
+            confidence_score=80,
         )
         cp = Checkpoint.from_run_state(
             run_id="r-round",
