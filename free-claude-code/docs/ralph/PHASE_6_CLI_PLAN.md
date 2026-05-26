@@ -1,7 +1,7 @@
 # Phase 6 Plan — CLI Surface for Ralph Runtime
 
 > **Date**: 2026-05-26
-> **Status**: Planned (not yet implemented)
+> **Status**: Implemented — see `PHASE_6_REPORT.md` for results
 > **Phase 6 Goal**: Implement `fcc-ralph` CLI commands — plan, review, approve, run, status, report
 
 ---

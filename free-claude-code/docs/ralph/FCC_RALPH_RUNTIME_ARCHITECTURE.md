@@ -99,7 +99,7 @@ Phase 5.5 [DONE]    Execution safety audit — approval gate hardening, no auto-
 Phase 5.6 [DONE]    Execution lifecycle hardening — IterationRunnerConfig, max_iterations,
                     DEBUG/ESCALATE/RETRY handling, allowlist hardening, config validation
                         ↓
-Phase 6             CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
+Phase 6 [DONE]      CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
                         ↓
 Phase 7             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
@@ -410,7 +410,7 @@ Phase 5.6 [DONE]    Execution lifecycle — IterationRunnerConfig, allowlist, co
                         ↓
 Phase 5.7 [DONE]    CLI-first audit — roadmap correction, execution contract audit, CLI plan
                         ↓
-Phase 6             CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
+Phase 6 [DONE]      CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
                         ↓
 Phase 7             Admin UI for Ralph Runtime, KPI dashboard (post-CLI, optional)
                         ↓

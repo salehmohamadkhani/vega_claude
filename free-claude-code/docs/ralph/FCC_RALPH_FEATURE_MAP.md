@@ -87,7 +87,7 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 5.6 complete*
+*Last updated: 2026-05-26 — Phase 6 complete (fcc-ralph CLI surface)*
 
 
 ---
@@ -263,7 +263,7 @@ goal → questions → task list → human review/approval → execution
 | Claude Code adapter | `core/ralph/claude_execution.py` | ✅ | 5 |
 | Iteration runner | `core/ralph/iteration_runner.py` | ✅ | 5 |
 | Run executor | `core/ralph/run_executor.py` | ✅ | 5 |
-| CLI — fcc-ralph | `core/ralph/cli.py` | — | 6 |
+| CLI — fcc-ralph | `core/ralph/cli.py` | ✅ | 6 |
 | Admin UI | `core/ralph/admin/` | — | 7 |
 | Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
 | Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
@@ -308,7 +308,7 @@ goal → questions → task list → human review/approval → execution
 | Memory store | `core/ralph/memory.py` | ✅ | 4 |
 | Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
 | Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ | 4 |
-| CLI — fcc-ralph | `core/ralph/cli.py` | — | 6 |
+| CLI — fcc-ralph | `core/ralph/cli.py` | ✅ | 6 |
 | Admin UI | `core/ralph/admin/` | — | 7 |
 | Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
 | Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
