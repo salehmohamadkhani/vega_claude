@@ -90,11 +90,14 @@ Phase 4 [DONE]      Task library, context builder, memory store, agent profiles,
 Phase 4.5 [DONE]    Persistence layer audit — PyYAML removed, path traversal hardened,
                     RunLifecycle validation, 8 new tests, 299 passing
                         ↓
-Phase 5             Admin UI for Ralph Runtime, KPI dashboard
+Phase 5 [DONE]      First execution layer — execution models, prompt builder,
+                    Claude Code execution adapter (dry-run), iteration runner, run executor
                         ↓
-Phase 6             Full Ralph Loop with Claude Code via FCC proxy
+Phase 6             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
-Phase 7             Playwright KPI verifier, browser-based acceptance testing
+Phase 7             Full Ralph Loop with Claude Code via FCC proxy
+                        ↓
+Phase 8             Playwright KPI verifier, browser-based acceptance testing
 ```
 
 ## What Phase 1 Implements Now
@@ -117,17 +120,84 @@ Phase 7             Playwright KPI verifier, browser-based acceptance testing
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 5+
+## What Remains for Phase 6+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
-| Admin UI — Ralph tab in FCC admin | 5 | FCC `api/admin_routes.py` |
-| Full Ralph Loop — Async Claude Code loop | 6 | `core/ralph/loop_guard.py`, FCC `cli/manager.py` |
-| Playwright KPI Verifier | 7 | Playwright, FCC smoke tests |
+| Admin UI — Ralph tab in FCC admin | 6 | FCC `api/admin_routes.py` |
+| Full Ralph Loop — Async Claude Code loop | 7 | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
+| Playwright KPI Verifier | 8 | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-26 — Phase 4.5 complete*
+*Last updated: 2026-05-26 — Phase 5 complete*
+
+---
+
+## Phase 5 — First Execution Layer (Dry-Run)
+
+### What Phase 5 Adds
+
+| Module | File | Status |
+|---|---|---|
+| Execution Models | `core/ralph/execution.py` | ✅ `ExecutionMode`, `ExecutionStatus`, `ExecutionRequest`, `ExecutionResult`, `ExecutionConfig` |
+| Prompt Builder | `core/ralph/prompt_builder.py` | ✅ `TaskPromptContext`, `TaskPromptBuilder` — deterministic prompt construction |
+| Claude Code Execution | `core/ralph/claude_execution.py` | ✅ `ClaudeCodeCommandBuilder`, `ClaudeCodeExecutionAdapter` — dry-run by default |
+| Iteration Runner | `core/ralph/iteration_runner.py` | ✅ `IterationRunResult`, `IterationRunner` — single iteration pipeline |
+| Run Executor | `core/ralph/run_executor.py` | ✅ `RunExecutorResult`, `RunExecutor` — multi-task coordination |
+
+### Architecture Integration
+
+```
+                        Ralph Runtime (core/ralph/) Phase 5
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        RunExecutor                               │
+  │  run_next_task → run_until_blocked                               │
+  │                                                                   │
+  │  ┌──────────────────────────────────────────────────────────┐   │
+  │  │                  IterationRunner                          │   │
+  │  │  build_plan → build_prompt → execute → quality_gate      │   │
+  │  │  → checkpoint → IterationRunResult                        │   │
+  │  └──────────────────────────────────────────────────────────┘   │
+  │                                                                   │
+  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+  │  │ PromptBuilder │  │ClaudeExec    │  │ ExecutionConfig      │   │
+  │  │ TaskPromptCtx │  │ Adapter      │  │ dry_run=True         │   │
+  │  │ deterministic │  │ allowlist    │  │ allow_real=False     │   │
+  │  └──────────────┘  └──────────────┘  └──────────────────────┘   │
+  │                                                                   │
+  │  Uses: RunLifecycle, QualityGate, CheckpointStore, RunTable     │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+### Execution Safety Design
+
+- **Default: dry-run only** — `ExecutionConfig(dry_run=True, allow_real_execution=False)`
+- **Command allowlist** — only `fcc-claude` and `claude` are permitted executables
+- **No shell=True** — all subprocess calls use explicit argv lists
+- **Timeout enforcement** — configurable per-command timeout (default 300s)
+- **Output truncation** — bounded stdout/stderr capture (default 50KB)
+- **No provider calls** — the adapter runs Claude Code CLI, not provider APIs
+- **No API keys** — Ralph Runtime never owns credentials
+
+### Dry-Run Behaviour
+
+When in dry-run mode:
+1. `ExecutionAdapter.execute()` returns SKIPPED immediately — no subprocess
+2. `IterationRunner.run_iteration()` returns `passed=False` with clear reason
+3. `RunExecutor.run_next_task()` still creates checkpoints and context snapshots
+4. All pipeline code is exercised except the actual subprocess call
+
+### Safety Properties
+
+- `ExecutionConfig.allow_real_execution` must be explicitly set to `True`
+- `ExecutionRequest.mode` must be `REAL` (not `DRY_RUN`)
+- Command must be in `command_allowlist` (default: `["fcc-claude", "claude"]`)
+- `subprocess.run` uses `shell=False` — no shell injection
+- Output is truncated to `max_output_chars`
+- Timeout raises `TimeoutExpired` → `ExecutionStatus.TIMED_OUT`
+- `FileNotFoundError` caught and returned as structured failure
 
 ---
 

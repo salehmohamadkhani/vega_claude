@@ -87,7 +87,54 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 4.5 complete*
+*Last updated: 2026-05-26 — Phase 5 complete*
+
+
+---
+
+## Phase 5 — First Execution Layer
+
+### What Phase 5 Adds
+
+| Module | File | Purpose |
+|---|---|---|
+| Execution Models | `core/ralph/execution.py` | `ExecutionMode`, `ExecutionStatus`, `ExecutionRequest`, `ExecutionResult`, `ExecutionConfig` — the execution safety layer |
+| Prompt Builder | `core/ralph/prompt_builder.py` | `TaskPromptBuilder` — structured 12-section prompts from `RalphTask`, context, verification plan, and memory |
+| Claude Code Adapter | `core/ralph/claude_execution.py` | `ClaudeCodeCommandBuilder` (resolves fcc-claude > claude > echo fallback) + `ClaudeCodeExecutionAdapter` (dry-run by default, allowlist enforcement, no shell=True) |
+| Iteration Runner | `core/ralph/iteration_runner.py` | `IterationRunner.run_iteration()` — 8-step pipeline: prompt → execution → context → quality gate → checkpoint → table update |
+| Run Executor | `core/ralph/run_executor.py` | `RunExecutor.run_until_blocked()` — selects next PENDING/APPROVED task, runs one iteration, respects LoopGuard/Arbiter decisions |
+
+### Execution Safety Design
+
+| Property | Mechanism |
+|---|---|
+| Default dry-run | `ExecutionConfig(dry_run=True, allow_real_execution=False)` |
+| No provider calls | Ralph Runtime never calls providers or owns API keys |
+| No shell=True | All subprocess calls use explicit argv lists |
+| Command allowlist | Basename matching against `command_allowlist` |
+| Output truncation | `max_output_chars` bounds stdout/stderr capture |
+| Timeout enforcement | Per-command timeout via `subprocess.run(timeout=...)` |
+| Deterministic prompts | `TaskPromptBuilder.build_task_prompt()` — no randomness, no model calls |
+
+### Test Coverage
+
+| File | Tests | What It Covers |
+|---|---|---|
+| `tests/core/ralph/test_execution.py` | 10 | Defaults, serialization, skipped factory, config |
+| `tests/core/ralph/test_prompt_builder.py` | 11 | All 12 sections, anti-hallucination, determinism |
+| `tests/core/ralph/test_claude_execution.py` | 10 | Dry-run, allowlist, timeout, cwd, output truncation, no shell=True |
+| `tests/core/ralph/test_iteration_runner.py` | 8 | Pipeline ordering, dry-run safety, checkpoint, table update |
+| `tests/core/ralph/test_run_executor.py` | 7 | Task selection, approval, ordering, dry-run safety |
+
+### Updated Mapping Table
+
+| Ralph Concept | FCC-Native Target | Status | Phase |
+|---|---|---|---|
+| Execution models | `core/ralph/execution.py` | ✅ | 5 |
+| Prompt builder | `core/ralph/prompt_builder.py` | ✅ | 5 |
+| Claude Code execution | `core/ralph/claude_execution.py` | ✅ | 5 |
+| Iteration runner | `core/ralph/iteration_runner.py` | ✅ | 5 |
+| Run executor | `core/ralph/run_executor.py` | ✅ | 5 |
 
 ---
 
@@ -129,9 +176,14 @@ KPI metrics to track across phases:
 | Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
 | Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ (hardened) | 4 |
 | YAML frontmatter | `core/ralph/_frontmatter.py` | ✅ (NEW — replaced PyYAML) | 4.5 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 6 |
-| Admin UI | `core/ralph/admin/` | — | 5 |
-| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 7 |
+| Execution models | `core/ralph/execution.py` | ✅ | 5 |
+| Prompt builder | `core/ralph/prompt_builder.py` | ✅ | 5 |
+| Claude Code adapter | `core/ralph/claude_execution.py` | ✅ | 5 |
+| Iteration runner | `core/ralph/iteration_runner.py` | ✅ | 5 |
+| Run executor | `core/ralph/run_executor.py` | ✅ | 5 |
+| Full Ralph Loop | `core/ralph/loop.py` | — | 7 |
+| Admin UI | `core/ralph/admin/` | — | 6 |
+| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 8 |
 
 ---
 
@@ -174,8 +226,8 @@ KPI metrics to track across phases:
 | Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
 | Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ | 4 |
 | Full Ralph Loop | `core/ralph/loop.py` | — | 6 |
-| Admin UI | `core/ralph/admin/` | — | 5 |
-| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 7 |
+| Admin UI | `core/ralph/admin/` | — | 6 |
+| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 8 |
 
 ---
 

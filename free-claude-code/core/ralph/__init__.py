@@ -12,8 +12,22 @@ of FCC without duplicating those concerns.
 from .agent_profiles import AgentProfile, AgentProfileRegistry
 from .arbiter import ArbiterAction, ArbiterDecision, ArbiterEngine
 from .checkpoint import Checkpoint, CheckpointStore
+from .claude_execution import (
+    ClaudeCodeCommandBuilder,
+    ClaudeCodeExecutionAdapter,
+    CommandBuilderError,
+    ExecutionAdapterError,
+)
 from .context_builder import ContextBuilder, GitContext, RalphContextSnapshot
 from .critic import CriticEngine, CriticReview
+from .execution import (
+    ExecutionConfig,
+    ExecutionMode,
+    ExecutionRequest,
+    ExecutionResult,
+    ExecutionStatus,
+)
+from .iteration_runner import IterationRunner, IterationRunResult
 from .loop_guard import LoopAction, LoopGuard, LoopGuardDecision
 from .memory import MemoryRecord, MemoryStore
 from .model_router import ModelRoleResolution, ModelRoleRouter, ModelRoleRoutingPolicy
@@ -32,6 +46,7 @@ from .models import (
     task_status_from_str,
 )
 from .planner import ClarifyingQuestion, ProjectSpec, TaskPlan, TaskPlanner
+from .prompt_builder import TaskPromptBuilder, TaskPromptContext
 from .quality_gate import QualityGate, QualityGateResult
 from .roles import (
     AGENT_ROLE_LABELS,
@@ -39,6 +54,7 @@ from .roles import (
     AgentRole,
     ModelRole,
 )
+from .run_executor import RunExecutor, RunExecutorResult
 from .run_lifecycle import RunLifecycle, RunLifecycleResult
 from .run_table import RunTable, RunTableEntry
 from .scoring import HallucinationRisk, ScoreCard
@@ -74,14 +90,25 @@ __all__ = [
     "Checkpoint",
     "CheckpointStore",
     "ClarifyingQuestion",
+    "ClaudeCodeCommandBuilder",
+    "ClaudeCodeExecutionAdapter",
+    "CommandBuilderError",
     "CommandExecutionResult",
     "ContextBuilder",
     "CriticDecision",
     "CriticEngine",
     "CriticReview",
+    "ExecutionAdapterError",
+    "ExecutionConfig",
+    "ExecutionMode",
+    "ExecutionRequest",
+    "ExecutionResult",
+    "ExecutionStatus",
     "FCCSmokeAdapter",
     "GitContext",
     "HallucinationRisk",
+    "IterationRunResult",
+    "IterationRunner",
     "IterationStatus",
     "LoopAction",
     "LoopGuard",
@@ -103,6 +130,8 @@ __all__ = [
     "RalphTask",
     "RalphWorkspace",
     "RalphWorkspacePaths",
+    "RunExecutor",
+    "RunExecutorResult",
     "RunLifecycle",
     "RunLifecycleResult",
     "RunStatus",
@@ -117,6 +146,8 @@ __all__ = [
     "TaskLibraryError",
     "TaskPlan",
     "TaskPlanner",
+    "TaskPromptBuilder",
+    "TaskPromptContext",
     "TaskStatus",
     "VerificationPlan",
     "VerificationResult",
