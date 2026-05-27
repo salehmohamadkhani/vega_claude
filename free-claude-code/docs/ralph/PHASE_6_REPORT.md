@@ -114,7 +114,7 @@ core/ralph/cli.py
     ├── plan    → TaskPlanner.plan() → RunLifecycle.prepare_run() → workspace
     ├── review  → TaskLibrary.list_tasks() / find_task()
     ├── approve → TaskLibrary.save_task()  (status → APPROVED)
-    ├── run     → IterationRunner.run_iteration()  (dry-run by default)
+    ├── run     → RunExecutor.run_until_blocked()  (enforces Policy A)
     ├── status  → TaskLibrary + CheckpointStore + AgentProfileRegistry
     └── report  → TaskLibrary + CheckpointStore → markdown file
 ```
@@ -125,7 +125,7 @@ The CLI does **not** reimplement runtime logic. Each handler is a thin wrapper
 that calls existing `core.ralph` services. The CLI module:
 - Has zero imports from `providers/`, `api/`, `messaging/`, or Admin UI
 - Uses only stdlib `argparse` (no `click`/`typer` dependency)
-- All execution safety is delegated to `IterationRunner` / `ExecutionConfig`
+- All execution safety is delegated to `RunExecutor` / `IterationRunner`
 
 ### Key Design Decisions
 
@@ -134,10 +134,12 @@ that calls existing `core.ralph` services. The CLI module:
    dispatch in `try/except SystemExit` and returns the exit code. This keeps
    the `_error()` helper simple while making the function testable.
 
-2. **`run` uses `IterationRunner` directly** — `RunLifecycle.RunTable` is
-   in-memory and doesn't survive CLI restarts. The `run` command reconstructs
-   run state from persisted metadata and calls `IterationRunner` for each
-   approved task, bypassing `RunExecutor`'s dependency on a live `RunTable`.
+2. **`run` delegates to `RunExecutor`** — The `run` command no longer uses
+   `IterationRunner` directly. Instead it calls
+   `RunExecutor.run_until_blocked()` which enforces Policy A (strict ordered
+   approval), arbiter action handling, and execution safety. The CLI populates
+   the executor's in-memory run table via `RunExecutor.load_run_tasks()` before
+   delegating execution.
 
 3. **`--json` before subcommand** — argparse global flags must appear before
    the subcommand name. All test invocations use
@@ -163,13 +165,14 @@ that calls existing `core.ralph` services. The CLI module:
 | Phase 5.6 additions | 22 |
 | **Total before Phase 6** | **~391** |
 | Phase 6 additions | 32 |
-| **Total** | **~423** |
+| Phase 6.1 additions | 12 |
+| **Total** | **~435** |
 
 ### Known Remaining Issues
 
 | Issue | Impact | Addressed In |
 |---|---|---|
-| `RunLifecycle.RunTable` is in-memory | `run` command bypasses `RunExecutor` for execution | Phase 8 (persistent RunTable) |
+| `RunLifecycle.RunTable` is in-memory | `RunExecutor.load_run_tasks()` populates it manually on CLI re-entry | Phase 8 (persistent RunTable) |
 | `--real` execution prints warning but still dry-runs | No actual Claude Code launch from CLI | Phase 8 (full Ralph Loop) |
 | Critic acceptance criteria are keyword-heuristic | May miss semantic mismatches | Phase 4+ (LLM-based critic) |
 | No persistent memory for quality gate state | Quality gate results are in-memory only | Phase 4 |
@@ -184,8 +187,11 @@ that calls existing `core.ralph` services. The CLI module:
 
 - CLI is additive — no existing modules were modified beyond adding the
   `fcc-ralph` entry point in `pyproject.toml`
-- All Phase 6 code lives in `core/ralph/cli.py` and `tests/core/ralph/test_cli.py`
+- All Phase 6/6.1 code lives in `core/ralph/cli.py` and
+  `tests/core/ralph/test_cli.py`
 - Zero regression risk for existing FCC services
+- Phase 6.1 hardened the CLI to enforce strict ordered approval (Policy A)
+  by delegating execution to `RunExecutor`
 
 ### Recommended Phase 7 Scope
 
@@ -206,4 +212,5 @@ Phase 7 should focus on the **Admin UI for Ralph Runtime**:
 
 ---
 
-*End of Phase 6 report. Proceed to Phase 7 when ready.*
+*End of Phase 6 report. See `PHASE_6_1_CLI_HARDENING_REPORT.md` for the
+Phase 6.1 hardening details. Proceed to Phase 7 when ready.*

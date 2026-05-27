@@ -15,16 +15,14 @@ import argparse
 import json
 import sys
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 from .agent_profiles import AgentProfileRegistry
 from .checkpoint import CheckpointStore
-from .iteration_runner import IterationRunner
-from .memory import MemoryStore
-from .models import ProjectGoal, RalphRun, RalphTask, RunStatus, TaskStatus
+from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
 from .planner import TaskPlanner
+from .run_executor import RunExecutor, RunExecutorConfig
 from .run_lifecycle import RunLifecycle
 from .task_library import TaskLibrary
 from .workspace import RalphWorkspace
@@ -57,6 +55,22 @@ def _error(msg: str, exit_code: int = EXIT_ERROR) -> None:
 
 def _warn(msg: str) -> None:
     print(f"Warning: {msg}", file=sys.stderr)
+
+
+def _print_task_result_line(
+    r: Any,
+    *,
+    label: str | None = None,
+) -> None:
+    """Print a single iteration result line."""
+    tid = label or r.task_id
+    passed_str = "PASSED" if r.passed else "NOT PASSED"
+    status_ = r.execution_result.status.value
+    action = r.quality_gate_result.arbiter_decision.action.value
+    print(f"  {tid}: {passed_str}")
+    print(f"    Mode: dry-run  Status: {status_}  Action: {action}")
+    if r.failure_reason:
+        print(f"    Reason: {r.failure_reason}")
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +301,14 @@ def _cmd_approve(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    """Run approved tasks through the Ralph runtime (dry-run by default)."""
+    """Run approved tasks through the Ralph runtime (dry-run by default).
+
+    Delegates execution and approval policy to ``RunExecutor`` so that
+    strict ordered execution (Policy A) is enforced. The CLI remains a
+    thin wrapper: it validates flags, loads workspace state, creates the
+    executor, and prints results — it does not reimplement task selection
+    or execution logic.
+    """
     ws = _open_workspace(args.workspace)
     if not ws.exists():
         _error("No Ralph workspace found. Run 'fcc-ralph plan' first.", EXIT_ERROR)
@@ -297,7 +318,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if not all_tasks:
         _error("No tasks in workspace.", EXIT_ERROR)
 
-    # --real safety gate
+    # --real safety gate (CLI-level validation)
     if args.real and not args.allow_real_execution:
         _error(
             "--real requires --allow-real-execution. "
@@ -307,6 +328,18 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     approved = [t for t in all_tasks if t.status == TaskStatus.APPROVED]
     pending = [t for t in all_tasks if t.status == TaskStatus.PENDING]
+
+    # Validate --task early (before approval/pending checks so that
+    # a nonexistent task ID is reported correctly).
+    if args.task:
+        target = next((t for t in all_tasks if t.id == args.task), None)
+        if target is None:
+            _error(f"Task {args.task!r} not found.", EXIT_TASK_NOT_FOUND)
+        if target.status != TaskStatus.APPROVED:
+            _error(
+                f"Task {args.task!r} is {target.status.value}, not APPROVED.",
+                EXIT_APPROVAL_REQUIRED,
+            )
 
     if not approved:
         if pending:
@@ -323,76 +356,200 @@ def _cmd_run(args: argparse.Namespace) -> int:
             "Using dry-run."
         )
 
-    tasks_to_run = approved
-    if args.task:
-        tasks_to_run = [t for t in tasks_to_run if t.id == args.task]
-        if not tasks_to_run:
-            _error(
-                f"Task {args.task!r} is not approved or not found.",
-                EXIT_TASK_NOT_FOUND,
-            )
-
-    max_tasks = args.max_tasks if args.max_tasks else len(tasks_to_run)
-    tasks_to_run = tasks_to_run[:max_tasks]
-
     # Reconstruct run state from persisted metadata
     run_meta = _load_latest_run_meta(ws)
-    if run_meta:
+    run_id = run_meta.get("id", "") if run_meta else ""
+    goal_id = run_meta.get("goal_id", "") if run_meta else ""
+
+    # Build executor and populate its in-memory run table.
+    # stop_on_debug=False: in dry-run the quality gate always returns
+    # DEBUG (no verification results), so stopping on debug would
+    # prevent multi-task dry-runs.
+    executor = RunExecutor(
+        workspace=ws,
+        config=RunExecutorConfig(stop_on_debug=False),
+    )
+
+    if args.task:
+        # --task mode with strict order enforcement (Policy A)
+        target = next((t for t in all_tasks if t.id == args.task), None)
+        if target is None:
+            _error(f"Task {args.task!r} not found.", EXIT_TASK_NOT_FOUND)
+
+        # Strict order: no earlier PENDING tasks may exist
+        for t in all_tasks:
+            if t.id == args.task:
+                break
+            if t.status == TaskStatus.PENDING:
+                _error(
+                    f"Cannot run {args.task}: task {t.id} is PENDING "
+                    f"and blocks strict ordered execution.",
+                    EXIT_APPROVAL_REQUIRED,
+                )
+
+        if target.status != TaskStatus.APPROVED:
+            _error(
+                f"Task {args.task} is not approved (status: "
+                f"{target.status.value}).",
+                EXIT_APPROVAL_REQUIRED,
+            )
+
         run = RalphRun(
-            id=run_meta.get("id", ""),
-            goal_id=run_meta.get("goal_id", ""),
+            id=run_id,
+            goal_id=goal_id,
+            status=RunStatus.RUNNING,
+            tasks=[target],
+        )
+        executor.load_run_tasks([target], run_id)
+        max_tasks = 1
+    else:
+        run = RalphRun(
+            id=run_id,
+            goal_id=goal_id,
             status=RunStatus.RUNNING,
             tasks=all_tasks,
         )
-    else:
-        run = RalphRun(status=RunStatus.RUNNING, tasks=all_tasks)
+        executor.load_run_tasks(all_tasks, run_id)
+        max_tasks = args.max_tasks if args.max_tasks > 0 else None
 
-    iteration_runner = IterationRunner(workspace=ws)
+    # Delegate execution to RunExecutor (enforces Policy A internally)
+    result = executor.run_until_blocked(run=run, max_tasks=max_tasks)
 
-    task_results = []
-    for task in tasks_to_run:
-        task.status = TaskStatus.RUNNING
+    # Persist task status changes (RunExecutor modifies tasks in-place)
+    for task in all_tasks:
         task_lib.save_task(task)
 
-        result = iteration_runner.run_iteration(run=run, task=task)
-        task_results.append(result)
+    # Build task results for display
+    task_results_data = [
+        {
+            "task_id": r.task_id,
+            "iteration": r.iteration,
+            "execution_mode": r.execution_result.mode.value,
+            "execution_status": r.execution_result.status.value,
+            "quality_gate_action": r.quality_gate_result.arbiter_decision.action.value,
+            "passed": r.passed,
+            "next_action": r.next_action,
+        }
+        for r in result.task_results
+    ]
 
-        if result.passed:
-            task.status = TaskStatus.PASSED
+    # ---- Handle result ----
+
+    if result.approval_required:
+        if args.json:
+            _print_json(
+                {
+                    "status": "approval_required",
+                    "completed": False,
+                    "blocked_task_id": result.blocked_task_id,
+                    "pending_task_ids": result.pending_task_ids,
+                    "reason": result.stopped_reason,
+                    "tasks_run": len(result.task_results),
+                    "task_results": task_results_data,
+                }
+            )
         else:
-            task.status = TaskStatus.NEEDS_FIX
-        task_lib.save_task(task)
+            print("Run Results:")
+            print(f"  Tasks run: {len(result.task_results)}")
+            print(
+                f"  Status: approval required — task "
+                f"{result.blocked_task_id} is PENDING"
+            )
+            print()
+            for r in result.task_results:
+                _print_task_result_line(r)
+            print()
+            print(
+                f"{len(result.pending_task_ids)} task(s) pending approval:"
+            )
+            for tid in result.pending_task_ids:
+                print(f"  {tid}")
+            print()
+            print("Approve with: fcc-ralph approve <task-id>")
+        return EXIT_APPROVAL_REQUIRED
 
+    if result.failed:
+        if args.json:
+            _print_json(
+                {
+                    "status": "failed",
+                    "completed": False,
+                    "stopped_reason": result.stopped_reason,
+                    "tasks_run": len(result.task_results),
+                    "task_results": task_results_data,
+                }
+            )
+        else:
+            print("Run Results:")
+            print(f"  Tasks run: {len(result.task_results)}")
+            print(f"  Status: FAILED — {result.stopped_reason}")
+            print()
+            for r in result.task_results:
+                _print_task_result_line(r)
+        return EXIT_ERROR
+
+    if result.retry_required:
+        if args.json:
+            _print_json(
+                {
+                    "status": "retry_required",
+                    "completed": False,
+                    "stopped_reason": result.stopped_reason,
+                    "tasks_run": len(result.task_results),
+                    "task_results": task_results_data,
+                }
+            )
+        else:
+            print("Run Results:")
+            print(f"  Tasks run: {len(result.task_results)}")
+            print(f"  Status: retry required — {result.stopped_reason}")
+            print()
+            for r in result.task_results:
+                _print_task_result_line(r)
+        return EXIT_ERROR
+
+    if result.debug_required:
+        if args.json:
+            _print_json(
+                {
+                    "status": "debug_required",
+                    "completed": False,
+                    "stopped_reason": result.stopped_reason,
+                    "tasks_run": len(result.task_results),
+                    "task_results": task_results_data,
+                }
+            )
+        else:
+            print("Run Results:")
+            print(f"  Tasks run: {len(result.task_results)}")
+            print(f"  Status: debug required — {result.stopped_reason}")
+            print()
+            for r in result.task_results:
+                _print_task_result_line(r)
+        return EXIT_ERROR
+
+    # Success (completed or partial)
+    status = "completed" if result.completed else "partial"
     if args.json:
-        _print_json(
-            {
-                "tasks_run": len(task_results),
-                "task_results": [
-                    {
-                        "task_id": r.task_id,
-                        "iteration": r.iteration,
-                        "execution_mode": r.execution_result.mode.value,
-                        "execution_status": r.execution_result.status.value,
-                        "quality_gate_action": r.quality_gate_result.arbiter_decision.action.value,
-                        "passed": r.passed,
-                        "next_action": r.next_action,
-                    }
-                    for r in task_results
-                ],
-            }
-        )
+        output: dict[str, Any] = {
+            "status": status,
+            "completed": result.completed,
+            "tasks_run": len(result.task_results),
+            "task_results": task_results_data,
+        }
+        if not result.completed:
+            output["stopped_reason"] = result.stopped_reason
+        _print_json(output)
     else:
         print("Run Results:")
-        print(f"  Tasks run: {len(task_results)}")
+        print(f"  Tasks run: {len(result.task_results)}")
+        if result.completed:
+            print("  Status: completed (all tasks passed)")
+        else:
+            print(f"  Status: {result.stopped_reason}")
         print()
-        for r in task_results:
-            passed_str = "PASSED" if r.passed else "NOT PASSED"
-            status_ = r.execution_result.status.value
-            action = r.quality_gate_result.arbiter_decision.action.value
-            print(f"  {r.task_id}: {passed_str}")
-            print(f"    Mode: dry-run  Status: {status_}  Action: {action}")
-            if r.failure_reason:
-                print(f"    Reason: {r.failure_reason}")
+        for r in result.task_results:
+            _print_task_result_line(r)
 
     return EXIT_SUCCESS
 
@@ -548,7 +705,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
                     }
                 )
 
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     # Build markdown report
     lines = [

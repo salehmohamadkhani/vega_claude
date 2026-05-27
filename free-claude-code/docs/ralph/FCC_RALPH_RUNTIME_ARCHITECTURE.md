@@ -101,6 +101,9 @@ Phase 5.6 [DONE]    Execution lifecycle hardening — IterationRunnerConfig, max
                         ↓
 Phase 6 [DONE]      CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
                         ↓
+Phase 6.1 [DONE]    CLI integration hardening — ``run`` delegates to ``RunExecutor``,
+                    Policy A enforced, JSON output validated, 12 new tests
+                        ↓
 Phase 7             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
 Phase 8             Full Ralph Loop with Claude Code via FCC proxy
@@ -128,18 +131,19 @@ Phase 9             Playwright KPI verifier, browser-based acceptance testing
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 6+
+## What Remains for Phase 7+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
 | CLI — fcc-ralph plan/review/approve/run/status/report | 6 | `core/ralph/cli.py`, `pyproject.toml` entry point |
+| CLI hardening — RunExecutor delegation, Policy A | 6.1 | `core/ralph/cli.py`, `run_lifecycle.py`, `run_executor.py` |
 | Admin UI — Ralph tab in FCC admin | 7 | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | 8 | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
 | Playwright KPI Verifier | 9 | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-26 — Phase 5.6 complete*
+*Last updated: 2026-05-27 — Phase 6.1 complete*
 
 ---
 
@@ -411,6 +415,9 @@ Phase 5.6 [DONE]    Execution lifecycle — IterationRunnerConfig, allowlist, co
 Phase 5.7 [DONE]    CLI-first audit — roadmap correction, execution contract audit, CLI plan
                         ↓
 Phase 6 [DONE]      CLI surface for Ralph Runtime — fcc-ralph plan/review/approve/run/status/report
+                        ↓
+Phase 6.1 [DONE]    CLI integration hardening — ``run`` delegates to ``RunExecutor``,
+                    Policy A enforced, JSON output validated, 12 new tests
                         ↓
 Phase 7             Admin UI for Ralph Runtime, KPI dashboard (post-CLI, optional)
                         ↓

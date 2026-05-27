@@ -80,6 +80,31 @@ class RunLifecycle:
     # Public API
     # ------------------------------------------------------------------
 
+    def load_run_tasks(
+        self, tasks: list[RalphTask], run_id: str = ""
+    ) -> None:
+        """Populate the in-memory run table from a list of tasks.
+
+        ``RunTable`` is in-memory and does not survive process restarts.
+        This method is needed when recreating ``RunLifecycle`` from
+        persisted state (e.g., after a CLI process restart) so that
+        ``mark_task_running`` / ``mark_task_result`` do not raise
+        ``RunLifecycleError`` for missing entries.
+        """
+        for task in tasks:
+            entry = self._run_table.get_entry(task.id)
+            if entry is None:
+                entry = RunTableEntry(
+                    run_id=run_id,
+                    task_id=task.id,
+                    task_title=task.title or "",
+                    agent_role=task.agent_role,
+                    status=task.status,
+                )
+                self._run_table.add_entry(entry)
+            else:
+                entry.status = task.status
+
     def create_run(
         self,
         goal: ProjectGoal,

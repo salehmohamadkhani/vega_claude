@@ -87,7 +87,7 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-26 — Phase 6 complete (fcc-ralph CLI surface)*
+*Last updated: 2026-05-27 — Phase 6.1 complete (CLI hardening)*
 
 
 ---
@@ -264,6 +264,7 @@ goal → questions → task list → human review/approval → execution
 | Iteration runner | `core/ralph/iteration_runner.py` | ✅ | 5 |
 | Run executor | `core/ralph/run_executor.py` | ✅ | 5 |
 | CLI — fcc-ralph | `core/ralph/cli.py` | ✅ | 6 |
+| CLI hardening (RunExecutor delegation) | `core/ralph/cli.py` | ✅ | 6.1 |
 | Admin UI | `core/ralph/admin/` | — | 7 |
 | Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
 | Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
@@ -309,6 +310,7 @@ goal → questions → task list → human review/approval → execution
 | Agent profiles | `core/ralph/agent_profiles.py` | ✅ | 4 |
 | Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ | 4 |
 | CLI — fcc-ralph | `core/ralph/cli.py` | ✅ | 6 |
+| CLI hardening (RunExecutor delegation) | `core/ralph/cli.py` | ✅ | 6.1 |
 | Admin UI | `core/ralph/admin/` | — | 7 |
 | Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
 | Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |

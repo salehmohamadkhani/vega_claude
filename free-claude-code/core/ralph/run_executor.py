@@ -107,6 +107,17 @@ class RunExecutor:
     # Public API
     # ------------------------------------------------------------------
 
+    def load_run_tasks(
+        self, tasks: list[RalphTask], run_id: str = ""
+    ) -> None:
+        """Populate the in-memory run table from persisted tasks.
+
+        ``RunTable`` is in-memory and does not survive process restarts.
+        Call this before ``run_until_blocked()`` when tasks have been
+        loaded from persistent storage (e.g., CLI re-entry).
+        """
+        self._run_lifecycle.load_run_tasks(tasks, run_id)
+
     def run_next_task(
         self,
         run: RalphRun,

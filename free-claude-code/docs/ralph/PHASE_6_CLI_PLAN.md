@@ -3,6 +3,11 @@
 > **Date**: 2026-05-26
 > **Status**: Implemented — see `PHASE_6_REPORT.md` for results
 > **Phase 6 Goal**: Implement `fcc-ralph` CLI commands — plan, review, approve, run, status, report
+>
+> **Phase 6.1 Update (2026-05-27)**: `fcc-ralph run` now delegates to
+> `RunExecutor.run_until_blocked()` instead of using `IterationRunner`
+> directly. Strict ordered approval (Policy A) is enforced. See
+> `PHASE_6_1_CLI_HARDENING_REPORT.md` for details.
 
 ---
 
@@ -74,9 +79,9 @@ No new `cli/` files — the Ralph CLI lives inside `core/ralph/` because:
 | Aspect | Detail |
 |---|---|
 | **Purpose** | Execute tasks (dry-run by default) |
-| **Implies** | `RunExecutor.run_until_blocked()` |
+| **Implies** | `RunExecutor.run_until_blocked()` — enforces Policy A strict ordered approval |
 | **Safety** | **Default: dry-run** — `ExecutionMode.DRY_RUN`. `--real` flag required for actual execution |
-| **Output** | Iteration results: passed/failed, score, arbiter action, checkpoint |
+| **Output** | Iteration results: passed/failed, status, blocked task, arbiter action |
 
 ### `fcc-ralph status [run-id]`
 
