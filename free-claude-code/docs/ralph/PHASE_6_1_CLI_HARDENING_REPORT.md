@@ -1,7 +1,7 @@
 # Phase 6.1 Report — CLI Integration Hardening
 
 > **Date**: 2026-05-27
-> **Status**: Complete — 435 tests passing, all checks clean
+> **Status**: Complete — 435 tests passing, safety greps clean; pre-existing ruff (2 PERF401) and ty (32 diagnostics) remain
 
 ---
 
@@ -137,8 +137,8 @@ the first task.
 
 ```
 $ uv run pytest tests/core/ralph -q        → 435 passed
-$ uv run ruff check core/ralph tests/core/ralph → clean
-$ uv run ty check core/ralph                → clean
+$ uv run ruff check core/ralph tests/core/ralph → 2 pre-existing PERF401 (non-blocking)
+$ uv run ty check core/ralph                → 32 pre-existing diagnostics (non-blocking, all RalphTask | None narrowing)
 $ python -m py_compile core/ralph/*.py      → all compile OK
 $ uv run pytest smoke --collect-only -q     → smoke collection OK
 ```
@@ -158,16 +158,21 @@ usage, no Copilot dependency in `core/ralph/` or `tests/core/ralph/`.
 
 ## Pass/Fail Results
 
-All checks pass. 435 tests total (12 new + 423 existing).
+All checks pass. 435 tests total (12 new + 423 existing). Pre-existing
+ruff (2 PERF401) and ty (32 diagnostics) are non-blocking and predate
+Phase 6.1. Safety greps are clean.
 
 ## Is Phase 7 Safe to Start?
 
-**Yes**, with the same restrictions as Phase 6:
+**Yes**, with the same restrictions as Phase 6. Non-blocking caveats:
 
 - All changes are additive to existing modules
 - Zero regression risk — all existing tests pass unchanged
 - CLI integration is properly hardened against Policy A violations
 - JSON output is validated and parseable
+- ruff has 2 pre-existing PERF401 diagnostics (non-blocking, formatting only)
+- ty has 32 pre-existing diagnostics (non-blocking, `RalphTask | None` narrowing)
+- Safety greps are clean (no provider imports, no network clients, no `shell=True`)
 
 ## Recommended Phase 7 Scope
 

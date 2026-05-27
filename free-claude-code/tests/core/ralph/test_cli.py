@@ -430,9 +430,7 @@ def test_strict_order_blocks_later_approved_task(tmp_path: Path) -> None:
     assert reloaded1.status == TaskStatus.NEEDS_FIX
 
 
-def test_strict_order_json_shows_blocked_task(
-    tmp_path: Path, capsys
-) -> None:
+def test_strict_order_json_shows_blocked_task(tmp_path: Path, capsys) -> None:
     """run --json includes blocked_task_id and pending_task_ids."""
     _run_cli([f"--workspace={tmp_path}", "plan", "JSON blocked"])
     task_lib = TaskLibrary(workspace=_ws(tmp_path))
@@ -462,18 +460,14 @@ def test_specific_task_respects_strict_order(tmp_path: Path) -> None:
     _run_cli([f"--workspace={tmp_path}", "approve", tasks[1].id])
 
     # --task=later must be blocked by strict order
-    rc = _run_cli(
-        [f"--workspace={tmp_path}", "run", f"--task={tasks[1].id}"]
-    )
+    rc = _run_cli([f"--workspace={tmp_path}", "run", f"--task={tasks[1].id}"])
     assert rc == EXIT_APPROVAL_REQUIRED
 
     # Approve the blocking task
     _run_cli([f"--workspace={tmp_path}", "approve", tasks[0].id])
 
     # Now --task=later should run
-    rc = _run_cli(
-        [f"--workspace={tmp_path}", "run", f"--task={tasks[1].id}"]
-    )
+    rc = _run_cli([f"--workspace={tmp_path}", "run", f"--task={tasks[1].id}"])
     assert rc == 0
     reloaded = task_lib.find_task(tasks[1].id)
     assert reloaded is not None
@@ -488,17 +482,13 @@ def test_specific_task_respects_strict_order(tmp_path: Path) -> None:
 def test_specific_task_unknown_returns_error(tmp_path: Path) -> None:
     """run --task with nonexistent ID returns error."""
     _run_cli([f"--workspace={tmp_path}", "plan", "Unknown specific task"])
-    rc = _run_cli(
-        [f"--workspace={tmp_path}", "run", "--task=TASK-999-NOPE"]
-    )
+    rc = _run_cli([f"--workspace={tmp_path}", "run", "--task=TASK-999-NOPE"])
     assert rc == EXIT_TASK_NOT_FOUND
 
 
 def test_approve_then_run_runs_multiple_tasks(tmp_path: Path) -> None:
     """Approve all, run executes all approved tasks in order."""
-    _run_cli(
-        [f"--workspace={tmp_path}", "plan", "Multi-task run test"]
-    )
+    _run_cli([f"--workspace={tmp_path}", "plan", "Multi-task run test"])
     task_lib = TaskLibrary(workspace=_ws(tmp_path))
     tasks = task_lib.list_tasks()
 
@@ -524,9 +514,7 @@ def test_approve_then_run_runs_multiple_tasks(tmp_path: Path) -> None:
 # ======================================================================
 
 
-def test_plan_json_output_is_parseable(
-    tmp_path: Path, capsys
-) -> None:
+def test_plan_json_output_is_parseable(tmp_path: Path, capsys) -> None:
     """plan --json outputs parseable JSON with expected fields."""
     _run_cli(
         [
@@ -546,9 +534,7 @@ def test_plan_json_output_is_parseable(
     assert len(data["tasks"]) == data["task_count"]
 
 
-def test_review_json_output_is_parseable(
-    tmp_path: Path, capsys
-) -> None:
+def test_review_json_output_is_parseable(tmp_path: Path, capsys) -> None:
     """review --json outputs parseable JSON list."""
     _run_cli([f"--workspace={tmp_path}", "plan", "JSON review test"])
     capsys.readouterr()  # discard plan output
@@ -562,9 +548,7 @@ def test_review_json_output_is_parseable(
         assert "status" in data[0]
 
 
-def test_status_json_output_is_parseable(
-    tmp_path: Path, capsys
-) -> None:
+def test_status_json_output_is_parseable(tmp_path: Path, capsys) -> None:
     """status --json outputs parseable JSON object."""
     _run_cli([f"--workspace={tmp_path}", "plan", "JSON status test"])
     capsys.readouterr()  # discard plan output
@@ -577,15 +561,11 @@ def test_status_json_output_is_parseable(
     assert "tasks_by_status" in data
 
 
-def test_run_json_output_is_parseable(
-    tmp_path: Path, capsys
-) -> None:
+def test_run_json_output_is_parseable(tmp_path: Path, capsys) -> None:
     """run --json outputs parseable JSON after approval."""
     _run_cli([f"--workspace={tmp_path}", "plan", "JSON run test"])
     task_lib = TaskLibrary(workspace=_ws(tmp_path))
-    _run_cli(
-        [f"--workspace={tmp_path}", "approve", task_lib.list_tasks()[0].id]
-    )
+    _run_cli([f"--workspace={tmp_path}", "approve", task_lib.list_tasks()[0].id])
     capsys.readouterr()  # discard setup output
 
     _run_cli([f"--workspace={tmp_path}", "--json", "run"])
@@ -597,16 +577,12 @@ def test_run_json_output_is_parseable(
     assert "task_results" in data
 
 
-def test_json_error_does_not_mix_into_stdout(
-    tmp_path: Path, capsys
-) -> None:
+def test_json_error_does_not_mix_into_stdout(tmp_path: Path, capsys) -> None:
     """JSON mode writes errors to stderr, stdout stays clean."""
     rc = _run_cli([f"--workspace={tmp_path}", "--json", "run"])
     captured = capsys.readouterr()
     # No workspace → error before any JSON output
-    assert captured.out == "", (
-        f"Expected empty stdout, got: {captured.out!r}"
-    )
+    assert captured.out == "", f"Expected empty stdout, got: {captured.out!r}"
     assert "Error" in captured.err
     assert rc != 0
 

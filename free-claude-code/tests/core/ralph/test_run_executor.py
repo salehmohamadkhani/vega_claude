@@ -262,7 +262,9 @@ class TestRunExecutor:
         result = executor.run_until_blocked(run)
         assert result.escalation_required is True
         assert result.failed is True
-        assert "ESCALATE" in result.stopped_reason or "escalate" in result.stopped_reason
+        assert (
+            "ESCALATE" in result.stopped_reason or "escalate" in result.stopped_reason
+        )
 
     def test_stop_on_escalate_false_continues(self) -> None:
         """When arbiter returns ESCALATE and stop_on_escalate=False, continues."""
@@ -390,9 +392,7 @@ class TestRunExecutor:
 # --------------------------------------------------------------------------
 
 
-def _make_dry_fail(
-    task_id: str, arbiter_action: ArbiterAction
-) -> IterationRunResult:
+def _make_dry_fail(task_id: str, arbiter_action: ArbiterAction) -> IterationRunResult:
     """Create a dry-run IterationRunResult with a specific arbiter action.
 
     The result is always ``passed=False`` (dry-run semantics).

@@ -43,6 +43,7 @@ EXIT_UNSAFE_REAL = 5
 # Output helpers
 # ---------------------------------------------------------------------------
 
+
 def _print_json(data: Any) -> None:
     json.dump(data, sys.stdout, indent=2, default=str)
     sys.stdout.write("\n")
@@ -77,6 +78,7 @@ def _print_task_result_line(
 # Workspace helpers
 # ---------------------------------------------------------------------------
 
+
 def _open_workspace(workspace_arg: str | None) -> RalphWorkspace:
     return RalphWorkspace(project_root=workspace_arg or ".")
 
@@ -101,6 +103,7 @@ def _load_latest_run_meta(ws: RalphWorkspace) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 # Plan
 # ---------------------------------------------------------------------------
+
 
 def _cmd_plan(args: argparse.Namespace) -> int:
     """Create a project goal, generate tasks, and persist them."""
@@ -179,6 +182,7 @@ def _cmd_plan(args: argparse.Namespace) -> int:
 # Review
 # ---------------------------------------------------------------------------
 
+
 def _cmd_review(args: argparse.Namespace) -> int:
     """Show tasks and their approval status."""
     ws = _open_workspace(args.workspace)
@@ -256,6 +260,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
 # Approve
 # ---------------------------------------------------------------------------
 
+
 def _cmd_approve(args: argparse.Namespace) -> int:
     """Approve one or all pending tasks."""
     ws = _open_workspace(args.workspace)
@@ -300,6 +305,7 @@ def _cmd_approve(args: argparse.Namespace) -> int:
 # Run
 # ---------------------------------------------------------------------------
 
+
 def _cmd_run(args: argparse.Namespace) -> int:
     """Run approved tasks through the Ralph runtime (dry-run by default).
 
@@ -321,8 +327,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     # --real safety gate (CLI-level validation)
     if args.real and not args.allow_real_execution:
         _error(
-            "--real requires --allow-real-execution. "
-            "Defaulting to dry-run.",
+            "--real requires --allow-real-execution. Defaulting to dry-run.",
             EXIT_UNSAFE_REAL,
         )
 
@@ -351,10 +356,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         _error("No approved tasks to run.", EXIT_ERROR)
 
     if args.real and args.allow_real_execution:
-        _warn(
-            "REAL EXECUTION requested but not available in Phase 6. "
-            "Using dry-run."
-        )
+        _warn("REAL EXECUTION requested but not available in Phase 6. Using dry-run.")
 
     # Reconstruct run state from persisted metadata
     run_meta = _load_latest_run_meta(ws)
@@ -389,8 +391,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
         if target.status != TaskStatus.APPROVED:
             _error(
-                f"Task {args.task} is not approved (status: "
-                f"{target.status.value}).",
+                f"Task {args.task} is not approved (status: {target.status.value}).",
                 EXIT_APPROVAL_REQUIRED,
             )
 
@@ -459,9 +460,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
             for r in result.task_results:
                 _print_task_result_line(r)
             print()
-            print(
-                f"{len(result.pending_task_ids)} task(s) pending approval:"
-            )
+            print(f"{len(result.pending_task_ids)} task(s) pending approval:")
             for tid in result.pending_task_ids:
                 print(f"  {tid}")
             print()
@@ -557,6 +556,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
+
 
 def _cmd_status(args: argparse.Namespace) -> int:
     """Show current Ralph workspace / run status."""
@@ -664,6 +664,7 @@ def _cmd_status(args: argparse.Namespace) -> int:
 # Report
 # ---------------------------------------------------------------------------
 
+
 def _cmd_report(args: argparse.Namespace) -> int:
     """Produce a human-readable report and save it to .fcc-ralph/reports/."""
     ws = _open_workspace(args.workspace)
@@ -740,7 +741,9 @@ def _cmd_report(args: argparse.Namespace) -> int:
             if cp["score"]:
                 scores = cp["score"]
                 score_str = f"  Score: {scores}"
-            lines.append(f"- {cp['task_id']} (it={cp['iteration']}): {cp['action']}{score_str}")
+            lines.append(
+                f"- {cp['task_id']} (it={cp['iteration']}): {cp['action']}{score_str}"
+            )
 
     if run_meta:
         lines.extend(["", "## Run Metadata"])
@@ -778,6 +781,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
 # Argument parser
 # ---------------------------------------------------------------------------
 
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fcc-ralph",
@@ -797,7 +801,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("plan", help="Create a task plan from a goal")
     p.add_argument("goal", help="Project goal description")
     p.add_argument("--title", default=None, help="Short title for the goal")
-    p.add_argument("--constraint", action="append", default=[], help="Constraint (repeatable)")
+    p.add_argument(
+        "--constraint", action="append", default=[], help="Constraint (repeatable)"
+    )
     p.add_argument("--kpi", action="append", default=[], help="KPI (repeatable)")
     p.add_argument("--yes", action="store_true", help="Skip confirmation prompts")
 
@@ -846,6 +852,7 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
+
 
 def _run_cli(argv: list[str]) -> int:
     """Parse arguments and dispatch to the appropriate command handler.

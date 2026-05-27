@@ -80,9 +80,7 @@ class RunLifecycle:
     # Public API
     # ------------------------------------------------------------------
 
-    def load_run_tasks(
-        self, tasks: list[RalphTask], run_id: str = ""
-    ) -> None:
+    def load_run_tasks(self, tasks: list[RalphTask], run_id: str = "") -> None:
         """Populate the in-memory run table from a list of tasks.
 
         ``RunTable`` is in-memory and does not survive process restarts.

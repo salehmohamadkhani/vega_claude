@@ -112,6 +112,7 @@ class TestIterationRunner:
         """Verify skipped execution produces clear failure reason."""
         mock_adapter = MagicMock()
         from core.ralph.execution import ExecutionResult, ExecutionStatus
+
         mock_adapter.execute.return_value = ExecutionResult(
             status=ExecutionStatus.SKIPPED,
             failure_reason="Dry-run: execution was skipped.",
@@ -153,9 +154,7 @@ class TestIterationRunner:
         config = IterationRunnerConfig(execution_mode=ExecutionMode.DRY_RUN)
         mock_adapter = MagicMock()
         mock_adapter.execute.return_value = ExecutionResult.skipped("dry")
-        runner = IterationRunner(
-            config=config, execution_adapter=mock_adapter
-        )
+        runner = IterationRunner(config=config, execution_adapter=mock_adapter)
         runner.run_iteration(self.run, self.task)
         call_args = mock_adapter.execute.call_args[0][0]
         assert call_args.mode == ExecutionMode.DRY_RUN
@@ -169,9 +168,7 @@ class TestIterationRunner:
             exit_code=0,
             mode=ExecutionMode.REAL,
         )
-        runner = IterationRunner(
-            config=config, execution_adapter=mock_adapter
-        )
+        runner = IterationRunner(config=config, execution_adapter=mock_adapter)
         runner.run_iteration(self.run, self.task)
         call_args = mock_adapter.execute.call_args[0][0]
         assert call_args.mode == ExecutionMode.REAL

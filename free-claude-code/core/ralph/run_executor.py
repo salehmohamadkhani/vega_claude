@@ -107,9 +107,7 @@ class RunExecutor:
     # Public API
     # ------------------------------------------------------------------
 
-    def load_run_tasks(
-        self, tasks: list[RalphTask], run_id: str = ""
-    ) -> None:
+    def load_run_tasks(self, tasks: list[RalphTask], run_id: str = "") -> None:
         """Populate the in-memory run table from persisted tasks.
 
         ``RunTable`` is in-memory and does not survive process restarts.
@@ -216,8 +214,7 @@ class RunExecutor:
                     )
                 # Check if approval is needed (Policy A: strict ordered)
                 pending_ids = [
-                    t.id for t in (run.tasks or [])
-                    if t.status == TaskStatus.PENDING
+                    t.id for t in (run.tasks or []) if t.status == TaskStatus.PENDING
                 ]
                 if pending_ids and not self._config.auto_approve_pending_tasks:
                     return RunExecutorResult(
@@ -246,7 +243,8 @@ class RunExecutor:
             if task.status == TaskStatus.PENDING:
                 if not self._config.auto_approve_pending_tasks:
                     pending_ids = [
-                        t.id for t in (run.tasks or [])
+                        t.id
+                        for t in (run.tasks or [])
                         if t.status == TaskStatus.PENDING
                     ]
                     return RunExecutorResult(
