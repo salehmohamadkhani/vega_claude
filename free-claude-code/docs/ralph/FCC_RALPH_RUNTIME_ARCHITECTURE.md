@@ -419,9 +419,12 @@ Phase 6 [DONE]      CLI surface for Ralph Runtime — fcc-ralph plan/review/appr
 Phase 6.1 [DONE]    CLI integration hardening — ``run`` delegates to ``RunExecutor``,
                     Policy A enforced, JSON output validated, 12 new tests
                         ↓
-Phase 7             Admin UI for Ralph Runtime, KPI dashboard (post-CLI, optional)
+Phase 7 [DONE]      CLI-driven Ralph loop — multi-iteration retry/debug/escalate,
+                    loop policy, fcc-ralph run --loop, status/report loop awareness
                         ↓
-Phase 8             Full Ralph Loop with Claude Code via FCC proxy
+Phase 8             Controlled real execution pilot through fcc-ralph:
+                    - still gated, approval-required, no provider ownership
+                    - validates fcc-claude integration end-to-end
                         ↓
 Phase 9             Playwright KPI verifier, browser-based acceptance testing
 ```

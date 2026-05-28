@@ -20,6 +20,8 @@ from typing import Any
 
 from .agent_profiles import AgentProfileRegistry
 from .checkpoint import CheckpointStore
+from .loop_policy import LoopPolicy
+from .loop_runner import RalphLoopRunner
 from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
 from .planner import TaskPlanner
 from .run_executor import RunExecutor, RunExecutorConfig
@@ -56,6 +58,29 @@ def _error(msg: str, exit_code: int = EXIT_ERROR) -> None:
 
 def _warn(msg: str) -> None:
     print(f"Warning: {msg}", file=sys.stderr)
+
+
+def _detect_loop_state(
+    by_status: dict[str, int],
+    run_meta: dict[str, Any] | None,
+    checkpoints: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Detect loop state from task statuses, run meta, and checkpoints."""
+    state: dict[str, Any] = {
+        "has_pending": "pending" in by_status,
+        "has_approved": "approved" in by_status,
+        "has_needs_fix": "needs_fix" in by_status,
+        "has_failed": "failed" in by_status,
+        "has_passed": "passed" in by_status,
+    }
+    if run_meta:
+        state["run_status"] = run_meta.get("status", "")
+    if checkpoints:
+        latest = checkpoints[0]
+        state["latest_task"] = latest.get("task_id", "")
+        state["latest_action"] = latest.get("action", "")
+        state["latest_iteration"] = latest.get("iteration", 0)
+    return state
 
 
 def _print_task_result_line(
@@ -554,6 +579,158 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Run (loop mode) — multi-iteration Ralph loop
+# ---------------------------------------------------------------------------
+
+
+def _print_loop_result(result: Any, *, dry_run: bool) -> None:
+    """Print a RalphLoopResult to stdout."""
+    mode = "dry-run" if dry_run else "real"
+    print(f"  Mode: {mode}")
+    print(f"  Tasks attempted: {len(result.task_results)}")
+    print(f"  Total iterations: {result.total_iterations}")
+    print(f"  Checkpoints created: {result.checkpoints_created}")
+    print()
+
+    for tr in result.task_results:
+        iters = len(tr.iterations)
+        status = "PASSED" if tr.passed else "NOT PASSED"
+        action = tr.final_action or "none"
+        print(f"  {tr.task_id} ({tr.task_title[:50]}):")
+        print(f"    Iterations: {iters}  Status: {status}  Action: {action}")
+        if tr.stopped_reason:
+            print(f"    Reason: {tr.stopped_reason}")
+        if not tr.passed and tr.next_action:
+            print(f"    Next recommended: {_next_step_hint(tr.next_action)}")
+
+    print()
+    if not result.completed:
+        if result.approval_required:
+            print("Next: fcc-ralph approve <task-id>")
+        elif result.retry_required:
+            print("Next: fcc-ralph run --loop (retry)")
+        elif result.debug_required:
+            print("Next: Investigate task output, then re-run")
+        elif result.escalation_required:
+            print("Next: Escalate to manual review")
+        else:
+            print(f"Status: {result.stopped_reason}")
+
+
+def _print_loop_json(result: Any, *, dry_run: bool) -> None:
+    """Print a RalphLoopResult as JSON."""
+    _print_json(
+        {
+            "mode": "dry-run" if dry_run else "real",
+            "completed": result.completed,
+            "stopped_reason": result.stopped_reason,
+            "approval_required": result.approval_required,
+            "retry_required": result.retry_required,
+            "debug_required": result.debug_required,
+            "escalation_required": result.escalation_required,
+            "total_iterations": result.total_iterations,
+            "checkpoints_created": result.checkpoints_created,
+            "blocked_task_id": result.blocked_task_id,
+            "pending_task_ids": result.pending_task_ids,
+            "task_results": [
+                {
+                    "task_id": tr.task_id,
+                    "task_title": tr.task_title,
+                    "iterations": len(tr.iterations),
+                    "passed": tr.passed,
+                    "final_action": tr.final_action,
+                    "stopped_reason": tr.stopped_reason,
+                    "next_action": tr.next_action,
+                }
+                for tr in result.task_results
+            ],
+        }
+    )
+
+
+def _next_step_hint(action: str) -> str:
+    hints = {
+        "approve": "Task approved, continue with next task",
+        "retry": "fcc-ralph run --loop (will retry)",
+        "debug": "Review dry-run output and task context",
+        "escalate": "Manual review required",
+        "stop": "Check task output for errors",
+    }
+    return hints.get(action, f"Action: {action}")
+
+
+def _cmd_run_loop(args: argparse.Namespace) -> int:
+    """Run approved tasks through the multi-iteration Ralph loop."""
+    ws = _open_workspace(args.workspace)
+    if not ws.exists():
+        _error("No Ralph workspace found. Run 'fcc-ralph plan' first.", EXIT_ERROR)
+
+    task_lib = TaskLibrary(workspace=ws)
+    all_tasks = task_lib.list_tasks()
+    if not all_tasks:
+        _error("No tasks in workspace.", EXIT_ERROR)
+
+    # --real safety gate
+    if args.real and not args.allow_real_execution:
+        _error(
+            "--real requires --allow-real-execution.",
+            EXIT_UNSAFE_REAL,
+        )
+
+    dry_run = not args.real or not args.allow_real_execution
+    if not dry_run:
+        _warn(
+            "REAL EXECUTION requested but not available in this phase. "
+            "Using dry-run."
+        )
+
+    # Build policy from CLI flags
+    policy = LoopPolicy(
+        max_tasks=args.max_tasks if args.max_tasks > 0 else None,
+        max_iterations_per_task=args.max_iterations,
+        stop_on_debug=args.stop_on_debug,
+        stop_on_escalate=args.stop_on_escalate,
+        dry_run=dry_run,
+        allow_real_execution=args.allow_real_execution,
+    )
+
+    # Reconstruct run state from persisted metadata
+    run_meta = _load_latest_run_meta(ws)
+    run_id = run_meta.get("id", "") if run_meta else ""
+    goal_id = run_meta.get("goal_id", "") if run_meta else ""
+
+    run = RalphRun(
+        id=run_id,
+        goal_id=goal_id,
+        status=RunStatus.RUNNING,
+        tasks=all_tasks,
+    )
+
+    runner = RalphLoopRunner(workspace=ws, task_library=task_lib)
+    result = runner.run(run=run, tasks=all_tasks, policy=policy)
+
+    # Persist task status changes
+    for task in all_tasks:
+        task_lib.save_task(task)
+
+    if args.json:
+        _print_loop_json(result, dry_run=dry_run)
+    else:
+        mode = "Ralph Loop Results (dry-run)" if dry_run else "Ralph Loop Results"
+        print(mode)
+        print("=" * len(mode))
+        _print_loop_result(result, dry_run=dry_run)
+
+    if result.approval_required:
+        return EXIT_APPROVAL_REQUIRED
+    if result.retry_required or result.debug_required or result.escalation_required:
+        return EXIT_ERROR
+    if not result.completed:
+        return EXIT_ERROR
+    return EXIT_SUCCESS
+
+
+# ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
 
@@ -615,6 +792,7 @@ def _cmd_status(args: argparse.Namespace) -> int:
                 "checkpoints": checkpoints,
                 "profile_count": profile_count,
                 "report_count": len(reports),
+                "loop_state": _detect_loop_state(by_status, run_meta, checkpoints),
             }
         )
         return EXIT_SUCCESS
@@ -634,9 +812,21 @@ def _cmd_status(args: argparse.Namespace) -> int:
         print("  No runs yet.")
     print()
     if checkpoints:
+        latest_cp = checkpoints[0]
         print(f"  Recent checkpoints: {len(checkpoints)}")
         for cp in checkpoints:
-            print(f"    {cp['task_id']}  it={cp['iteration']}  [{cp['action']}]")
+            action_tag = ""
+            if cp["action"] in ("debug", "escalate"):
+                action_tag = " ⚠"
+            elif cp["action"] == "retry":
+                action_tag = " ↻"
+            elif cp["action"] == "approve":
+                action_tag = " ✓"
+            print(
+                f"    {cp['task_id']}  it={cp['iteration']}  "
+                f"[{cp['action']}]{action_tag}"
+            )
+        print(f"  Latest loop action: {latest_cp.get('action', 'N/A')}")
     else:
         print("  No checkpoints yet.")
     print()
@@ -644,12 +834,17 @@ def _cmd_status(args: argparse.Namespace) -> int:
     print(f"  Reports on disk: {len(reports)}")
     print()
 
-    # Next-command hint
+    # Next-command hint (enhanced)
     pending = by_status.get("pending", 0)
     approved = by_status.get("approved", 0)
     passed = by_status.get("passed", 0)
-    if approved:
-        print("  Next: fcc-ralph run")
+    needs_fix = by_status.get("needs_fix", 0)
+    if needs_fix:
+        print("  Next: fcc-ralph run --loop  (retry tasks needing fix)")
+    elif approved and not pending:
+        print("  Next: fcc-ralph run  or  fcc-ralph run --loop")
+    elif approved and pending:
+        print("  Next: fcc-ralph approve <task-id>  then  fcc-ralph run")
     elif pending:
         print("  Next: fcc-ralph review  ->  fcc-ralph approve <task-id>")
     elif not tasks:
@@ -706,6 +901,9 @@ def _cmd_report(args: argparse.Namespace) -> int:
                     }
                 )
 
+    # Detect loop state
+    loop_state = _detect_loop_state(by_status, run_meta, checkpoints)
+
     now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     # Build markdown report
@@ -718,10 +916,23 @@ def _cmd_report(args: argparse.Namespace) -> int:
         "",
         f"- Total tasks: {len(tasks)}",
     ]
-    for status in ["pending", "approved", "running", "passed", "failed"]:
+    for status in ["pending", "approved", "running", "passed", "failed", "needs_fix"]:
         count = by_status.get(status, 0)
         if count:
             lines.append(f"- {status}: {count}")
+
+    if loop_state.get("latest_action"):
+        lines.extend(
+            [
+                "",
+                "## Loop State",
+                f"- Latest task: {loop_state.get('latest_task', 'N/A')}",
+                f"- Latest action: {loop_state.get('latest_action', 'N/A')}",
+                f"- Latest iteration: {loop_state.get('latest_iteration', 0)}",
+                f"- Needs fix: {loop_state.get('has_needs_fix', False)}",
+                f"- Has pending: {loop_state.get('has_pending', False)}",
+            ]
+        )
 
     lines.extend(["", "## Tasks"])
     for td in task_details:
@@ -819,6 +1030,17 @@ def _build_parser() -> argparse.ArgumentParser:
     # --- run ---
     p = sub.add_parser("run", help="Run approved tasks (dry-run by default)")
     p.add_argument("--task", default=None, help="Run a specific task by ID")
+    p.add_argument("--loop", action="store_true", help="Enable multi-iteration Ralph loop")
+    p.add_argument(
+        "--max-iterations",
+        type=int,
+        default=3,
+        help="Max iterations per task in loop mode (default: 3)",
+    )
+    p.add_argument("--stop-on-debug", action="store_true", default=True, help="Stop on debug action (default: True)")
+    p.add_argument("--no-stop-on-debug", action="store_false", dest="stop_on_debug", help="Do not stop on debug action")
+    p.add_argument("--stop-on-escalate", action="store_true", default=True, help="Stop on escalate action (default: True)")
+    p.add_argument("--no-stop-on-escalate", action="store_false", dest="stop_on_escalate", help="Do not stop on escalate action")
     p.add_argument(
         "--real",
         action="store_true",
@@ -874,6 +1096,8 @@ def _run_cli(argv: list[str]) -> int:
                 _error("Specify a task ID or use --all.", EXIT_INVALID_INPUT)
             return _cmd_approve(args)
         elif args.command == "run":
+            if args.loop:
+                return _cmd_run_loop(args)
             return _cmd_run(args)
         elif args.command == "status":
             return _cmd_status(args)
