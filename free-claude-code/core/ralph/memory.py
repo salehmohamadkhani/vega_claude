@@ -93,7 +93,7 @@ class MemoryStore:
         try:
             data = self._workspace.read_json(relative)
             return self._dict_to_record(data)
-        except FileNotFoundError, json.JSONDecodeError, OSError:
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
             return None
 
     def list_records(
@@ -111,7 +111,7 @@ class MemoryStore:
             try:
                 data = self._workspace.read_json(f"{self._memory_dir}/{p.name}")
                 record = self._dict_to_record(data)
-            except FileNotFoundError, json.JSONDecodeError, OSError:
+            except (FileNotFoundError, json.JSONDecodeError, OSError):
                 continue
 
             if level is not None and record.level != level:

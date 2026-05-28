@@ -152,7 +152,7 @@ class TaskLibrary:
         try:
             content = self._workspace.read_text(relative)
             return self._parse_markdown(content)
-        except TaskParseError, FileNotFoundError, OSError:
+        except (TaskParseError, FileNotFoundError, OSError):
             return None
 
     def delete_task(self, task_id: str) -> bool:
