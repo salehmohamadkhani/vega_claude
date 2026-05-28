@@ -138,7 +138,19 @@ class TaskPromptBuilder:
         if plan is None or not plan.kpi_descriptions:
             return
         parts.append("### KPIs")
-        parts.extend(f"- {kpi}" for kpi in plan.kpi_descriptions)
+        parts.append("")
+        parts.append(
+            "The following KPIs will be evaluated. "
+            "Do NOT claim satisfaction without verifiable evidence."
+        )
+        parts.append("")
+        parts.extend(f"- [ ] {kpi}" for kpi in plan.kpi_descriptions)
+        parts.append("")
+        parts.append(
+            "For each KPI, provide: (1) what was done, "
+            "(2) what evidence exists, "
+            "(3) any measurable result."
+        )
         parts.append("")
 
     def _add_agent_role(self, parts: list[str], ctx: TaskPromptContext) -> None:
@@ -189,7 +201,8 @@ class TaskPromptBuilder:
     def _add_anti_hallucination(self, parts: list[str]) -> None:
         parts.append("### Important")
         parts.append(
-            "Do NOT claim the task is complete unless ALL verification commands pass."
+            "Do NOT claim the task is complete unless ALL verification commands "
+            "pass AND all required KPIs are satisfied."
         )
         parts.append("")
 

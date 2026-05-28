@@ -85,23 +85,36 @@ class TestFCCSmokeAdapter:
         assert adapter.is_known("providers") is False
 
     def test_build_smoke_plan_all_known_fcc_targets(self) -> None:
-        """All known FCC targets should produce valid uv run pytest --collect-only commands."""
+        """All known FCC targets should produce valid uv run pytest commands."""
         adapter = FCCSmokeAdapter()
+        # Sub-collect targets (those that use tests/core/ralph) don't include
+        # --collect-only since they execute real test runs.
+        non_collect_targets = {"ralph", "core-ralph"}
         for target in adapter.known_targets:
             plan = adapter.build_smoke_plan([target])
             assert len(plan.targets) == 1
             assert plan.commands[0].startswith("uv run pytest")
-            assert "--collect-only" in plan.commands[0]
+            if target in non_collect_targets:
+                assert "--collect-only" not in plan.commands[0]
+            else:
+                assert "--collect-only" in plan.commands[0]
             assert "-q" in plan.commands[0]
 
-    def test_all_known_targets_match_features_inventory(self) -> None:
-        """The known target set must stay in sync with smoke/features.py."""
+    def test_ralph_specific_targets_present(self) -> None:
+        """Ralph-specific smoke targets are present."""
         adapter = FCCSmokeAdapter()
-        # Extracted from FEATURE_INVENTORY smoke_targets across all entries:
-        # providers, api, cli, clients, nvidia_nim_cli, openrouter_free_cli,
-        # config, messaging, tools, voice, rate_limit, auth, extensibility,
-        # lmstudio, llamacpp, ollama, telegram, discord
-        expected = {
+        assert "ralph" in adapter.known_targets
+        assert "core-ralph" in adapter.known_targets
+        assert "smoke-collect" in adapter.known_targets
+        assert "api-prereq" in adapter.known_targets
+        assert "provider-registry" in adapter.known_targets
+        assert "admin-routes" in adapter.known_targets
+
+    def test_known_targets_at_least_fcc_feature_set(self) -> None:
+        """The known target set includes all FCC feature inventory targets."""
+        adapter = FCCSmokeAdapter()
+        # Extracted from FEATURE_INVENTORY smoke_targets:
+        fcc_expected = {
             "providers",
             "api",
             "cli",
@@ -121,4 +134,5 @@ class TestFCCSmokeAdapter:
             "telegram",
             "discord",
         }
-        assert adapter.known_targets == expected
+        for target in fcc_expected:
+            assert target in adapter.known_targets, f"Missing FCC target: {target}"

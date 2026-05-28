@@ -316,6 +316,7 @@ def _cmd_approve(args: argparse.Namespace) -> int:
         task = task_lib.find_task(args.task_id)
         if task is None:
             _error(f"Task {args.task_id!r} not found.", EXIT_TASK_NOT_FOUND)
+        assert task is not None
         if task.status == TaskStatus.APPROVED:
             print(f"Task {args.task_id} is already approved.")
             return EXIT_SUCCESS
@@ -1226,6 +1227,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--allow-repo-root-execution",
         action="store_true",
         help="Allow real execution on a Git repo root",
+    )
+    p.add_argument(
+        "--verify",
+        action="store_true",
+        help="Execute verification commands during run",
+    )
+    p.add_argument(
+        "--smoke-target",
+        action="append",
+        default=[],
+        help="Smoke verification target (repeatable)",
     )
 
     # --- status ---

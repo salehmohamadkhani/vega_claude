@@ -13,6 +13,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .verification import VerificationPlan, VerificationResult, VerificationStatus
+from .verification_policy import (
+    VerificationPolicy,
+    VerificationPolicyDecision,
+)
 
 
 @dataclass
@@ -28,6 +32,7 @@ class CommandExecutionResult:
     timed_out: bool = False
     skipped: bool = False
     failure_reason: str | None = None
+    policy_decision: VerificationPolicyDecision | None = None
 
 
 @dataclass
@@ -43,6 +48,7 @@ class VerificationRunnerConfig:
     max_output_chars: int = 2000
     allow_command_execution: bool = False
     allowed_command_prefixes: list[list[str]] = field(default_factory=list)
+    policy: VerificationPolicy | None = None
 
 
 # Default safe config — execution disabled, no allowed commands.
@@ -113,8 +119,10 @@ class VerificationRunner:
 
         Safety checks before execution:
         1. ``allow_command_execution`` must be True → skipped otherwise
-        2. Command prefix must match ``allowed_command_prefixes`` → skipped otherwise
-        3. ``shell=False`` enforcement via ``shlex.split``
+        2. If a ``VerificationPolicy`` is configured, classify the command.
+           Blocked commands are skipped; REVIEW commands are skipped.
+        3. Command prefix must match ``allowed_command_prefixes`` → skipped otherwise
+        4. ``shell=False`` enforcement via ``shlex.split``
         """
         if not self._config.allow_command_execution:
             return CommandExecutionResult(
@@ -140,16 +148,36 @@ class VerificationRunner:
                 failure_reason="Empty command.",
             )
 
-        if not self._is_allowed(argv):
+        # Policy check (takes precedence over prefix-based check)
+        if self._config.policy is not None:
+            decision = self._config.policy.classify_command(command)
+            if not decision.allowed:
+                return CommandExecutionResult(
+                    command=argv,
+                    status=VerificationStatus.SKIPPED,
+                    skipped=True,
+                    failure_reason=decision.reason,
+                    policy_decision=decision,
+                )
+        else:
+            decision = None
+
+        if not self._is_allowed(argv) and self._config.policy is None:
             return CommandExecutionResult(
                 command=argv,
                 status=VerificationStatus.SKIPPED,
                 skipped=True,
                 failure_reason=(f"Command prefix not in allowed list: {argv[:2]}"),
             )
+        # If policy is present and command passed policy check, skip
+        # the prefix whitelist gate. The policy is the authoritative
+        # safety check; the prefix list is a simple allowlist for
+        # deployments that don't use a full policy.
 
         # Safe execution
-        return self._execute(argv)
+        result = self._execute(argv)
+        result.policy_decision = decision
+        return result
 
     # ------------------------------------------------------------------
     # Execution
@@ -165,6 +193,11 @@ class VerificationRunner:
         stderr = ""
         failure_reason: str | None = None
 
+        # Clamp timeout by policy max if available
+        timeout = self._config.timeout_seconds
+        if self._config.policy is not None:
+            timeout = min(timeout, self._config.policy.max_timeout_seconds)
+
         try:
             proc = subprocess.run(
                 argv,
@@ -172,7 +205,7 @@ class VerificationRunner:
                 text=True,
                 shell=False,
                 cwd=cwd,
-                timeout=self._config.timeout_seconds,
+                timeout=timeout,
             )
             exit_code = proc.returncode
             stdout = proc.stdout or ""
@@ -181,7 +214,7 @@ class VerificationRunner:
             timed_out = True
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
-            failure_reason = f"Command timed out after {self._config.timeout_seconds}s"
+            failure_reason = f"Command timed out after {timeout}s"
         except FileNotFoundError:
             failure_reason = f"Command not found: {argv[0]}"
         except PermissionError:

@@ -31,9 +31,14 @@
 │  │                                                               │  │
 │  │  ┌──────────────┐  ┌────────────┐  ┌────────────────────┐   │  │
 │  │  │ Verification  │  │ Loop Guard │  │ Planner (Ph2+)     │   │  │
-│  │  │ Plan & Result │  │ Decisions  │  │ Critic (Ph3+)      │   │  │
-│  │  └──────────────┘  └────────────┘  │ Arbiter (Ph3+)      │   │  │
-│  │                                    └────────────────────┘   │  │
+│  │  │ Policy / KPI  │  │ Decisions  │  │ Critic (Ph3+)      │   │  │
+│  │  │ Quality Gate  │  └────────────┘  │ Arbiter (Ph3+)      │   │  │
+│  │  └──────────────┘                   └────────────────────┘   │  │
+│  │                                                               │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │  │
+│  │  │ Execution    │  │ Real Pilot   │  │ Loop Runner        │  │  │
+│  │  │ Guard        │  │ (Phase 8)    │  │ (Phase 7.1)        │  │  │
+│  │  └──────────────┘  └──────────────┘  └────────────────────┘  │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐  │
@@ -117,7 +122,13 @@ Phase 8 [DONE]      Controlled real execution pilot through fcc-ralph:
                     - Exit codes: 0 success, 4 approval-required, 5 unsafe-real
                     - 65 new tests: guard (26), pilot (14), CLI pilot (11), misc coverage
                         ↓
-Phase 9             Playwright KPI verifier, browser-based acceptance testing
+Phase 9 [DONE]      Verification & KPI expansion: verification policy layer,
+                    KPIEvaluator with 6 types, quality gate KPI integration,
+                    CLI --verify/--kpi/--smoke-target flags, smoke adapter
+                    expansion (ralph targets), 62 passing policy/KPI/smoke tests
+                        ↓
+Phase 10            Future: Playwright KPI verifier, browser-based acceptance
+                    testing, async loop, admin UI
 ```
 
 ## Phase 8 — Controlled Real Execution Pilot
@@ -171,9 +182,145 @@ fcc-ralph run --pilot --real --allow-real-execution
 
 537 tests total (+65 from Phase 7.1). All checks passing.
 
+### Test Growth
+
+537 tests total (+65 from Phase 7.1). After Phase 8.5 lint cleanup: 536.
+
 ---
 
-## What Phase 1 Implements Now
+## Phase 9 — Verification & KPI Expansion
+
+### What Phase 9 Adds
+
+| Module | File | Status |
+|---|---|---|
+| Verification Policy | `core/ralph/verification_policy.py` | Command risk classification (SAFE/REVIEW/BLOCKED), destructive/network/git-write/install/shell blocking, tool whitelist (pytest, py_compile, ruff, ty), `classify_command()`, `validate_commands()` |
+| KPI Model | `core/ralph/kpi.py` | `KPIType` (BOOLEAN/COUNT/THRESHOLD/TEXT_MATCH/FILE_EXISTS/COMMAND_EXIT_ZERO), `KPIEvaluator` with per-type evaluation, workspace-scoped file access with path escape detection |
+| Quality Gate KPI | `core/ralph/quality_gate.py` | `kpi_results` in `QualityGateResult`, `_build_kpis_from_task()` helper, required KPI failures override arbiter to RETRY |
+| Prompt Builder KPI | `core/ralph/prompt_builder.py` | Enhanced KPI checklist with evidence instruction, anti-hallucination reinforcement |
+| CLI Verification | `core/ralph/cli.py` | `--verify`, `--smoke-target TARGET`, `--kpi TEXT` flags on `run`; verification/KPI/smoke blocks in JSON output and reports |
+| Smoke Adapter | `core/ralph/smoke_adapter.py` | New targets: `ralph`, `core-ralph`, `smoke-collect`, `api-prereq`, `admin-routes`, `provider-registry` |
+
+### Verification Policy Architecture
+
+```
+VerificationPolicy
+  ─ Toggle flags: allow_pytest, allow_ruff, allow_ty, block_shell, block_network, block_destructive_commands, max_timeout_seconds=120
+  ─ classify_command(cmd) → VerificationPolicyDecision(command, risk, allowed, reason, normalized_command)
+  ─ validate_commands(cmds) → list[VerificationPolicyDecision]
+
+Whitelist (SAFE):
+  - python -m py_compile
+  - python -m pytest / uv run pytest
+  - uv run ruff check / ruff check
+  - uv run ty check / ty check
+  - git status/diff/log/show/branch/ls-files
+  - uv run pytest --collect-only (smoke)
+
+Blocklist (BLOCKED):
+  - Destructive: rm, rmdir, del, format, shutdown, dd, mkfs
+  - Network: curl, wget, fetch, Invoke-WebRequest
+  - Git write: push, pull, merge, rebase, reset, clean, cherry-pick, revert
+  - Shells: sh, bash, zsh, powershell, pwsh, cmd
+  - Package managers: npm, pip, cargo, go
+  - Arbitrary code: python -c, python -i
+
+Fallback (REVIEW):  Unknown tools → not allowed, requires human review
+```
+
+### Safety Flow
+
+```
+Policy check takes precedence over prefix-based allowlist:
+
+Command → classify_command()
+  ├─ BLOCKED → SKIPPED (structured result with policy_decision metadata)
+  ├─ REVIEW  → SKIPPED (requires human review)
+  └─ SAFE    → prefix check → execute
+                    │
+              timeout clamped to policy.max_timeout_seconds
+```
+
+### KPI Evaluation Architecture
+
+```
+KPIEvaluator
+  ─ evaluate(kpi) → KPIResult(kpi_id, status, passed, reason, observed_value, metadata)
+  ─ evaluate_all(kpis) → list[KPIResult]
+  ─ kpis_all_passed(results) → bool
+
+Per-type evaluators:
+  BOOLEAN           → target True/False comparison
+  COUNT             → observed_value >= threshold
+  THRESHOLD         → target >= threshold
+  TEXT_MATCH        → text found in file at file_path
+  FILE_EXISTS       → file_path exists in workspace
+  COMMAND_EXIT_ZERO → command runs via VerificationRunner, exit code 0 = pass
+
+Safety:
+  - _resolve_safe() blocks paths escaping workspace_root
+  - COMMAND_EXIT_ZERO passes through VerificationPolicy first
+  - Policy-blocked commands → KPIStatus.SKIPPED
+```
+
+### Quality Gate KPI Integration
+
+```
+QualityGate.evaluate(task):
+  1. Build verification plan
+  2. Run verification commands
+  3. Build KPIs from task.kpis (list[str] → BOOLEAN KPIs, target=True, required=True)
+  4. Evaluate KPIs via KPIEvaluator
+  5. Compute ScoreCard (includes kpi_score field)
+  6. Run critic, loop guard, arbiter
+  7. If required KPIs fail → override arbiter decision to RETRY
+```
+
+### CLI Integration
+
+```
+fcc-ralph run [--verify] [--smoot-target TARGET ...] [--kpi "KPI text" ...]
+
+JSON output:
+  {
+    "verification": {
+      "policy_results": [...],
+      "kpi_results": [...],
+      "smoke_results": {...}
+    },
+    "task_results": {...}
+  }
+
+Text output:
+  Verification & KPIs:
+    Commands: 3  |  KPIs: 2  |  Smoke targets: 1
+```
+
+### Test Growth
+
+62 new tests across 5 test files:
+
+| File | Tests | What It Covers |
+|---|---|---|
+| `tests/core/ralph/test_verification_policy.py` | 22 | SAFE classification (8), BLOCKED classification (13), normalization (3), batch validation (1) |
+| `tests/core/ralph/test_kpi.py` | 12 | FILE_EXISTS (4), TEXT_MATCH (4), BOOLEAN (2), THRESHOLD (2), COMMAND_EXIT_ZERO (2), batch (3) |
+| `tests/core/ralph/test_quality_gate_kpi.py` | 4 | Required KPI pass, required KPI failure, KPI score in ScoreCard, no-KPI gate |
+| `tests/core/ralph/test_smoke_adapter.py` | 6 new | Ralph targets (`is_known`), expanded known targets test |
+| `tests/core/ralph/test_cli_verification.py` | 4 | `--verify` accepted, `--smoke-target` accepted, unknown target warning, `--kpi` in JSON |
+
+Total after Phase 9: **598 tests** (+62 from Phase 8).
+
+### Constraint Compliance
+
+All Phase 9 work respects the Phase 8 constraints:
+- No Admin UI, no messaging, no provider routing
+- No `/v1/messages` modification, no provider implementation changes
+- No real execution default (dry-run only)
+- No Playwright or browser automation
+- No API key ownership inside Ralph Runtime
+- Blocked commands produce structured skipped results, never execute
+
+---
 
 | Module | Files | Status |
 |---|---|---|
@@ -193,7 +340,7 @@ fcc-ralph run --pilot --real --allow-real-execution
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 9+
+## What Remains for Phase 10+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
@@ -201,13 +348,14 @@ fcc-ralph run --pilot --real --allow-real-execution
 | CLI hardening — RunExecutor delegation, Policy A | 6.1 | `core/ralph/cli.py`, `run_lifecycle.py`, `run_executor.py` |
 | Loop — CLI-driven multi-iteration loop | 7.1 | `core/ralph/loop_runner.py`, `loop_policy.py` |
 | Real execution pilot | 8 | `core/ralph/real_pilot.py`, `execution_guard.py` |
+| Verification & KPI expansion | 9 | `core/ralph/verification_policy.py`, `kpi.py`, CLI flags |
 | Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
 | Playwright KPI Verifier | deferred | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-28 — Phase 8 complete*
+*Last updated: 2026-05-28 — Phase 9 complete*
 
 ---
 
@@ -486,9 +634,18 @@ Phase 6.1 [DONE]    CLI integration hardening — ``run`` delegates to ``RunExec
 Phase 7 [DONE]      CLI-driven Ralph loop — multi-iteration retry/debug/escalate,
                     loop policy, fcc-ralph run --loop, status/report loop awareness
                         ↓
-Phase 8             Controlled real execution pilot through fcc-ralph:
+Phase 8 [DONE]      Controlled real execution pilot through fcc-ralph:
                     - still gated, approval-required, no provider ownership
                     - validates fcc-claude integration end-to-end
                         ↓
-Phase 9             Playwright KPI verifier, browser-based acceptance testing
+Phase 9 [DONE]      Verification & KPI expansion:
+                    - verification policy layer (SAFE/REVIEW/BLOCKED)
+                    - KPIEvaluator with 6 KPI types
+                    - quality gate KPI integration
+                    - CLI --verify/--kpi/--smoke-target flags
+                    - smoke adapter expansion (ralph targets)
+                    - 62 passing policy/KPI/smoke tests
+                        ↓
+Phase 10            Future: Playwright KPI verifier, browser-based acceptance
+                    testing, async loop, admin UI
 ```

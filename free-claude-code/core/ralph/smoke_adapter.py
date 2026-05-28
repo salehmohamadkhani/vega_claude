@@ -12,19 +12,28 @@ from dataclasses import dataclass
 # Each maps to the pytest command(s) that exercise it.
 # Keep in sync with FEATURE_INVENTORY smoke_targets in smoke/features.py.
 _KNOWN_SMOKE_TARGETS: dict[str, str] = {
+    # Ralph-specific targets
+    "ralph": "uv run pytest tests/core/ralph -q",
+    "core-ralph": "uv run pytest tests/core/ralph -q",
+    "smoke-collect": "uv run pytest smoke --collect-only -q",
+    # FCC smoke prereq targets
     "providers": "uv run pytest smoke/prereq -m providers --collect-only -q",
     "api": "uv run pytest smoke/prereq -m api --collect-only -q",
+    "api-prereq": "uv run pytest smoke/prereq -m api --collect-only -q",
     "cli": "uv run pytest smoke/prereq -m cli --collect-only -q",
     "clients": "uv run pytest smoke/prereq -m clients --collect-only -q",
     "nvidia_nim_cli": "uv run pytest smoke/prereq -m nvidia_nim_cli --collect-only -q",
     "openrouter_free_cli": "uv run pytest smoke/prereq -m openrouter_free_cli --collect-only -q",
     "config": "uv run pytest smoke/prereq -m config --collect-only -q",
+    "extensibility": "uv run pytest smoke/prereq -m extensibility --collect-only -q",
+    "admin-routes": "uv run pytest smoke/prereq -m admin --collect-only -q",
     "messaging": "uv run pytest smoke/prereq -m messaging --collect-only -q",
     "tools": "uv run pytest smoke/prereq -m tools --collect-only -q",
     "voice": "uv run pytest smoke/prereq -m voice --collect-only -q",
     "rate_limit": "uv run pytest smoke/prereq -m rate_limit --collect-only -q",
     "auth": "uv run pytest smoke/prereq -m auth --collect-only -q",
-    "extensibility": "uv run pytest smoke/prereq -m extensibility --collect-only -q",
+    "provider-registry": "uv run pytest smoke/prereq -m providers --collect-only -q",
+    # Live provider smoke targets
     "lmstudio": "uv run pytest smoke/prereq -m lmstudio --collect-only -q",
     "llamacpp": "uv run pytest smoke/prereq -m llamacpp --collect-only -q",
     "ollama": "uv run pytest smoke/prereq -m ollama --collect-only -q",

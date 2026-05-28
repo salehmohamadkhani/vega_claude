@@ -75,8 +75,9 @@
 | Unit tests (Phase 1) | `pytest` | Models, run table, scoring, verification plans, loop guard |
 | Integration tests (Phase 2+) | `pytest` + fixtures | Task planner, model router, context builder |
 | Smoke tests (Phase 2+) | `pytest smoke/` | Ralph Runtime tasks hitting FCC smoke targets |
-| KPI verifier (Phase 3) | Future: `core/ralph/kpi_verifier.py` | Measure pass rates, iteration counts, hallucination rate |
-| Playwright / browser (Phase 4) | Future: Playwright | Admin UI for Ralph Runtime |
+| KPI verifier (Phase 9) | `core/ralph/kpi.py` — `KPIEvaluator` | BOOLEAN/COUNT/THRESHOLD/TEXT_MATCH/FILE_EXISTS/COMMAND_EXIT_ZERO evaluation |
+| Policy layer (Phase 9) | `core/ralph/verification_policy.py` | Command risk classification (SAFE/REVIEW/BLOCKED), tool whitelist/blocklist |
+| Playwright / browser (Phase 10+) | Future: Playwright | Admin UI for Ralph Runtime |
 
 KPI metrics to track across phases:
 - **Task pass rate**: % of tasks passing verification on first attempt
@@ -87,7 +88,7 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-28 — Phase 8 complete (real execution pilot)*
+*Last updated: 2026-05-28 — Phase 9 complete (verification & KPI expansion)*
 
 
 ---
@@ -268,7 +269,9 @@ goal → questions → task list → human review/approval → execution
 | Loop — Ralph loop runner | `core/ralph/loop_runner.py`, `loop_policy.py` | ✅ | 7.1 |
 | Real execution pilot | `core/ralph/real_pilot.py` | ✅ | 8 |
 | Execution guard | `core/ralph/execution_guard.py` | ✅ | 8 |
-| Admin UI | `core/ralph/admin/` | deferred | — |
+| Verification policy | `core/ralph/verification_policy.py` | ✅ | 9 |
+| KPI evaluator | `core/ralph/kpi.py` | ✅ | 9 |
+| Admin UI | deferred | deferred | — |
 | Full async Ralph Loop | deferred | deferred | — |
 | Playwright KPI | deferred | deferred | — |
 
@@ -321,7 +324,6 @@ goal → questions → task list → human review/approval → execution
 | Full async Ralph Loop | deferred | deferred | — |
 | Playwright KPI | deferred | deferred | — |
 
----
 
 ## Phase 3.5 — Stabilization Audit
 

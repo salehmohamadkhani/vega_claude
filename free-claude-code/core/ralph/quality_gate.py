@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .arbiter import ArbiterDecision, ArbiterEngine
+from .arbiter import ArbiterAction, ArbiterDecision, ArbiterEngine
 from .critic import CriticEngine, CriticReview
+from .kpi import KPI, KPIEvaluator, KPIResult, KPIStatus, KPIType
 from .loop_guard import LoopGuard, LoopGuardDecision
 from .models import RalphTask, TaskStatus
 from .scoring import HallucinationRisk, ScoreCard
@@ -31,6 +32,7 @@ class QualityGateResult:
     task_title: str = ""
     verification_plan: VerificationPlan = field(default_factory=VerificationPlan)
     verification_result: VerificationResult = field(default_factory=VerificationResult)
+    kpi_results: list[KPIResult] = field(default_factory=list)
     score_card: ScoreCard = field(default_factory=ScoreCard)
     critic_reviews: list[CriticReview] = field(default_factory=list)
     loop_guard_decision: LoopGuardDecision = field(default_factory=LoopGuardDecision)
@@ -46,8 +48,9 @@ class QualityGateResult:
 
 def _compute_score_from_verification(
     verification_result: VerificationResult,
+    kpi_results: list[KPIResult] | None = None,
 ) -> ScoreCard:
-    """Build a ScoreCard from verification results.
+    """Build a ScoreCard from verification results and KPI results.
 
     Scores are derived from pass rates converted to 0-100 scale.
     """
@@ -62,10 +65,9 @@ def _compute_score_from_verification(
     impl_score = _rate_to_score(passed_cmd, total_cmd)
     test_score = _rate_to_score(passed_smoke, total_smoke)
 
-    # KPI score: what fraction of defined KPIs passed
-    kpi_results = verification_result.kpi_results
-    passed_kpi = sum(1 for v in kpi_results.values() if v)
-    total_kpi = len(kpi_results)
+    # KPI score from KPI results (structured)
+    passed_kpi = sum(1 for r in (kpi_results or []) if r.passed)
+    total_kpi = len(kpi_results or [])
     kpi_score = _rate_to_score(passed_kpi, total_kpi)
 
     # Risk score: inverse of pass rate, higher = more risk
@@ -88,6 +90,12 @@ def _compute_score_from_verification(
     else:
         h_risk = HallucinationRisk.LOW
 
+    notes = [f"Verification: {total_passed}/{total_checks} checks passed"]
+    if total_kpi > 0:
+        notes.append(f"KPIs: {passed_kpi}/{total_kpi} passed")
+    if any(not r.passed for r in (kpi_results or []) if r.status == KPIStatus.SKIPPED):
+        notes.append("Some KPIs were skipped — review required.")
+
     return ScoreCard(
         implementation_score=impl_score,
         test_score=test_score,
@@ -95,8 +103,29 @@ def _compute_score_from_verification(
         risk_score=risk_score,
         confidence_score=confidence_score,
         hallucination_risk=h_risk,
-        notes=[f"Verification: {total_passed}/{total_checks} checks passed"],
+        notes=notes,
     )
+
+
+def _build_kpis_from_task(task: RalphTask) -> list[KPI]:
+    """Convert a task's KPI strings into structured KPI objects.
+
+    Each string is treated as a BOOLEAN KPI (checked/not-checked).
+    More sophisticated parsing (e.g., detecting threshold patterns)
+    can be added here in future phases.
+    """
+    kpis: list[KPI] = []
+    for i, kpi_str in enumerate(task.kpis):
+        kpis.append(
+            KPI(
+                id=f"{task.id}-kpi-{i}",
+                label=kpi_str,
+                type=KPIType.BOOLEAN,
+                target=True,
+                required=True,
+            )
+        )
+    return kpis
 
 
 def _rate_to_score(passed: int, total: int) -> int:
@@ -125,10 +154,12 @@ class QualityGate:
         verification_runner: VerificationRunner | None = None,
         critic: CriticEngine | None = None,
         arbiter: ArbiterEngine | None = None,
+        kpi_evaluator: KPIEvaluator | None = None,
     ) -> None:
         self._runner = verification_runner or VerificationRunner()
         self._critic = critic or CriticEngine()
         self._arbiter = arbiter or ArbiterEngine()
+        self._kpi_evaluator = kpi_evaluator
 
     def evaluate(
         self,
@@ -164,9 +195,17 @@ class QualityGate:
         # Step 2: Run the verification plan
         verification_result = self._runner.run_plan(plan)
 
+        # Step 2b: Evaluate KPIs (structured)
+        kpi_results: list[KPIResult] = []
+        if self._kpi_evaluator is not None and task.kpis:
+            kpis = _build_kpis_from_task(task)
+            kpi_results = self._kpi_evaluator.evaluate_all(kpis)
+
         # Step 3: Build or use provided score card
         if score_card is None:
-            score_card = _compute_score_from_verification(verification_result)
+            score_card = _compute_score_from_verification(
+                verification_result, kpi_results
+            )
 
         # Step 4: Critic review of verification + scoring
         verifier_review = self._critic.review_verification(
@@ -211,11 +250,27 @@ class QualityGate:
         )
 
         # Step 7: Determine final status
+        kpi_all_required_pass = all(
+            r.passed
+            for r in kpi_results
+            if r.status != KPIStatus.SKIPPED
+        )
+        kpi_any_skipped = any(r.status == KPIStatus.SKIPPED for r in kpi_results)
+
         all_passed = (
             verification_result.status == VerificationStatus.PASSED
             and combined_review.approved
             and arbiter_decision.action.value == "approve"
+            and kpi_all_required_pass
         )
+
+        # If required KPIs failed and arbiter said approve, override to retry.
+        if arbiter_decision.action.value == "approve" and not kpi_all_required_pass:
+            arbiter_decision = ArbiterDecision(
+                action=ArbiterAction.RETRY,
+                reason="Required KPIs not satisfied despite approval signal.",
+                summary="Retrying due to KPI failures.",
+            )
 
         if arbiter_decision.action.value == "approve":
             final_status = TaskStatus.PASSED
@@ -229,12 +284,18 @@ class QualityGate:
             f"verification={verification_result.status.value}",
             f"score={score_card.final_weighted_score():.0f}",
         ]
+        if kpi_results:
+            passed_kpi = sum(1 for r in kpi_results if r.passed)
+            summary_parts.append(f"kpis={passed_kpi}/{len(kpi_results)}")
+            if kpi_any_skipped:
+                summary_parts.append("kpi-skip")
 
         return QualityGateResult(
             task_id=task.id,
             task_title=task.title,
             verification_plan=plan,
             verification_result=verification_result,
+            kpi_results=kpi_results,
             score_card=score_card,
             critic_reviews=[verifier_review, scoring_review],
             loop_guard_decision=loop_guard_decision,
