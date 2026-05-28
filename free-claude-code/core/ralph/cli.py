@@ -912,15 +912,15 @@ def _cmd_status(args: argparse.Namespace) -> int:
     if run_meta:
         run_id = run_meta.get("id", "")
         if run_id:
-            for cp in cp_store.list_for_run(run_id)[:5]:
-                checkpoints.append(
-                    {
-                        "id": cp.id,
-                        "iteration": cp.iteration_number,
-                        "task_id": cp.task_id,
-                        "action": cp.next_action,
-                    }
-                )
+            checkpoints.extend(
+                {
+                    "id": cp.id,
+                    "iteration": cp.iteration_number,
+                    "task_id": cp.task_id,
+                    "action": cp.next_action,
+                }
+                for cp in cp_store.list_for_run(run_id)[:5]
+            )
 
     # Agent profiles
     try:
@@ -1039,17 +1039,17 @@ def _cmd_report(args: argparse.Namespace) -> int:
     if run_meta:
         run_id = run_meta.get("id", "")
         if run_id:
-            for cp in cp_store.list_for_run(run_id):
-                checkpoints.append(
-                    {
-                        "id": cp.id,
-                        "iteration": cp.iteration_number,
-                        "task_id": cp.task_id,
-                        "action": cp.next_action,
-                        "score": cp.score,
-                        "created_at": cp.created_at,
-                    }
-                )
+            checkpoints.extend(
+                {
+                    "id": cp.id,
+                    "iteration": cp.iteration_number,
+                    "task_id": cp.task_id,
+                    "action": cp.next_action,
+                    "score": cp.score,
+                    "created_at": cp.created_at,
+                }
+                for cp in cp_store.list_for_run(run_id)
+            )
 
     # Detect loop state
     loop_state = _detect_loop_state(by_status, run_meta, checkpoints)

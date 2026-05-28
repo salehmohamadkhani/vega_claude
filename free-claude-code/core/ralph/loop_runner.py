@@ -224,9 +224,6 @@ class RalphLoopRunner:
 
         # Determine overall loop result
         all_passed = all(r.passed for r in task_results)
-        any_retry = any(r.next_action == "retry" for r in task_results)
-        any_debug = any(r.next_action == "debug" for r in task_results)
-        any_escalate = any(r.next_action == "escalate" for r in task_results)
 
         pending_blocked = first_blocked
 
@@ -358,9 +355,6 @@ class RalphLoopRunner:
             # Mark task running on first iteration
             if iteration_number == 1:
                 task.status = TaskStatus.RUNNING
-
-            # Create a LoopGuard for this task (fresh per task)
-            task_loop_guard = LoopGuard()
 
             result = self._iteration_runner.run_iteration(
                 run=run,

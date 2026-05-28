@@ -92,7 +92,6 @@ The `_cmd_run_loop` handler passes all tasks (including pending) to the runner, 
 - Dry-run quality gate returns DEBUG on all iterations (no verification results), so `stop_on_debug=True` by default halts after one iteration. `stop_on_debug=False` is needed for multi-iteration dry-runs. The CLI sets `stop_on_debug=False` via the RunExecutor path but the loop mode respects the flag as-is. This may surprise users in dry-run.
 - `pass/fail` on last iteration: NOT PASSED but `next_action` is reported by the quality gate after max iterations.
 - Report command writes to `.fcc-ralph/reports/` but no archive/rotation exists.
-- Architecture doc (`FCC_RALPH_RUNTIME_ARCHITECTURE.md`) has not been updated for Phase 7 changes.
 
 ## Phase 8 Readiness
 

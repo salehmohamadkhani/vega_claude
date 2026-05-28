@@ -219,10 +219,10 @@ class TestCliLoopJson:
 
     def test_run_loop_json_pending_output(self, tmp_path: Path, capsys) -> None:
         """run --loop --json with all-pending tasks produces valid JSON with blocked info."""
-        ids = _plan_and_approve(tmp_path, task_count=2)
+        _plan_and_approve(tmp_path, task_count=2)
         # Approve first task only
         task_lib = TaskLibrary(workspace=_ws(tmp_path))
-        tasks = task_lib.list_tasks()
+        task_lib.list_tasks()  # discard, setup only
         capsys.readouterr()  # discard setup output
 
         _run_cli(

@@ -104,9 +104,11 @@ Phase 6 [DONE]      CLI surface for Ralph Runtime — fcc-ralph plan/review/appr
 Phase 6.1 [DONE]    CLI integration hardening — ``run`` delegates to ``RunExecutor``,
                     Policy A enforced, JSON output validated, 12 new tests
                         ↓
-Phase 7             Admin UI for Ralph Runtime, KPI dashboard
+Phase 7 [SKIPPED]    Ralph Admin UI was deferred; focus shifted to CLI
                         ↓
-Phase 8             Full Ralph Loop with Claude Code via FCC proxy
+Phase 7.1 [DONE]    CLI-driven Ralph loop — multi-iteration retry/debug/escalate,
+                    loop policy, fcc-ralph run --loop, status/report loop awareness,
+                    Policy A (contiguous approved prefix), JSON output hardening
                         ↓
 Phase 8 [DONE]      Controlled real execution pilot through fcc-ralph:
                     - ExecutionGuard verifies safety (no system roots, dirty git, repo root)
@@ -191,15 +193,17 @@ fcc-ralph run --pilot --real --allow-real-execution
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 7+
+## What Remains for Phase 9+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
 | CLI — fcc-ralph plan/review/approve/run/status/report | 6 | `core/ralph/cli.py`, `pyproject.toml` entry point |
 | CLI hardening — RunExecutor delegation, Policy A | 6.1 | `core/ralph/cli.py`, `run_lifecycle.py`, `run_executor.py` |
-| Admin UI — Ralph tab in FCC admin | 7 | FCC `api/admin_routes.py` |
-| Full Ralph Loop — Async Claude Code loop | 8 | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
-| Playwright KPI Verifier | 9 | Playwright, FCC smoke tests |
+| Loop — CLI-driven multi-iteration loop | 7.1 | `core/ralph/loop_runner.py`, `loop_policy.py` |
+| Real execution pilot | 8 | `core/ralph/real_pilot.py`, `execution_guard.py` |
+| Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
+| Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
+| Playwright KPI Verifier | deferred | Playwright, FCC smoke tests |
 
 ---
 

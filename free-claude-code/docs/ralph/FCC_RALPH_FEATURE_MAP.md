@@ -265,9 +265,12 @@ goal → questions → task list → human review/approval → execution
 | Run executor | `core/ralph/run_executor.py` | ✅ | 5 |
 | CLI — fcc-ralph | `core/ralph/cli.py` | ✅ | 6 |
 | CLI hardening (RunExecutor delegation) | `core/ralph/cli.py` | ✅ | 6.1 |
-| Admin UI | `core/ralph/admin/` | — | 7 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
-| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
+| Loop — Ralph loop runner | `core/ralph/loop_runner.py`, `loop_policy.py` | ✅ | 7.1 |
+| Real execution pilot | `core/ralph/real_pilot.py` | ✅ | 8 |
+| Execution guard | `core/ralph/execution_guard.py` | ✅ | 8 |
+| Admin UI | `core/ralph/admin/` | deferred | — |
+| Full async Ralph Loop | deferred | deferred | — |
+| Playwright KPI | deferred | deferred | — |
 
 ---
 
@@ -311,9 +314,12 @@ goal → questions → task list → human review/approval → execution
 | Run lifecycle | `core/ralph/run_lifecycle.py` | ✅ | 4 |
 | CLI — fcc-ralph | `core/ralph/cli.py` | ✅ | 6 |
 | CLI hardening (RunExecutor delegation) | `core/ralph/cli.py` | ✅ | 6.1 |
-| Admin UI | `core/ralph/admin/` | — | 7 |
-| Full Ralph Loop | `core/ralph/loop.py` | — | 8 |
-| Playwright KPI | `core/ralph/kpi_verifier.py` | — | 9 |
+| Loop — Ralph loop runner | `core/ralph/loop_runner.py`, `loop_policy.py` | ✅ | 7.1 |
+| Real execution pilot | `core/ralph/real_pilot.py` | ✅ | 8 |
+| Execution guard | `core/ralph/execution_guard.py` | ✅ | 8 |
+| Admin UI | `core/ralph/admin/` | deferred | — |
+| Full async Ralph Loop | deferred | deferred | — |
+| Playwright KPI | deferred | deferred | — |
 
 ---
 

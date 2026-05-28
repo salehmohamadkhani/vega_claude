@@ -79,7 +79,7 @@ fcc-ralph run --pilot --real --allow-real-execution
 
 ## Test Growth
 
-537 tests total (+65 from Phase 7.1):
+537 tests total (+65 from Phase 7.1). After Phase 8.5 lint cleanup: 536.
 
 | File | Tests | What It Covers |
 |---|---|---|
@@ -115,4 +115,4 @@ Both JSON and text output modes verified:
 
 ## Phase 9 Readiness
 
-**Yes.** Phase 8 is stable, all 537 tests pass, and the pilot provides a validated path for real execution through the safety guard.
+**Yes.** Phase 8 is stable, all 536 tests pass, and the pilot provides a validated path for real execution through the safety guard.

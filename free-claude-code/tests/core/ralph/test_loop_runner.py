@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from core.ralph.arbiter import ArbiterAction, ArbiterDecision
-from core.ralph.checkpoint import CheckpointStore
 from core.ralph.execution import ExecutionMode, ExecutionResult, ExecutionStatus
 from core.ralph.iteration_runner import IterationRunner, IterationRunResult
 from core.ralph.loop_guard import LoopGuardDecision
 from core.ralph.loop_policy import LoopPolicy
-from core.ralph.loop_runner import RalphLoopRunner, RalphLoopResult, TaskLoopResult
+from core.ralph.loop_runner import RalphLoopRunner
 from core.ralph.models import (
-    ProjectGoal,
     RalphRun,
     RalphTask,
     RunStatus,
@@ -24,7 +22,6 @@ from core.ralph.models import (
 )
 from core.ralph.quality_gate import QualityGateResult
 from core.ralph.workspace import RalphWorkspace
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -96,9 +93,6 @@ def workspace(tmp_path: Path) -> RalphWorkspace:
     ws = RalphWorkspace(project_root=str(tmp_path))
     ws.initialize()
     return ws
-
-
-from pathlib import Path
 
 
 @pytest.fixture
@@ -494,7 +488,7 @@ class TestTaskStatusPersistence:
             "TASK-001", passed=True, action=ArbiterAction.APPROVE
         )
 
-        result = runner.run(run, tasks)
+        runner.run(run, tasks)
 
         assert tasks[0].status == TaskStatus.PASSED
 
