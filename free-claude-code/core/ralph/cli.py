@@ -20,10 +20,12 @@ from typing import Any
 
 from .agent_profiles import AgentProfileRegistry
 from .checkpoint import CheckpointStore
+from .execution_guard import check_real_execution_safety
 from .loop_policy import LoopPolicy
 from .loop_runner import RalphLoopRunner
 from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
 from .planner import TaskPlanner
+from .real_pilot import RealPilot, RealPilotConfig, RealPilotResult
 from .run_executor import RunExecutor, RunExecutorConfig
 from .run_lifecycle import RunLifecycle
 from .task_library import TaskLibrary
@@ -380,8 +382,23 @@ def _cmd_run(args: argparse.Namespace) -> int:
             )
         _error("No approved tasks to run.", EXIT_ERROR)
 
-    if args.real and args.allow_real_execution:
-        _warn("REAL EXECUTION requested but not available in Phase 6. Using dry-run.")
+    dry_run = not args.real or not args.allow_real_execution
+
+    # Real execution guard (only when not dry-run)
+    if not dry_run and args.workspace:
+        guard_result = check_real_execution_safety(
+            args.workspace,
+            allow_repo_root_execution=args.allow_repo_root_execution,
+            allow_dirty_git=args.allow_dirty_git,
+        )
+        if not guard_result.allowed:
+            for reason in guard_result.failure_reasons:
+                _warn(reason)
+            _error(
+                "Real execution blocked by safety guard. "
+                "See warnings above.",
+                EXIT_UNSAFE_REAL,
+            )
 
     # Reconstruct run state from persisted metadata
     run_meta = _load_latest_run_meta(ws)
@@ -660,7 +677,16 @@ def _next_step_hint(action: str) -> str:
 
 
 def _cmd_run_loop(args: argparse.Namespace) -> int:
-    """Run approved tasks through the multi-iteration Ralph loop."""
+    """Run approved tasks through the multi-iteration Ralph loop.
+
+    Supports pilot mode (``--pilot``) for controlled real-execution
+    validation, and guard flags (``--allow-dirty-git``,
+    ``--allow-repo-root-execution``) for real execution safety.
+    """
+    # --- Pilot mode ---
+    if args.pilot:
+        return _cmd_pilot_run(args)
+
     ws = _open_workspace(args.workspace)
     if not ws.exists():
         _error("No Ralph workspace found. Run 'fcc-ralph plan' first.", EXIT_ERROR)
@@ -678,11 +704,22 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
         )
 
     dry_run = not args.real or not args.allow_real_execution
-    if not dry_run:
-        _warn(
-            "REAL EXECUTION requested but not available in this phase. "
-            "Using dry-run."
+
+    # Real execution guard (only when not dry-run)
+    if not dry_run and args.workspace:
+        guard_result = check_real_execution_safety(
+            args.workspace,
+            allow_repo_root_execution=args.allow_repo_root_execution,
+            allow_dirty_git=args.allow_dirty_git,
         )
+        if not guard_result.allowed:
+            for reason in guard_result.failure_reasons:
+                _warn(reason)
+            _error(
+                "Real execution blocked by safety guard. "
+                "See warnings above.",
+                EXIT_UNSAFE_REAL,
+            )
 
     # Build policy from CLI flags
     policy = LoopPolicy(
@@ -728,6 +765,119 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
     if not result.completed:
         return EXIT_ERROR
     return EXIT_SUCCESS
+
+
+def _print_pilot_result(result: RealPilotResult, *, json_mode: bool) -> None:
+    """Print a RealPilotResult to stdout."""
+    if json_mode:
+
+        _print_json(
+            {
+                "pilot_workspace_path": result.pilot_workspace_path,
+                "run_id": result.run_id,
+                "task_id": result.task_id,
+                "passed": result.passed,
+                "changed_files": result.changed_files,
+                "failure_reasons": result.failure_reasons,
+                "guard": result.guard_result.to_dict() if result.guard_result else {},
+                "loop": {
+                    "completed": result.loop_result.completed
+                    if result.loop_result
+                    else False,
+                    "stopped_reason": result.loop_result.stopped_reason
+                    if result.loop_result
+                    else "",
+                    "approval_required": result.loop_result.approval_required
+                    if result.loop_result
+                    else False,
+                    "total_iterations": result.loop_result.total_iterations
+                    if result.loop_result
+                    else 0,
+                }
+                if result.loop_result
+                else None,
+            }
+        )
+    else:
+        print("Ralph Real Execution Pilot")
+        print("=" * 60)
+        print(f"  Pilot workspace: {result.pilot_workspace_path}")
+        print(f"  Run ID: {result.run_id}")
+        print(f"  Task ID: {result.task_id}")
+        print(f"  Passed: {'yes' if result.passed else 'no'}")
+        print()
+        if result.guard_result:
+            print(f"  Guard allowed: {result.guard_result.allowed}")
+            if result.guard_result.failure_reasons:
+                for r in result.guard_result.failure_reasons:
+                    print(f"    Guard failure: {r}")
+            print()
+        if result.changed_files:
+            print("  Changed files:")
+            for f in result.changed_files:
+                print(f"    {f}")
+            print()
+        if result.failure_reasons:
+            print("  Failure reasons:")
+            for r in result.failure_reasons:
+                print(f"    {r}")
+            print()
+        if result.loop_result:
+            print(f"  Loop completed: {result.loop_result.completed}")
+            print(f"  Stopped reason: {result.loop_result.stopped_reason}")
+            print(f"  Total iterations: {result.loop_result.total_iterations}")
+
+
+def _cmd_pilot_run(args: argparse.Namespace) -> int:
+    """Run the controlled real-execution pilot.
+
+    Creates an isolated throwaway workspace, sets up a small task, and
+    runs through the Ralph loop. Dry-run by default.
+
+    The pilot is considered "passed" if:
+    - No guard failures (real mode only)
+    - No loop errors
+    - The pilot infrastructure ran successfully
+
+    In dry-run mode, the task may report ``debug_required`` from the
+    quality gate — this is expected and does not indicate a pilot failure.
+    """
+    # --real safety gate
+    if args.real and not args.allow_real_execution:
+        _error(
+            "--real requires --allow-real-execution.",
+            EXIT_UNSAFE_REAL,
+        )
+
+    dry_run = not args.real or not args.allow_real_execution
+
+    pilot_config = RealPilotConfig(
+        pilot_workspace_path=args.pilot_workspace or "",
+        dry_run=dry_run,
+        allow_real_execution=args.allow_real_execution,
+        max_iterations_per_task=args.max_iterations,
+        allow_dirty_git=args.allow_dirty_git,
+        allow_repo_root_execution=args.allow_repo_root_execution,
+    )
+
+    pilot = RealPilot(config=pilot_config)
+    result = pilot.run()
+
+    _print_pilot_result(result, json_mode=args.json)
+
+    if result.guard_result and not result.guard_result.allowed:
+        return EXIT_UNSAFE_REAL
+
+    # Dry-run pilot: the loop may report debug/retry/non-completed from
+    # the quality gate, but the pilot infrastructure itself succeeded.
+    if dry_run:
+        return EXIT_SUCCESS
+
+    if result.passed:
+        return EXIT_SUCCESS
+    if result.loop_result and result.loop_result.approval_required:
+        return EXIT_APPROVAL_REQUIRED
+    return EXIT_ERROR
 
 
 # ---------------------------------------------------------------------------
@@ -1054,6 +1204,26 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--max-tasks", type=int, default=0, help="Maximum number of tasks to run"
     )
+    p.add_argument(
+        "--pilot",
+        action="store_true",
+        help="Run in controlled pilot mode (isolated workspace)",
+    )
+    p.add_argument(
+        "--pilot-workspace",
+        default=None,
+        help="Path for the pilot workspace (default: %%TEMP%%/vega-ralph-real-pilot)",
+    )
+    p.add_argument(
+        "--allow-dirty-git",
+        action="store_true",
+        help="Allow real execution even when Git workspace is dirty",
+    )
+    p.add_argument(
+        "--allow-repo-root-execution",
+        action="store_true",
+        help="Allow real execution on a Git repo root",
+    )
 
     # --- status ---
     sub.add_parser("status", help="Show workspace / run status")
@@ -1096,7 +1266,7 @@ def _run_cli(argv: list[str]) -> int:
                 _error("Specify a task ID or use --all.", EXIT_INVALID_INPUT)
             return _cmd_approve(args)
         elif args.command == "run":
-            if args.loop:
+            if args.loop or args.pilot:
                 return _cmd_run_loop(args)
             return _cmd_run(args)
         elif args.command == "status":

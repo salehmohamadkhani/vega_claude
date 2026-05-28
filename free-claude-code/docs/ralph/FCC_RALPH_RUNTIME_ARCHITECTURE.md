@@ -108,8 +108,68 @@ Phase 7             Admin UI for Ralph Runtime, KPI dashboard
                         ↓
 Phase 8             Full Ralph Loop with Claude Code via FCC proxy
                         ↓
+Phase 8 [DONE]      Controlled real execution pilot through fcc-ralph:
+                    - ExecutionGuard verifies safety (no system roots, dirty git, repo root)
+                    - RealPilot creates throwaway workspace outside repo
+                    - fcc-ralph run --pilot — dry-run by default, --real requires --allow-real-execution
+                    - Exit codes: 0 success, 4 approval-required, 5 unsafe-real
+                    - 65 new tests: guard (26), pilot (14), CLI pilot (11), misc coverage
+                        ↓
 Phase 9             Playwright KPI verifier, browser-based acceptance testing
 ```
+
+## Phase 8 — Controlled Real Execution Pilot
+
+### What Phase 8 Adds
+
+| Module | File | Status |
+|---|---|---|
+| Execution Guard | `core/ralph/execution_guard.py` | System root/home root/forbidden path detection, dirty git detection, allowed/forbidden file enforcement |
+| Real Pilot | `core/ralph/real_pilot.py` | Isolated throwaway workspace creation, pilot task setup, structured pilot results |
+| Guard Tests | `tests/core/ralph/test_execution_guard.py` | 26 tests — system root, guard check, git detection, changed file validation |
+| Pilot Tests | `tests/core/ralph/test_real_pilot.py` | 14 tests — basic pilot, config, mocked execution |
+| CLI Pilot Tests | `tests/core/ralph/test_cli_real_pilot.py` | 11 tests — pilot commands, safety flags, approval gates, JSON output |
+| CLI Integration | `core/ralph/cli.py` | `--pilot`, `--pilot-workspace`, `--allow-dirty-git`, `--allow-repo-root-execution` flags |
+
+### Safety Architecture
+
+```
+fcc-ralph run --pilot --real --allow-real-execution
+        │
+        ▼
+  RealPilot.run()
+        │
+        ├─ 1. Resolve pilot workspace path (temp or user-provided)
+        ├─ 2. Create pilot workspace (mkdir + init)
+        ├─ 3. Run ExecutionGuard
+        │       ├─ Path exists?
+        │       ├─ System root / home root?
+        │       ├─ Forbidden path?
+        │       ├─ Git repo root? (--allow-repo-root-execution)
+        │       └─ Dirty git? (--allow-dirty-git)
+        ├─ 4. Create pilot file (README.md)
+        ├─ 5. Create approved pilot task
+        ├─ 6. Run through RalphLoopRunner
+        └─ 7. Detect changed files
+```
+
+### Guard Properties
+
+| Check | Default | Override |
+|---|---|---|
+| System root | Block | — |
+| Home root | Block | — |
+| Forbidden paths (C:\\Windows, Program Files, etc.) | Block | — |
+| Git repo root | Block | `--allow-repo-root-execution` |
+| Dirty git | Block | `--allow-dirty-git` |
+| Temp path | Allow | — |
+| User-provided workspace outside repo | Allow | — |
+
+### Test Growth
+
+537 tests total (+65 from Phase 7.1). All checks passing.
+
+---
 
 ## What Phase 1 Implements Now
 
@@ -143,7 +203,7 @@ Phase 9             Playwright KPI verifier, browser-based acceptance testing
 
 ---
 
-*Last updated: 2026-05-27 — Phase 6.1 complete*
+*Last updated: 2026-05-28 — Phase 8 complete*
 
 ---
 

@@ -87,7 +87,7 @@ KPI metrics to track across phases:
 
 ---
 
-*Last updated: 2026-05-27 — Phase 6.1 complete (CLI hardening)*
+*Last updated: 2026-05-28 — Phase 8 complete (real execution pilot)*
 
 
 ---

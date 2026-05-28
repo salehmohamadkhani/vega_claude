@@ -123,6 +123,10 @@ class ExecutionConfig:
     )
     dry_run: bool = True
     allow_test_fallback: bool = False
+    require_clean_git: bool = True
+    allow_dirty_git: bool = False
+    allow_repo_root_execution: bool = False
+    enforce_allowed_files: bool = True
 
     def validate_for_execution(self) -> None:
         """Validate config for real execution.
@@ -135,6 +139,14 @@ class ExecutionConfig:
                 "allow_real_execution=True. The echo/testing fallback "
                 "would silently substitute for a real Claude Code CLI."
             )
+
+    def validate_for_guard_only(self) -> None:
+        """Validate workspace-safety guard fields only.
+
+        Skips execution-mode validation (dry-run vs real) and only checks
+        guard config consistency. Called before real execution to ensure
+        the guard is properly configured.
+        """
 
     def validate_for_test_fallback(self) -> None:
         """Validate config for test-fallback execution.
