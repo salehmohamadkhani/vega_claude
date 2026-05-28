@@ -13,13 +13,7 @@ from core.ralph.iteration_runner import IterationRunner, IterationRunResult
 from core.ralph.loop_guard import LoopGuardDecision
 from core.ralph.loop_policy import LoopPolicy
 from core.ralph.loop_runner import RalphLoopRunner
-from core.ralph.models import (
-    RalphRun,
-    RalphTask,
-    RunStatus,
-    TaskStatus,
-    _new_id,
-)
+from core.ralph.models import RalphRun, RalphTask, RunStatus, TaskStatus, _new_id
 from core.ralph.quality_gate import QualityGateResult
 from core.ralph.workspace import RalphWorkspace
 

@@ -222,6 +222,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
         task = task_lib.find_task(args.task)
         if task is None:
             _error(f"Task {args.task!r} not found.", EXIT_TASK_NOT_FOUND)
+        assert task is not None
         tasks = [task]
     else:
         tasks = task_lib.list_tasks()
@@ -367,6 +368,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         target = next((t for t in all_tasks if t.id == args.task), None)
         if target is None:
             _error(f"Task {args.task!r} not found.", EXIT_TASK_NOT_FOUND)
+        assert target is not None
         if target.status != TaskStatus.APPROVED:
             _error(
                 f"Task {args.task!r} is {target.status.value}, not APPROVED.",
@@ -419,6 +421,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         target = next((t for t in all_tasks if t.id == args.task), None)
         if target is None:
             _error(f"Task {args.task!r} not found.", EXIT_TASK_NOT_FOUND)
+        assert target is not None
 
         # Strict order: no earlier PENDING tasks may exist
         for t in all_tasks:
@@ -1277,7 +1280,7 @@ def _run_cli(argv: list[str]) -> int:
             parser.print_help()
             return EXIT_ERROR
     except SystemExit as e:
-        code = e.code if e.code is not None else EXIT_ERROR
+        code = e.code if isinstance(e.code, int) else EXIT_ERROR
         return code
 
 
