@@ -28,7 +28,9 @@ from .loop_policy import LoopPolicy
 from .loop_runner import RalphLoopRunner
 from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
 from .planner import TaskPlanner
+from .kpi import KPIEvaluator
 from .quality_gate import QualityGate
+from .verification_policy import VerificationPolicy
 from .real_pilot import RealPilot, RealPilotConfig, RealPilotResult
 from .run_executor import RunExecutor, RunExecutorConfig
 from .run_lifecycle import RunLifecycle
@@ -786,7 +788,14 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
         working_directory=ws.paths().root,
     )
     verification_runner = VerificationRunner(config=verification_config)
-    quality_gate = QualityGate(verification_runner=verification_runner)
+    kpi_evaluator = KPIEvaluator(
+        workspace_root=ws.paths().root,
+        policy=VerificationPolicy(),
+    )
+    quality_gate = QualityGate(
+        verification_runner=verification_runner,
+        kpi_evaluator=kpi_evaluator,
+    )
 
     iteration_runner = IterationRunner(
         config=IterationRunnerConfig(execution_mode=execution_mode),
