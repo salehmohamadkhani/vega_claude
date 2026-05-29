@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import uuid
 from datetime import UTC, datetime
@@ -772,8 +773,16 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
 
     # Create iteration runner with proper execution mode
     execution_mode = ExecutionMode.REAL if not dry_run else ExecutionMode.DRY_RUN
+    # Build child environment for Claude Code with FCC proxy connection
+    _fcc_port = os.environ.get("FCC_PORT", "8082")
+    _fcc_auth = os.environ.get("ANTHROPIC_AUTH_TOKEN", "")
+    _child_env: dict[str, str] = {}
+    if _fcc_auth:
+        _child_env["ANTHROPIC_AUTH_TOKEN"] = _fcc_auth
+        _child_env["ANTHROPIC_BASE_URL"] = f"http://localhost:{_fcc_port}"
     adapter_config = ExecutionConfig(
         allow_real_execution=(not dry_run),
+        child_env=_child_env,
     )
     execution_adapter = ClaudeCodeExecutionAdapter(config=adapter_config)
 

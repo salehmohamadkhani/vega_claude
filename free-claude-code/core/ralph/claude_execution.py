@@ -9,6 +9,7 @@ Real execution is opt-in and disabled by default. Never uses
 
 from __future__ import annotations
 
+import os
 import re
 import shlex
 import shutil
@@ -48,27 +49,33 @@ class ClaudeCodeCommandBuilder:
     ) -> list[str]:
         """Build the argv list for running Claude Code.
 
+        Uses ``claude`` directly (not ``fcc-claude``) so the process CWD
+        (set by the caller via ``cwd``) is not overridden by the FCC
+        launcher wrapper. ``fcc-claude`` always ``cd``s to the FCC
+        directory, which breaks workspace isolation.
+
         Resolution order:
-        1. ``fcc-claude`` (FCC's Claude Code launcher)
-        2. ``claude`` (raw Claude Code CLI)
-        3. ``echo`` (testing fallback — only when ``allow_fallback=True``)
+        1. ``claude`` (raw Claude Code CLI)
+        2. ``echo`` (testing fallback — only when ``allow_fallback=True``)
 
         Raises ``CommandBuilderError`` if no CLI is found and
         fallback is not allowed.
         """
-        fcc_claude = shutil.which("fcc-claude")
-        if fcc_claude is not None:
-            return [fcc_claude, "--print", request.prompt]
-
         claude = shutil.which("claude")
         if claude is not None:
-            return [claude, "--print", request.prompt]
+            return [
+                claude,
+                "--print",
+                "--permission-mode",
+                "acceptEdits",
+                request.prompt,
+            ]
 
         if allow_fallback:
             return ["echo", "claude", "--print", request.prompt]
 
         raise CommandBuilderError(
-            "No Claude Code CLI found (tried fcc-claude, claude). "
+            "No Claude Code CLI found (tried claude). "
             "Install Claude Code or set allow_fallback=True for testing."
         )
 
@@ -148,6 +155,9 @@ class ClaudeCodeExecutionAdapter:
         start_time = time.monotonic()
 
         try:
+            child_env: dict[str, str] | None = None
+            if self._config.child_env:
+                child_env = {**os.environ, **self._config.child_env}
             proc = subprocess.run(
                 command,
                 capture_output=True,
@@ -155,6 +165,7 @@ class ClaudeCodeExecutionAdapter:
                 shell=False,
                 cwd=request.workspace_path or None,
                 timeout=request.timeout_seconds or self._config.timeout_seconds,
+                env=child_env,
             )
             duration = time.monotonic() - start_time
             exit_code = proc.returncode

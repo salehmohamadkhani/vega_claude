@@ -10,6 +10,7 @@ opt-in via ``ExecutionConfig(allow_real_execution=True)``.
 from __future__ import annotations
 
 import enum
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -127,6 +128,9 @@ class ExecutionConfig:
     allow_dirty_git: bool = False
     allow_repo_root_execution: bool = False
     enforce_allowed_files: bool = True
+    # Environment variables to set in the child process (overrides current env).
+    # When empty (default), inherits the current process environment.
+    child_env: dict[str, str] = field(default_factory=dict)
 
     def validate_for_execution(self) -> None:
         """Validate config for real execution.
