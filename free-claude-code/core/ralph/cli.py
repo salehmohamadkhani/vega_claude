@@ -25,17 +25,17 @@ from .claude_execution import ClaudeCodeExecutionAdapter
 from .execution import ExecutionConfig, ExecutionMode
 from .execution_guard import check_real_execution_safety
 from .iteration_runner import IterationRunner, IterationRunnerConfig
+from .kpi import KPIEvaluator
 from .loop_policy import LoopPolicy
 from .loop_runner import RalphLoopRunner
 from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
 from .planner import TaskPlanner
-from .kpi import KPIEvaluator
 from .quality_gate import QualityGate
-from .verification_policy import VerificationPolicy
 from .real_pilot import RealPilot, RealPilotConfig, RealPilotResult
 from .run_executor import RunExecutor, RunExecutorConfig
 from .run_lifecycle import RunLifecycle
 from .task_library import TaskLibrary
+from .verification_policy import VerificationPolicy
 from .verification_profiles import (
     make_profile_decision,
     profile_from_string,
@@ -793,6 +793,7 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
             ["echo"],
             ["test"],
             ["find"],
+            ["grep"],
         ],
         working_directory=ws.paths().root,
     )

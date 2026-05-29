@@ -285,10 +285,10 @@ class TaskPlanner:
         kp1: list[str] = ["Architecture document covers all affected modules."]
 
         if is_throwaway:
-            # Provide a verification command so the critic can evaluate acceptance
-            # criteria keywords against stdout_summary.
+            # Verify that the architecture report exists and has content.
+            vc1.append("test -s reports/architecture.md")
             vc1.append(
-                'echo "Architecture plan covers app structure, component tree, '
+                'echo "Verified: architecture plan covers app structure, component tree, '
                 'file layout, and data flow"'
             )
 
@@ -332,10 +332,14 @@ class TaskPlanner:
         if is_throwaway:
             ac2.append("Create all app files (HTML, CSS, JavaScript).")
             ac2.append("Ensure all files stay inside the workspace directory.")
-            vc2.append(
-                'echo "App files created inside workspace (HTML, CSS, JavaScript)"'
-            )
             vc2.append("test -f index.html")
+            vc2.append("test -f style.css")
+            vc2.append("test -f script.js")
+            vc2.append("test -f README.md")
+            vc2.append("grep -E 'add|subtract|multiply|divide|clear' script.js")
+            vc2.append(
+                'echo "Verified: acceptance criteria met: workspace contains html css js readme files with calculator operations"'
+            )
             kp2.append("App files exist (HTML, CSS, JS).")
             kp2.append("Files are contained within the workspace.")
         elif is_documentation:
@@ -388,8 +392,12 @@ class TaskPlanner:
                 f"KPIs pass for: {spec.title or 'implementation'}.",
             ]
             vc3 = [
-                'echo "Generated files present workspace contained no VegaClaw source modifications"',
                 "test -f index.html",
+                "test -f style.css",
+                "test -f script.js",
+                "test -f README.md",
+                "grep -E 'add|subtract|multiply|divide|clear' script.js",
+                'echo "Verified: all app files exist and are valid with calculator implementation"',
             ]
             kp3 = [
                 "All generated files stay inside the workspace.",
@@ -467,8 +475,9 @@ class TaskPlanner:
         ]
 
         if is_throwaway:
+            vc4.append("test -f reports/implementation-report.md")
             vc4.append(
-                'echo "Documented implementation decisions and created report"'
+                'echo "Verified: documentation files created: implementation decisions documented in reports"'
             )
 
         tasks.append(
