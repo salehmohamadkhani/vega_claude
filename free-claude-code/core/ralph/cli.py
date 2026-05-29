@@ -169,7 +169,8 @@ def _cmd_plan(args: argparse.Namespace) -> int:
             _error(str(exc), EXIT_INVALID_INPUT)
 
     planner = TaskPlanner()
-    task_plan = planner.plan(goal, profile=profile)
+    task_count = getattr(args, "task_count", None)
+    task_plan = planner.plan(goal, profile=profile, target_task_count=task_count)
 
     # Persist goal
     ws.write_json(
@@ -1248,6 +1249,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Verification profile: ralph-runtime, throwaway-app, documentation, or generic (default: auto-detect)",
     )
     p.add_argument("--yes", action="store_true", help="Skip confirmation prompts")
+    p.add_argument(
+        "--task-count",
+        type=int,
+        default=None,
+        help="Target number of tasks (default: 4). >4 decomposes implementation into sub-tasks.",
+    )
 
     # --- review ---
     p = sub.add_parser("review", help="Review tasks and approval status")

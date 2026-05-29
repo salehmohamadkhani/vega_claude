@@ -157,12 +157,14 @@ class RalphLoopRunner:
                 dry_run=dry_run,
             )
 
-        # Contiguous approved prefix: only tasks up to the first non-APPROVED
+        # Contiguous runnable prefix: APPROVED tasks after PASSED ones
         runnable: list[RalphTask] = []
         first_blocked: str | None = None
         for t in tasks:
             if t.status == TaskStatus.APPROVED:
                 runnable.append(t)
+            elif t.status == TaskStatus.PASSED:
+                continue  # Skip already-completed tasks
             else:
                 if (
                     effective_policy.require_approval

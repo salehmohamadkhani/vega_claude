@@ -232,16 +232,19 @@ class TaskPlanner:
         self,
         spec: ProjectSpec,
         profile: ProfileDecision | None = None,
+        target_task_count: int | None = None,
     ) -> list[RalphTask]:
         """Generate deterministic RalphTasks from a project spec.
 
         When a ``profile`` is provided, task verification commands and KPIs
-        are adjusted to match the profile (e.g. throwaway apps skip
+        are adjusted to the match the profile (e.g. throwaway apps skip
         VegaClaw-specific tests).  If ``None``, the caller can still rely on
         the original behaviour (Ralph Runtime default).
 
-        Always produces at least four tasks. Metadata is injected based on
-        the spec's target areas and constraints.
+        By default produces exactly four tasks (arch, impl, verif, docs).
+        When ``target_task_count`` is set and the profile is throwaway, the
+        implementation task is decomposed into multiple focused sub-tasks
+        so that Claude Code handles one component at a time.
 
         The task counter is reset at the start of each call so that calling
         this method multiple times with the same input produces identical IDs.
@@ -320,62 +323,171 @@ class TaskPlanner:
             )
         )
 
-        # --- Task 2: Implementation ---
-        ac2: list[str] = [
-            f"Implement the changes required for: {spec.title or 'the goal'}.",
-            "All acceptance criteria defined in the task must be met.",
-        ]
-        vc2: list[str] = []
-        st2: list[str] = []
-        kp2: list[str] = []
-
-        if is_throwaway:
-            ac2.append("Create all app files (HTML, CSS, JavaScript).")
-            ac2.append("Ensure all files stay inside the workspace directory.")
-            vc2.append("test -f index.html")
-            vc2.append(
-                'echo "Verified: acceptance criteria defined for app implementation are satisfied: required files exist inside workspace"'
-            )
-            kp2.append("App files exist (HTML, CSS, JS).")
-            kp2.append("Files are contained within the workspace.")
-        elif is_documentation:
-            ac2.append("Create or update documentation files only.")
-            kp2.append("Documentation files are accurate.")
-        elif _include_runtime_checks():
-            vc2.append("uv run ruff check core/ralph")
-            vc2.append("uv run pytest tests/core/ralph -q")
-            kp2.append("Implementation passes ruff linting.")
-
-        if _include_runtime_checks():
-            if "api" in categories:
-                ac2.append("API contract is maintained or extended correctly.")
-                st2.append("api")
-            if "ui" in categories:
-                ac2.append("UI components follow existing Admin UI patterns.")
-                kp2.append("UI renders without errors (manual check).")
-            if "messaging" in categories:
-                ac2.append("Messaging integration follows FCC handler patterns.")
-                st2.append("messaging")
-            if "cli" in categories:
-                ac2.append("CLI commands follow existing fcc-* conventions.")
-                st2.append("cli")
-
-        tasks.append(
-            RalphTask(
-                id=self._next_task_id("implementation"),
-                title="Implementation",
-                description=f"Implement the core changes for: {spec.title or 'the goal'}.",
-                status=TaskStatus.PENDING,
-                agent_role=AgentRole.DOER,
-                allowed_files=[],
-                forbidden_files=["api/routes.py", "providers/"],
-                acceptance_criteria=ac2,
-                verification_commands=vc2,
-                smoke_targets=st2,
-                kpis=kp2,
-                max_iterations=5,
-            )
+        # --- Task 2 (+ optional sub-tasks): Implementation ---
+        # Only decompose when target_task_count is explicitly set and > 4.
+        extra_doer = (
+            max(0, min(target_task_count, 14) - 3)
+            if target_task_count is not None and target_task_count > 4
+            else 0
         )
+
+        if is_throwaway and extra_doer > 0:
+            # Decompose implementation into sub-tasks with focused file targets.
+            _IMPL_SUB_GOAL_MAP = [
+                (
+                    "Core logic / calculator engine",
+                    ["calculator", "arithmetic", "math", "compute",
+                     "calculator.js", "script.js", "app.js", "main.js"],
+                ),
+                (
+                    "Main page UI and styling",
+                    ["index.html", "index.htm", "styles.css", "style.css",
+                     "landing page", "homepage", "ui", "interface", "layout"],
+                ),
+                (
+                    "Advanced / scientific mode pages",
+                    ["scientific.html", "advanced.html",
+                     "scientific", "advanced", "degree", "radian"],
+                ),
+                (
+                    "Help page and documentation files",
+                    ["help.html", "docs", "README.md",
+                     "help", "docs", "documentation", "usage"],
+                ),
+                (
+                    "Accessibility and i18n setup",
+                    ["accessibility", "i18n", "locale",
+                     "a11y", "language", "translation"],
+                ),
+                (
+                    "Error handling and edge cases",
+                    ["error", "fallback", "validation",
+                     "divide by zero", "invalid", "boundary"],
+                ),
+                (
+                    "Responsive layout and mobile support",
+                    ["responsive", "mobile", "media", "layout",
+                     "phone", "tablet", "viewport"],
+                ),
+                (
+                    "Build / tooling configuration",
+                    ["Makefile", ".env", "config",
+                     "build", "tooling", "package"],
+                ),
+                (
+                    "Testing and formula validation",
+                    ["test", "formula", "assert", "verify",
+                     "validation", "unit test", "spec", "check"],
+                ),
+                (
+                    "Data persistence and user preferences",
+                    ["localStorage", "settings", "preferences",
+                     "history", "memory", "save", "persist", "theme"],
+                ),
+            ]
+
+            # Pick groups that match the goal text (include KPIs + constraints for richer matching)
+            goal_text = f"{spec.title} {spec.summary} {' '.join(spec.constraints)} {' '.join(spec.success_kpis)}".lower()
+            matched: list[tuple[str, list[str]]] = []
+            for label, hints in _IMPL_SUB_GOAL_MAP:
+                if any(h in goal_text for h in hints):
+                    matched.append((label, hints))
+
+            # At least one group
+            if not matched:
+                matched.append(_IMPL_SUB_GOAL_MAP[0])
+
+            matched = matched[:extra_doer]
+
+            for label, hints in matched:
+                hint_str = ", ".join(hints)
+                safe_id = label.lower().replace(" ", "-").replace("/", "-")[:20]
+                tasks.append(
+                    RalphTask(
+                        id=self._next_task_id(f"impl-{safe_id}"),
+                        title=f"Implementation: {label}",
+                        description=(
+                            f"Implement {label} for: {spec.title or 'the goal'}. "
+                            f"Focus on files matching: {hint_str}."
+                        ),
+                        status=TaskStatus.PENDING,
+                        agent_role=AgentRole.DOER,
+                        allowed_files=[],
+                        forbidden_files=["api/routes.py", "providers/"],
+                        acceptance_criteria=[
+                            f"Create files for {label}.",
+                            f"Ensure files match the scope: {hint_str}.",
+                            "All files stay inside the workspace directory.",
+                        ],
+                        verification_commands=[
+                            f"test -f {hints[0]}",
+                            f'echo "Verified: {label} implementation files exist inside workspace"',
+                        ],
+                        smoke_targets=[],
+                        kpis=[
+                            f"Implementation files for {label} exist.",
+                            "Files are contained within the workspace.",
+                        ],
+                        max_iterations=4,
+                    )
+                )
+        else:
+            # Single implementation task (original behaviour)
+            ac2: list[str] = [
+                f"Implement the changes required for: {spec.title or 'the goal'}.",
+                "All acceptance criteria defined in the task must be met.",
+            ]
+            vc2: list[str] = []
+            st2: list[str] = []
+            kp2: list[str] = []
+
+            if is_throwaway:
+                ac2.append("Create all app files (HTML, CSS, JavaScript).")
+                ac2.append("Ensure all files stay inside the workspace directory.")
+                vc2.append("test -f index.html")
+                vc2.append(
+                    'echo "Verified: acceptance criteria defined for app implementation are satisfied: required files exist inside workspace"'
+                )
+                kp2.append("App files exist (HTML, CSS, JS).")
+                kp2.append("Files are contained within the workspace.")
+            elif is_documentation:
+                ac2.append("Create or update documentation files only.")
+                kp2.append("Documentation files are accurate.")
+            elif _include_runtime_checks():
+                vc2.append("uv run ruff check core/ralph")
+                vc2.append("uv run pytest tests/core/ralph -q")
+                kp2.append("Implementation passes ruff linting.")
+
+            if _include_runtime_checks():
+                if "api" in categories:
+                    ac2.append("API contract is maintained or extended correctly.")
+                    st2.append("api")
+                if "ui" in categories:
+                    ac2.append("UI components follow existing Admin UI patterns.")
+                    kp2.append("UI renders without errors (manual check).")
+                if "messaging" in categories:
+                    ac2.append("Messaging integration follows FCC handler patterns.")
+                    st2.append("messaging")
+                if "cli" in categories:
+                    ac2.append("CLI commands follow existing fcc-* conventions.")
+                    st2.append("cli")
+
+            tasks.append(
+                RalphTask(
+                    id=self._next_task_id("implementation"),
+                    title="Implementation",
+                    description=f"Implement the core changes for: {spec.title or 'the goal'}.",
+                    status=TaskStatus.PENDING,
+                    agent_role=AgentRole.DOER,
+                    allowed_files=[],
+                    forbidden_files=["api/routes.py", "providers/"],
+                    acceptance_criteria=ac2,
+                    verification_commands=vc2,
+                    smoke_targets=st2,
+                    kpis=kp2,
+                    max_iterations=5,
+                )
+            )
 
         # --- Task 3: Verification / testing ---
         ac3: list[str]
@@ -496,11 +608,20 @@ class TaskPlanner:
         goal: ProjectGoal,
         answers: dict[str, str] | None = None,
         profile: ProfileDecision | None = None,
+        target_task_count: int | None = None,
     ) -> TaskPlan:
         """Run the full planning pipeline for a goal.
 
         When no ``profile`` is provided, the profile is auto-detected from
         the goal title, description, constraints, and KPIs.
+
+        Args:
+            goal: The project goal.
+            answers: Optional answers to clarifying questions.
+            profile: Optional explicit verification profile.
+            target_task_count:
+                Request a specific number of tasks (>4 decomposes
+                implementation into sub-tasks). 4 by default.
 
         Returns a ``TaskPlan`` containing clarifying questions, a project
         spec, and generated RalphTasks.
@@ -514,5 +635,5 @@ class TaskPlanner:
             )
         questions = self.generate_questions(goal)
         spec = self.build_project_spec(goal, answers)
-        tasks = self.generate_tasks(spec, profile=profile)
+        tasks = self.generate_tasks(spec, profile=profile, target_task_count=target_task_count)
         return TaskPlan(goal=goal, spec=spec, questions=questions, tasks=tasks)
