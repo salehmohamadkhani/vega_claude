@@ -20,7 +20,9 @@ from typing import Any
 
 from .agent_profiles import AgentProfileRegistry
 from .checkpoint import CheckpointStore
+from .execution import ExecutionMode
 from .execution_guard import check_real_execution_safety
+from .iteration_runner import IterationRunner, IterationRunnerConfig
 from .loop_policy import LoopPolicy
 from .loop_runner import RalphLoopRunner
 from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
@@ -763,7 +765,19 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
         tasks=all_tasks,
     )
 
-    runner = RalphLoopRunner(workspace=ws, task_library=task_lib)
+    # Create iteration runner with proper execution mode
+    execution_mode = ExecutionMode.REAL if not dry_run else ExecutionMode.DRY_RUN
+    iteration_runner = IterationRunner(
+        config=IterationRunnerConfig(execution_mode=execution_mode),
+        workspace=ws,
+        task_library=task_lib,
+    )
+
+    runner = RalphLoopRunner(
+        workspace=ws,
+        task_library=task_lib,
+        iteration_runner=iteration_runner,
+    )
     result = runner.run(run=run, tasks=all_tasks, policy=policy)
 
     # Persist task status changes
