@@ -28,6 +28,7 @@ from .loop_policy import LoopPolicy
 from .loop_runner import RalphLoopRunner
 from .models import ProjectGoal, RalphRun, RunStatus, TaskStatus
 from .planner import TaskPlanner
+from .quality_gate import QualityGate
 from .real_pilot import RealPilot, RealPilotConfig, RealPilotResult
 from .run_executor import RunExecutor, RunExecutorConfig
 from .run_lifecycle import RunLifecycle
@@ -36,6 +37,7 @@ from .verification_profiles import (
     make_profile_decision,
     profile_from_string,
 )
+from .verification_runner import VerificationRunner, VerificationRunnerConfig
 from .workspace import RalphWorkspace
 
 # ---------------------------------------------------------------------------
@@ -772,11 +774,26 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
         allow_real_execution=(not dry_run),
     )
     execution_adapter = ClaudeCodeExecutionAdapter(config=adapter_config)
+
+    # Configure verification runner to execute commands during real runs
+    verification_config = VerificationRunnerConfig(
+        allow_command_execution=(not dry_run),
+        allowed_command_prefixes=[
+            ["echo"],
+            ["test"],
+            ["find"],
+        ],
+        working_directory=ws.paths().root,
+    )
+    verification_runner = VerificationRunner(config=verification_config)
+    quality_gate = QualityGate(verification_runner=verification_runner)
+
     iteration_runner = IterationRunner(
         config=IterationRunnerConfig(execution_mode=execution_mode),
         workspace=ws,
         task_library=task_lib,
         execution_adapter=execution_adapter,
+        quality_gate=quality_gate,
     )
 
     runner = RalphLoopRunner(

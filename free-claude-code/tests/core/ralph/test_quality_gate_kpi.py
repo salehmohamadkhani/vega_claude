@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from core.ralph.kpi import KPI, KPIEvaluator, KPIStatus, KPIType
+from core.ralph.kpi import KPIEvaluator, KPIStatus
 from core.ralph.models import RalphTask, TaskStatus
 from core.ralph.quality_gate import QualityGate
 from core.ralph.roles import AgentRole
-from core.ralph.verification import VerificationPlan, VerificationResult, VerificationStatus
-from core.ralph.verification_policy import VerificationPolicy
 from core.ralph.verification_runner import VerificationRunner, VerificationRunnerConfig
 
 

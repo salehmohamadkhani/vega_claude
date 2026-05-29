@@ -333,7 +333,7 @@ class TaskPlanner:
             ac2.append("Create all app files (HTML, CSS, JavaScript).")
             ac2.append("Ensure all files stay inside the workspace directory.")
             vc2.append(
-                "test -f index.html || test -f calculator.html || exit 1"
+                "test -f index.html"
             )
             kp2.append("App files exist (HTML, CSS, JS).")
             kp2.append("Files are contained within the workspace.")
@@ -387,7 +387,7 @@ class TaskPlanner:
                 f"KPIs pass for: {spec.title or 'implementation'}.",
             ]
             vc3 = [
-                'find . -maxdepth 4 -type f \\( -name "*.html" -o -name "*.js" -o -name "*.css" \\) | head -20',
+                "test -f index.html",
             ]
             kp3 = [
                 "All generated files stay inside the workspace.",

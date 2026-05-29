@@ -5,7 +5,6 @@ from __future__ import annotations
 from core.ralph.verification_policy import (
     VerificationCommandRisk,
     VerificationPolicy,
-    VerificationPolicyDecision,
 )
 
 
