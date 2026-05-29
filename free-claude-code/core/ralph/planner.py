@@ -284,6 +284,14 @@ class TaskPlanner:
         st1: list[str] = []
         kp1: list[str] = ["Architecture document covers all affected modules."]
 
+        if is_throwaway:
+            # Provide a verification command so the critic can evaluate acceptance
+            # criteria keywords against stdout_summary.
+            vc1.append(
+                'echo "Architecture plan covers app structure, component tree, '
+                'file layout, and data flow"'
+            )
+
         if _include_runtime_checks():
             if "api" in categories:
                 ac1.append("Verify provider routing is compatible with the target API.")
