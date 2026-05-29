@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 
 from .models import ProjectGoal, RalphTask, TaskStatus
 from .roles import AgentRole
+from .verification_profiles import (
+    ProfileDecision,
+    VerificationProfile,
+    select_profile_for_goal,
+)
 
 # ---------------------------------------------------------------------------
 # Planning value objects
@@ -223,8 +228,17 @@ class TaskPlanner:
             target_areas=target_areas,
         )
 
-    def generate_tasks(self, spec: ProjectSpec) -> list[RalphTask]:
+    def generate_tasks(
+        self,
+        spec: ProjectSpec,
+        profile: ProfileDecision | None = None,
+    ) -> list[RalphTask]:
         """Generate deterministic RalphTasks from a project spec.
+
+        When a ``profile`` is provided, task verification commands and KPIs
+        are adjusted to match the profile (e.g. throwaway apps skip
+        VegaClaw-specific tests).  If ``None``, the caller can still rely on
+        the original behaviour (Ralph Runtime default).
 
         Always produces at least four tasks. Metadata is injected based on
         the spec's target areas and constraints.
@@ -240,23 +254,45 @@ class TaskPlanner:
             if any(kw in all_text for kw in keywords):
                 categories.add(kw_category)
 
+        # Determine effective profile
+        effective_profile = (
+            profile.profile if profile else VerificationProfile.RALPH_RUNTIME
+        )
+        is_throwaway = effective_profile == VerificationProfile.THROWAWAY_APP
+        is_documentation = effective_profile == VerificationProfile.DOCUMENTATION
+        is_generic = effective_profile == VerificationProfile.GENERIC
+
+        # Helper: should we include VegaClaw-specific verification?
+        def _include_runtime_checks() -> bool:
+            return not (is_throwaway or is_documentation or is_generic)
+
         tasks: list[RalphTask] = []
 
         # --- Task 1: Architecture / context mapping ---
-        ac1: list[str] = [
-            "Map the relevant codebase areas affected by this goal.",
-            "Document existing patterns that must be preserved.",
-        ]
+        ac1: list[str]
+        if is_throwaway:
+            ac1 = [
+                "Plan the app structure and component tree.",
+                "Document the file layout and data flow.",
+            ]
+        else:
+            ac1 = [
+                "Map the relevant codebase areas affected by this goal.",
+                "Document existing patterns that must be preserved.",
+            ]
         vc1: list[str] = []
         st1: list[str] = []
         kp1: list[str] = ["Architecture document covers all affected modules."]
-        if "api" in categories:
-            ac1.append("Verify provider routing is compatible with the target API.")
-            vc1.append("grep -r 'provider' core/ralph/ --include='*.py'")
-        if "config" in categories:
-            ac1.append("Ensure Settings integration does not break existing config.")
-            vc1.append("uv run pytest tests/core/ralph -q")
-        if not vc1:
+
+        if _include_runtime_checks():
+            if "api" in categories:
+                ac1.append("Verify provider routing is compatible with the target API.")
+                vc1.append("grep -r 'provider' core/ralph/ --include='*.py'")
+            if "config" in categories:
+                ac1.append("Ensure Settings integration does not break existing config.")
+                vc1.append("uv run pytest tests/core/ralph -q")
+
+        if _include_runtime_checks() and not vc1:
             vc1.append("uv run pytest tests/core/ralph -q")
 
         tasks.append(
@@ -266,7 +302,7 @@ class TaskPlanner:
                 description="Analyze the codebase and document the context for this goal.",
                 status=TaskStatus.PENDING,
                 agent_role=AgentRole.ARCHITECT,
-                allowed_files=["core/ralph/"],
+                allowed_files=["core/ralph/"] if not is_throwaway else [],
                 forbidden_files=[],
                 acceptance_criteria=ac1,
                 verification_commands=vc1,
@@ -281,22 +317,39 @@ class TaskPlanner:
             f"Implement the changes required for: {spec.title or 'the goal'}.",
             "All acceptance criteria defined in the task must be met.",
         ]
-        vc2: list[str] = ["uv run ruff check core/ralph"]
+        vc2: list[str] = []
         st2: list[str] = []
-        kp2: list[str] = ["Implementation passes ruff linting."]
-        if "api" in categories:
-            ac2.append("API contract is maintained or extended correctly.")
-            st2.append("api")
-        if "ui" in categories:
-            ac2.append("UI components follow existing Admin UI patterns.")
-            kp2.append("UI renders without errors (manual check).")
-        if "messaging" in categories:
-            ac2.append("Messaging integration follows FCC handler patterns.")
-            st2.append("messaging")
-        if "cli" in categories:
-            ac2.append("CLI commands follow existing fcc-* conventions.")
-            st2.append("cli")
-        vc2.append("uv run pytest tests/core/ralph -q")
+        kp2: list[str] = []
+
+        if is_throwaway:
+            ac2.append("Create all app files (HTML, CSS, JavaScript).")
+            ac2.append("Ensure all files stay inside the workspace directory.")
+            vc2.append(
+                "test -f index.html || test -f calculator.html || exit 1"
+            )
+            kp2.append("App files exist (HTML, CSS, JS).")
+            kp2.append("Files are contained within the workspace.")
+        elif is_documentation:
+            ac2.append("Create or update documentation files only.")
+            kp2.append("Documentation files are accurate.")
+        elif _include_runtime_checks():
+            vc2.append("uv run ruff check core/ralph")
+            vc2.append("uv run pytest tests/core/ralph -q")
+            kp2.append("Implementation passes ruff linting.")
+
+        if _include_runtime_checks():
+            if "api" in categories:
+                ac2.append("API contract is maintained or extended correctly.")
+                st2.append("api")
+            if "ui" in categories:
+                ac2.append("UI components follow existing Admin UI patterns.")
+                kp2.append("UI renders without errors (manual check).")
+            if "messaging" in categories:
+                ac2.append("Messaging integration follows FCC handler patterns.")
+                st2.append("messaging")
+            if "cli" in categories:
+                ac2.append("CLI commands follow existing fcc-* conventions.")
+                st2.append("cli")
 
         tasks.append(
             RalphTask(
@@ -316,30 +369,64 @@ class TaskPlanner:
         )
 
         # --- Task 3: Verification / testing ---
-        ac3: list[str] = [
-            "All new code has corresponding tests.",
-            f"Tests pass for: {spec.title or 'implementation'}.",
-        ]
-        vc3: list[str] = [
-            "uv run pytest tests/core/ralph -q",
-            "uv run ruff check core/ralph tests/core/ralph",
-            "uv run ty check core/ralph",
-        ]
-        st3: list[str] = []
-        kp3: list[str] = [
-            "All ruff checks pass.",
-            "All ty (strict type) checks pass.",
-            "All pytest tests pass.",
-        ]
-        if "testing" in categories:
-            ac3.append("Smoke tests are updated or verified not to regress.")
-            vc3.append("uv run pytest smoke --collect-only -q")
-            st3.append("smoke")
-        if "api" in categories:
-            ac3.append("Provider smoke targets pass where applicable.")
-            st3.append("providers")
-        if "messaging" in categories:
-            st3.append("messaging")
+        ac3: list[str]
+        vc3: list[str]
+        kp3: list[str]
+
+        if is_throwaway:
+            ac3 = [
+                "Verify all app files exist and are valid.",
+                f"KPIs pass for: {spec.title or 'implementation'}.",
+            ]
+            vc3 = [
+                'find . -maxdepth 4 -type f \\( -name "*.html" -o -name "*.js" -o -name "*.css" \\) | head -20',
+            ]
+            kp3 = [
+                "All generated files stay inside the workspace.",
+                "No VegaClaw source tree modifications.",
+                "App files are present and valid.",
+            ]
+            st3: list[str] = list(spec.success_kpis)
+        elif is_documentation:
+            ac3 = ["Verify documentation changes are accurate."]
+            vc3 = []
+            kp3 = ["Documentation is reviewed and accurate."]
+            st3 = []
+        elif _include_runtime_checks():
+            ac3 = [
+                "All new code has corresponding tests.",
+                f"Tests pass for: {spec.title or 'implementation'}.",
+            ]
+            vc3 = [
+                "uv run pytest tests/core/ralph -q",
+                "uv run ruff check core/ralph tests/core/ralph",
+                "uv run ty check core/ralph",
+            ]
+            kp3 = [
+                "All ruff checks pass.",
+                "All ty (strict type) checks pass.",
+                "All pytest tests pass.",
+            ]
+            st3 = []
+            if "testing" in categories:
+                ac3.append("Smoke tests are updated or verified not to regress.")
+                vc3.append("uv run pytest smoke --collect-only -q")
+                st3.append("smoke")
+            if "api" in categories:
+                ac3.append("Provider smoke targets pass where applicable.")
+                st3.append("providers")
+            if "messaging" in categories:
+                st3.append("messaging")
+        else:
+            # GENERIC or unrecognized profile: lightweight verification
+            ac3 = [
+                f"Verify acceptance criteria for: {spec.title or 'implementation'}.",
+            ]
+            vc3 = []
+            kp3 = [
+                "All acceptance criteria are met.",
+            ]
+            st3 = []
 
         tasks.append(
             RalphTask(
@@ -348,7 +435,7 @@ class TaskPlanner:
                 description="Write and run tests to verify the implementation.",
                 status=TaskStatus.PENDING,
                 agent_role=AgentRole.VERIFIER,
-                allowed_files=["tests/"],
+                allowed_files=["tests/"] if not is_throwaway else [],
                 forbidden_files=[],
                 acceptance_criteria=ac3,
                 verification_commands=vc3,
@@ -376,7 +463,7 @@ class TaskPlanner:
                 description="Document the implementation, decisions, and results.",
                 status=TaskStatus.PENDING,
                 agent_role=AgentRole.SUMMARIZER,
-                allowed_files=["docs/"],
+                allowed_files=["docs/"] if not is_throwaway else [],
                 forbidden_files=[],
                 acceptance_criteria=ac4,
                 verification_commands=vc4,
@@ -392,13 +479,24 @@ class TaskPlanner:
         self,
         goal: ProjectGoal,
         answers: dict[str, str] | None = None,
+        profile: ProfileDecision | None = None,
     ) -> TaskPlan:
         """Run the full planning pipeline for a goal.
+
+        When no ``profile`` is provided, the profile is auto-detected from
+        the goal title, description, constraints, and KPIs.
 
         Returns a ``TaskPlan`` containing clarifying questions, a project
         spec, and generated RalphTasks.
         """
+        if profile is None:
+            profile = select_profile_for_goal(
+                title=goal.title,
+                description=goal.description,
+                constraints=list(goal.constraints),
+                kpis=list(goal.success_kpis),
+            )
         questions = self.generate_questions(goal)
         spec = self.build_project_spec(goal, answers)
-        tasks = self.generate_tasks(spec)
+        tasks = self.generate_tasks(spec, profile=profile)
         return TaskPlan(goal=goal, spec=spec, questions=questions, tasks=tasks)

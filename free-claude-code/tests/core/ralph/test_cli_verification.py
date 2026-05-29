@@ -58,7 +58,7 @@ def test_kpi_flag_appears_in_json_output(tmp_path: Path, capsys) -> None:
     for t in task_lib.list_tasks():
         _run_cli([f"--workspace={tmp_path}", "approve", t.id])
     capsys.readouterr()  # discard setup output
-    rc = _run_cli(
+    _run_cli(
         [
             f"--workspace={tmp_path}",
             "--json",
@@ -79,6 +79,71 @@ def test_kpi_flag_appears_in_json_output(tmp_path: Path, capsys) -> None:
         except json.JSONDecodeError:
             # Non-JSON output means not --json compatible — acceptable
             pass
+
+
+def test_plan_succeeds_without_profile_flag(tmp_path: Path) -> None:
+    """Plan should work without --verification-profile."""
+    rc = _run_cli([f"--workspace={tmp_path}", "plan", "Build a calculator app"])
+    assert rc == 0
+
+
+def test_plan_accepts_throwaway_profile(tmp_path: Path) -> None:
+    """Explicit --verification-profile throwaway-app should be accepted."""
+    rc = _run_cli([
+        f"--workspace={tmp_path}",
+        "plan",
+        "Build a calculator",
+        "--verification-profile",
+        "throwaway-app",
+    ])
+    assert rc == 0
+
+
+def test_plan_accepts_ralph_runtime_profile(tmp_path: Path) -> None:
+    """Explicit --verification-profile ralph-runtime should be accepted."""
+    rc = _run_cli([
+        f"--workspace={tmp_path}",
+        "plan",
+        "Add provider routing",
+        "--verification-profile",
+        "ralph-runtime",
+    ])
+    assert rc == 0
+
+
+def test_invalid_profile_returns_error(tmp_path: Path) -> None:
+    """Invalid --verification-profile should return error."""
+    rc = _run_cli([
+        f"--workspace={tmp_path}",
+        "plan",
+        "Some goal",
+        "--verification-profile",
+        "nonexistent",
+    ])
+    assert rc != 0
+
+
+def test_throwaway_profile_no_pytest_in_tasks(tmp_path: Path) -> None:
+    """Throwaway profile plan should produce tasks without pytest commands."""
+    _run_cli([
+        f"--workspace={tmp_path}",
+        "plan",
+        "Build a calculator app with HTML and JS",
+        "--verification-profile",
+        "throwaway-app",
+    ])
+    from core.ralph.task_library import TaskLibrary
+    from core.ralph.workspace import RalphWorkspace
+
+    ws = RalphWorkspace(project_root=str(tmp_path))
+    lib = TaskLibrary(workspace=ws)
+    tasks = lib.list_tasks()
+    assert len(tasks) >= 4
+    for task in tasks:
+        for cmd in task.verification_commands:
+            assert "pytest" not in cmd, (
+                f"Task {task.id} should not have pytest (profile=throwaway): {cmd}"
+            )
 
 
 def _get_task_lib(tmp_path: Path):

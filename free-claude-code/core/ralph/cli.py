@@ -29,6 +29,10 @@ from .real_pilot import RealPilot, RealPilotConfig, RealPilotResult
 from .run_executor import RunExecutor, RunExecutorConfig
 from .run_lifecycle import RunLifecycle
 from .task_library import TaskLibrary
+from .verification_profiles import (
+    make_profile_decision,
+    profile_from_string,
+)
 from .workspace import RalphWorkspace
 
 # ---------------------------------------------------------------------------
@@ -144,8 +148,20 @@ def _cmd_plan(args: argparse.Namespace) -> int:
         success_kpis=list(args.kpi),
     )
 
+    # Resolve verification profile
+    profile = None
+    if args.verification_profile:
+        try:
+            profile_name = profile_from_string(args.verification_profile)
+            profile = make_profile_decision(
+                profile_name,
+                reason=f"Explicit --verification-profile={args.verification_profile}",
+            )
+        except ValueError as exc:
+            _error(str(exc), EXIT_INVALID_INPUT)
+
     planner = TaskPlanner()
-    task_plan = planner.plan(goal)
+    task_plan = planner.plan(goal, profile=profile)
 
     # Persist goal
     ws.write_json(
@@ -1170,6 +1186,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--constraint", action="append", default=[], help="Constraint (repeatable)"
     )
     p.add_argument("--kpi", action="append", default=[], help="KPI (repeatable)")
+    p.add_argument(
+        "--verification-profile",
+        default=None,
+        help="Verification profile: ralph-runtime, throwaway-app, documentation, or generic (default: auto-detect)",
+    )
     p.add_argument("--yes", action="store_true", help="Skip confirmation prompts")
 
     # --- review ---

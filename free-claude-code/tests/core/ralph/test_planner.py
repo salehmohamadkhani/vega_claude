@@ -11,6 +11,9 @@ from core.ralph.planner import (
 )
 from core.ralph.roles import AgentRole
 from core.ralph.verification import build_verification_plan_for_task
+from core.ralph.verification_profiles import (
+    select_profile_for_goal,
+)
 
 
 class TestTaskPlanner:
@@ -206,3 +209,110 @@ class TestTaskPlanner:
         # Tasks should be pending
         for task in plan_result.tasks:
             assert task.status == TaskStatus.PENDING
+
+    # ------------------------------------------------------------------
+    # Verification profile integration tests
+    # ------------------------------------------------------------------
+
+    def test_calculator_goal_auto_detects_throwaway_profile(self) -> None:
+        """Calculator goal should auto-detect THROWAWAY_APP and skip runtime checks."""
+        goal = ProjectGoal(
+            title="Build a tiny browser calculator app",
+            description="HTML, CSS, and JavaScript calculator with add, subtract, multiply, divide",
+            success_kpis=[
+                "Calculator can add two numbers correctly",
+                "All generated files stay inside the pilot workspace",
+            ],
+        )
+        planner = self.make_planner()
+        plan_result = planner.plan(goal)
+
+        # All tasks should have no pytest tests/core/ralph verification
+        for task in plan_result.tasks:
+            for cmd in task.verification_commands:
+                assert "pytest" not in cmd, (
+                    f"Task {task.id} should not have pytest: {cmd}"
+                )
+                assert "ruff" not in cmd, (
+                    f"Task {task.id} should not have ruff: {cmd}"
+                )
+
+    def test_calculator_goal_implementation_checks_file_existence(self) -> None:
+        """Throwaway app implementation task should check file existence."""
+        goal = ProjectGoal(
+            title="Build a calculator app",
+            description="HTML and JavaScript calculator",
+        )
+        planner = self.make_planner()
+        plan_result = planner.plan(goal)
+
+        impl_task = plan_result.tasks[1]  # TASK-002
+        assert impl_task.id == "TASK-002-implementation"
+        assert any("test -f" in cmd or "find " in cmd for cmd in impl_task.verification_commands)
+
+    def test_ralph_runtime_goal_includes_pytest_verification(self) -> None:
+        """Ralph Runtime goal should include pytest verification."""
+        goal = ProjectGoal(
+            title="Add new provider routing to the Ralph Runtime",
+            description="Extend the Ralph Runtime to support a new provider type",
+        )
+        planner = self.make_planner()
+        plan_result = planner.plan(goal)
+
+        # At least the implementation and verification tasks should have pytest
+        impl_task = plan_result.tasks[1]
+        verify_task = plan_result.tasks[2]
+        assert any("pytest" in cmd for cmd in impl_task.verification_commands), (
+            f"Implementation task should have pytest, got: {impl_task.verification_commands}"
+        )
+        assert any("pytest" in cmd for cmd in verify_task.verification_commands)
+
+    def test_explicit_throwaway_profile_works(self) -> None:
+        """Explicit THROWAWAY_APP profile should skip runtime checks."""
+        goal = ProjectGoal(
+            title="Dummy goal that looks like runtime work",
+            description="But we use throwaway profile explicitly",
+        )
+        planner = self.make_planner()
+        profile = select_profile_for_goal(
+            title="Build a calculator",
+        )
+        plan_result = planner.plan(goal, profile=profile)
+
+        for task in plan_result.tasks:
+            for cmd in task.verification_commands:
+                assert "pytest" not in cmd
+                assert "ruff" not in cmd
+
+    def test_documentation_profile_no_command_verification(self) -> None:
+        """Documentation profile should have minimal or no command verification."""
+        goal = ProjectGoal(
+            title="Update project documentation",
+            description="Write docs",
+        )
+        planner = self.make_planner()
+        plan_result = planner.plan(goal)
+
+        for task in plan_result.tasks:
+            assert not any("pytest" in cmd for cmd in task.verification_commands)
+            assert not any("ruff" in cmd for cmd in task.verification_commands)
+            assert not any("ty " in cmd for cmd in task.verification_commands)
+
+    def test_generic_profile_no_runtime_checks(self) -> None:
+        """GENERIC profile should not include runtime-specific checks."""
+        from core.ralph.verification_profiles import (
+            VerificationProfile as _VP,
+        )
+        from core.ralph.verification_profiles import (
+            make_profile_decision,
+        )
+
+        goal = ProjectGoal(title="Unrelated task")
+        profile = make_profile_decision(_VP.GENERIC)
+        planner = self.make_planner()
+        plan_result = planner.plan(goal, profile=profile)
+
+        for task in plan_result.tasks:
+            for cmd in task.verification_commands:
+                assert "pytest" not in cmd
+                assert "ruff" not in cmd
