@@ -20,7 +20,8 @@ from typing import Any
 
 from .agent_profiles import AgentProfileRegistry
 from .checkpoint import CheckpointStore
-from .execution import ExecutionMode
+from .claude_execution import ClaudeCodeExecutionAdapter
+from .execution import ExecutionConfig, ExecutionMode
 from .execution_guard import check_real_execution_safety
 from .iteration_runner import IterationRunner, IterationRunnerConfig
 from .loop_policy import LoopPolicy
@@ -767,10 +768,15 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
 
     # Create iteration runner with proper execution mode
     execution_mode = ExecutionMode.REAL if not dry_run else ExecutionMode.DRY_RUN
+    adapter_config = ExecutionConfig(
+        allow_real_execution=(not dry_run),
+    )
+    execution_adapter = ClaudeCodeExecutionAdapter(config=adapter_config)
     iteration_runner = IterationRunner(
         config=IterationRunnerConfig(execution_mode=execution_mode),
         workspace=ws,
         task_library=task_lib,
+        execution_adapter=execution_adapter,
     )
 
     runner = RalphLoopRunner(
