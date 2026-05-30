@@ -1212,6 +1212,106 @@ def _cmd_council_gates(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Sandbox Smoke
+# ---------------------------------------------------------------------------
+
+
+def _cmd_sandbox_smoke(args: argparse.Namespace) -> int:
+    """Run a deterministic sandbox smoke test.
+
+    Creates a sandbox directory, writes a manifest and fixture output file.
+    Runs artifact collection and evidence gates against the fixture.
+
+    No LLM calls. No product build. No network access.
+    """
+    from .agent_council.runtime_sandbox import (
+        collect_sandbox_artifacts,
+        create_backtest_run,
+        summarize_sandbox_run,
+        validate_sandbox_cleanliness,
+    )
+    from .agent_council.runtime_gate_enforcer import (
+        enforce_runtime_evidence_gates,
+        should_block_task_approval,
+    )
+    from .agent_council.gate_runner import summarize_gate_result, gate_result_to_context
+
+    project_type = args.project_type or "landing_page"
+    goal = args.goal or "Build a test project"
+    sandbox_root = args.sandbox_root or ""
+
+    # Create sandbox run dir with manifest
+    run_dir = create_backtest_run(
+        project_type=project_type,
+        project_goal=goal,
+        phase="9.16i-smoke",
+        evidence_gate_mode="strict" if args.strict else "warning",
+        sandbox_root=sandbox_root,
+    )
+
+    # Write a deterministic fixture output file
+    fixture_path = os.path.join(run_dir, "output.md")
+    with open(fixture_path, "w") as f:
+        f.write(f"# Sandbox Smoke Test\n\n")
+        f.write(f"Project: {goal}\n")
+        f.write(f"Type: {project_type}\n")
+        f.write(f"Status: OK\n")
+
+    # Collect artifacts
+    artifacts = collect_sandbox_artifacts(run_dir)
+    cleanliness = validate_sandbox_cleanliness(run_dir)
+
+    # Run evidence gates against the fixture
+    task_result = {
+        "task_id": f"sandbox-smoke-{project_type}",
+        "task_title": goal,
+        "changed_files": artifacts["files_found"],
+        "task": {
+            "agent_role": "doer",
+            "verification_commands": [
+                "test -f output.md",
+                "grep -c 'Status: OK' output.md",
+            ],
+            "acceptance_criteria": [
+                "Output file must exist and be non-empty.",
+                "Output file must contain status.",
+            ],
+        },
+    }
+    gate_result = enforce_runtime_evidence_gates(
+        task_result,
+        strict_mode=args.strict,
+    )
+    blocked = should_block_task_approval(gate_result)
+
+    if getattr(args, "json", False):
+        _print_json({
+            "run_dir": run_dir,
+            "cleanliness": cleanliness,
+            "artifacts": artifacts,
+            "gate_result": gate_result_to_context(gate_result),
+            "approval_blocked": blocked,
+        })
+    else:
+        print(summarize_sandbox_run(run_dir))
+        print()
+        if not cleanliness["clean"]:
+            print("SANDBOX VIOLATIONS DETECTED")
+        print()
+        print(summarize_gate_result(gate_result))
+        print()
+        if blocked:
+            print("GATE APPROVAL: BLOCKED")
+        else:
+            print("GATE APPROVAL: PASSED")
+
+    if not cleanliness["clean"] or blocked:
+        return EXIT_ERROR
+    return EXIT_SUCCESS
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 
@@ -1478,6 +1578,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Project type for Agent Council gate enforcement (landing_page, full_stack_app, etc.)",
     )
 
+    # --- sandbox-smoke ---
+    p = sub.add_parser("sandbox-smoke", help="Run a deterministic sandbox smoke test")
+    p.add_argument("--project-type", default="landing_page", help="Project type (default: landing_page)")
+    p.add_argument("--goal", default="Build a test project", help="Project goal description")
+    p.add_argument("--strict", action="store_true", help="Enable strict mode")
+    p.add_argument("--json", action="store_true", help="Output in JSON format")
+    p.add_argument("--sandbox-root", default="", help="Sandbox root path (default: auto-detect)")
+
     # --- status ---
     sub.add_parser("status", help="Show workspace / run status")
 
@@ -1553,6 +1661,8 @@ def _run_cli(argv: list[str]) -> int:
             return _cmd_council_plan(args)
         elif args.command == "council-gates":
             return _cmd_council_gates(args)
+        elif args.command == "sandbox-smoke":
+            return _cmd_sandbox_smoke(args)
         else:
             parser.print_help()
             return EXIT_ERROR
