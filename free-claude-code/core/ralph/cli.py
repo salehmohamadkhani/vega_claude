@@ -1083,6 +1083,49 @@ def _cmd_status(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Council Plan
+# ---------------------------------------------------------------------------
+
+
+def _cmd_council_plan(args: argparse.Namespace) -> int:
+    """Generate a deterministic Council Plan for a project.
+
+    No LLM calls. No execution. Pure deterministic planning.
+    """
+    from .agent_council.plan import CouncilPlanRequest
+    from .agent_council.plan_generator import generate_council_plan
+    from .agent_council.runtime_adapter import (
+        council_plan_to_context,
+        summarize_council_plan,
+    )
+
+    goal = args.goal or "Unnamed project"
+    project_type = args.project_type or ""
+
+    request = CouncilPlanRequest(
+        project_goal=goal,
+        project_type=project_type,
+        strict_mode=args.strict,
+        requested_agents=tuple(args.include_agents),
+        excluded_agents=tuple(args.exclude_agents),
+        research_root=args.research_root or "",
+    )
+
+    plan = generate_council_plan(request)
+
+    if getattr(args, "json", False):
+        context = council_plan_to_context(plan)
+        _print_json(context)
+    else:
+        print(summarize_council_plan(plan))
+
+    # Exit with error if blocked
+    if plan.is_blocked:
+        return EXIT_ERROR
+    return EXIT_SUCCESS
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 
@@ -1327,6 +1370,22 @@ def _build_parser() -> argparse.ArgumentParser:
     # --- status ---
     sub.add_parser("status", help="Show workspace / run status")
 
+    # --- council-plan ---
+    p = sub.add_parser("council-plan", help="Generate a deterministic Council Plan before execution")
+    p.add_argument("--project-type", default="", help="Project type (landing_page, full_stack_app, saas_product, etc.)")
+    p.add_argument("--goal", default="", help="Project goal description")
+    p.add_argument("--strict", action="store_true", help="Enable strict mode (missing critical artifacts block execution)")
+    p.add_argument("--json", action="store_true", help="Output in JSON format")
+    p.add_argument(
+        "--exclude-agent", action="append", default=[], dest="exclude_agents",
+        help="Agent ID to exclude from the plan (repeatable)",
+    )
+    p.add_argument(
+        "--include-agent", action="append", default=[], dest="include_agents",
+        help="Agent ID to include in the plan (repeatable)",
+    )
+    p.add_argument("--research-root", default="", help="Path to research corpus root")
+
     # --- report ---
     p = sub.add_parser("report", help="Generate a run report")
     p.add_argument(
@@ -1372,6 +1431,8 @@ def _run_cli(argv: list[str]) -> int:
             return _cmd_status(args)
         elif args.command == "report":
             return _cmd_report(args)
+        elif args.command == "council-plan":
+            return _cmd_council_plan(args)
         else:
             parser.print_help()
             return EXIT_ERROR
