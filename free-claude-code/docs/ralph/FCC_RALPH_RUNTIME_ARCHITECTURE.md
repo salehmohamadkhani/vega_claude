@@ -147,9 +147,13 @@ Phase 9.15D [DONE]  Security Corpus Expansion: 7 security repos added
                     OWASP ZAP). Layer 12 upgraded to Strong. 49 repos,
                     181 patterns. Phase 9.16 now safe to start.
                         ↓
-Phase 9.16  [NEXT]  Agent Council V2 Implementation: multi-agent runtime
-                    with domain-specialized agents, artifact pipeline,
-                    Final Arbiter, Quality Gate Keeper integration.
+Phase 9.16A [DONE]  Agent Council V2 Core Foundation: models, registry (17 agents),
+                    dependency graph, artifact contracts (23), activation planner
+                    (8 project types), research map, evidence model. 142 tests.
+                    Core foundation complete — no LLM calls, no network access.
+Phase 9.16B [NEXT]  Agent Council V2 Agent Specialization: expand 17→56 agents
+                    from full taxonomy, specialized agent profiles, initial
+                    Orchestrator decision pipeline.
                         ↓
 Phase 10   [DEFERRED] Future: Playwright KPI verifier, browser-based
                     acceptance testing, async loop, admin UI
@@ -371,14 +375,15 @@ All Phase 9 work respects the Phase 8 constraints:
 | Research Corpus Bootstrap | 9.15B | ✅ 42 repos, 42 YAML cards, 42 notes, 5 indexes, 153 patterns |
 | Research Corpus Quality Audit | 9.15C | ✅ All cards/indexes/repos validated (0 errors), corpus rated USABLE |
 | Security Corpus Expansion | 9.15D | ✅ 7 security repos added, Layer 12 Strong, 49 repos, 181 patterns |
-| Agent Council V2 Implementation | 9.16 | Multi-agent runtime, domain agents, artifact pipeline, Final Arbiter |
+| Agent Council V2 Core Foundation | 9.16A | ✅ Models, registry (17 agents), dependency graph, 23 artifact contracts, activation planner (8 types), research map, evidence model. 142 tests. |
+| Agent Council V2 Specialization | 9.16B | Expand 17→56 agents, specialized profiles, Orchestrator pipeline |
 | Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
 | Playwright KPI Verifier | deferred | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-30 — Phase 9.15D complete (Security corpus expanded: 49 repos, 181 patterns, Layer 12 Strong)*
+*Last updated: 2026-05-30 — Phase 9.16A complete (Agent Council V2 Core Foundation: 8 modules, 142 tests, 0 LLM calls)*
 
 ---
 
