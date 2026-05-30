@@ -170,7 +170,26 @@ def _cmd_plan(args: argparse.Namespace) -> int:
 
     planner = TaskPlanner()
     task_count = getattr(args, "task_count", None)
-    task_plan = planner.plan(goal, profile=profile, target_task_count=task_count)
+
+    # Agent Council context injection
+    agent_council_context: dict[str, object] | None = None
+    use_council = getattr(args, "use_agent_council", False)
+    if use_council:
+        project_type = getattr(args, "project_type", "") or ""
+        strict_council = getattr(args, "strict_council", False)
+        from .agent_council.planner_integration import build_agent_council_task_context
+        agent_council_context = build_agent_council_task_context(
+            goal=args.goal,
+            project_type=project_type or None,
+            strict_mode=strict_council,
+        )
+
+    task_plan = planner.plan(
+        goal,
+        profile=profile,
+        target_task_count=task_count,
+        agent_council_context=agent_council_context,
+    )
 
     # Persist goal
     ws.write_json(
@@ -1298,6 +1317,13 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Target number of tasks (default: 4). >4 decomposes implementation into sub-tasks.",
     )
+    p.add_argument("--project-type", default=None,
+                   help="Project type for Agent Council planning (landing_page, full_stack_app, saas_product, etc.)")
+    p.add_argument("--use-agent-council", action="store_true",
+                   help="Enable Agent Council V2 context injection into task planning")
+    p.add_argument("--strict-council", action="store_true",
+                   help="Enable strict mode for Agent Council planning (missing artifacts block)")
+    p.add_argument("--json", action="store_true", help="Output in JSON format")
 
     # --- review ---
     p = sub.add_parser("review", help="Review tasks and approval status")

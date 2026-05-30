@@ -50,12 +50,18 @@ class ProjectSpec:
 
 @dataclass
 class TaskPlan:
-    """The complete output of planning: spec, questions, and generated tasks."""
+    """The complete output of planning: spec, questions, and generated tasks.
+
+    When ``agent_council_context`` is set, the plan was enriched with Agent
+    Council V2 planning data (active agents, required artifacts, risk gates,
+    evidence requirements).
+    """
 
     goal: ProjectGoal
     spec: ProjectSpec
     questions: list[ClarifyingQuestion]
     tasks: list[RalphTask]
+    agent_council_context: dict[str, object] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -106,8 +112,16 @@ class TaskPlanner:
         self._task_counter += 1
         return f"TASK-{self._task_counter:03d}-{prefix}"
 
-    def generate_questions(self, goal: ProjectGoal) -> list[ClarifyingQuestion]:
-        """Generate clarifying questions about a goal."""
+    def generate_questions(
+        self,
+        goal: ProjectGoal,
+        agent_council_context: dict[str, object] | None = None,
+    ) -> list[ClarifyingQuestion]:
+        """Generate clarifying questions about a goal.
+
+        When ``agent_council_context`` is provided, adds council-specific
+        questions about missing artifacts, blocking risks, and evidence gaps.
+        """
         questions: list[ClarifyingQuestion] = []
         categories = _classify_goal(goal)
 
@@ -164,6 +178,42 @@ class TaskPlanner:
                 )
             )
 
+        # Agent Council questions — only when context is available
+        if agent_council_context and agent_council_context.get("council_plan_available"):
+            missing = agent_council_context.get("missing_artifact_ids", [])
+            if missing and isinstance(missing, list) and len(missing) > 0:
+                questions.append(
+                    ClarifyingQuestion(
+                        id="Q-COUNCIL-MISSING",
+                        question=(
+                            f"The Agent Council identifies {len(missing)} missing "
+                            "critical artifacts. How should these be resolved?"
+                        ),
+                        reason="Missing critical artifacts block execution in strict mode.",
+                        required=False,
+                        category="council",
+                    )
+                )
+
+            risks = agent_council_context.get("risks", [])
+            blocking = [
+                r for r in risks
+                if isinstance(r, dict) and r.get("severity") == "blocking"
+            ]
+            if blocking:
+                questions.append(
+                    ClarifyingQuestion(
+                        id="Q-COUNCIL-BLOCKING",
+                        question=(
+                            f"Agent Council reports {len(blocking)} blocking risks. "
+                            "Should the plan proceed with warnings?"
+                        ),
+                        reason="Blocking risks may need manual mitigation before execution.",
+                        required=False,
+                        category="council",
+                    )
+                )
+
         # Always ask about constraints
         questions.append(
             ClarifyingQuestion(
@@ -181,15 +231,35 @@ class TaskPlanner:
         self,
         goal: ProjectGoal,
         answers: dict[str, str] | None = None,
+        agent_council_context: dict[str, object] | None = None,
     ) -> ProjectSpec:
-        """Build a structured project spec from a goal and optional answers."""
+        """Build a structured project spec from a goal and optional answers.
+
+        When ``agent_council_context`` is provided, the spec is enriched
+        with council-derived risks, target areas (from agent layers), and
+        a council-aware summary.
+        """
         categories = _classify_goal(goal)
 
         # Summary — derive from goal title + matched categories
         area_hints = (
             ", ".join(sorted(categories)) if categories else "general development"
         )
-        summary = f"Project: {goal.title or 'Untitled'}. Covers {area_hints}."
+        summary_parts: list[str] = [
+            f"Project: {goal.title or 'Untitled'}. Covers {area_hints}.",
+        ]
+
+        # Council summary enrichment
+        council_available = False
+        if agent_council_context and agent_council_context.get("council_plan_available"):
+            council_available = True
+            council_type = agent_council_context.get("project_type", "unknown")
+            agent_count = agent_council_context.get("active_agent_count", 0)
+            summary_parts.append(
+                f"Agent Council: {agent_count} agents activated for project type '{council_type}'."
+            )
+
+        summary = " ".join(summary_parts)
 
         # Assumptions
         assumptions: list[str] = [
@@ -201,6 +271,10 @@ class TaskPlanner:
             assumptions.append("Messaging platform credentials are configured in FCC.")
         if "api" in categories:
             assumptions.append("Provider configuration exists in FCC Settings.")
+        if council_available:
+            assumptions.append(
+                "Agent Council V2 activation plan is available for task enrichment."
+            )
 
         # Risks
         risks: list[str] = [
@@ -212,9 +286,46 @@ class TaskPlanner:
         if "api" in categories:
             risks.append("Provider API changes or deprecation outside our control.")
 
-        # Target areas
+        # Council-derived risks
+        if council_available:
+            council_risks = agent_council_context.get("risks", [])
+            if isinstance(council_risks, list):
+                for cr in council_risks:
+                    if isinstance(cr, dict):
+                        desc = cr.get("description", "")
+                        if desc:
+                            risks.append(f"[Council] {desc}")
+
+        # Target areas — enrich with council data
         target_areas = list(categories) if categories else ["foundation"]
-        if "general" not in target_areas:
+
+        # Add council layer groups as target areas
+        if council_available:
+            agents = agent_council_context.get("active_agents", [])
+            if isinstance(agents, list):
+                layers: set[int] = set()
+                for a in agents:
+                    if isinstance(a, dict):
+                        layer = a.get("layer")
+                        if isinstance(layer, int):
+                            layers.add(layer)
+
+                # Map council layers to target area labels
+                _LAYER_AREA_MAP: dict[int, str] = {
+                    8: "frontend_engineering",
+                    9: "backend_engineering",
+                    10: "database_data",
+                    11: "qa_testing",
+                    12: "security_compliance",
+                    13: "devops_infrastructure",
+                    14: "observability",
+                    15: "growth_analytics",
+                }
+                for layer_num, area_label in _LAYER_AREA_MAP.items():
+                    if layer_num in layers and area_label not in target_areas:
+                        target_areas.append(area_label)
+
+        if "general" not in target_areas and "testing" not in target_areas:
             target_areas.append("testing")
 
         return ProjectSpec(
@@ -233,6 +344,7 @@ class TaskPlanner:
         spec: ProjectSpec,
         profile: ProfileDecision | None = None,
         target_task_count: int | None = None,
+        agent_council_context: dict[str, object] | None = None,
     ) -> list[RalphTask]:
         """Generate deterministic RalphTasks from a project spec.
 
@@ -601,7 +713,122 @@ class TaskPlanner:
             )
         )
 
+        # --- Council enrichment ---
+        council_available = (
+            agent_council_context is not None
+            and agent_council_context.get("council_plan_available", False)
+        )
+        if council_available and tasks:
+            self._enrich_tasks_with_council_context(tasks, agent_council_context)
+
         return tasks
+
+    # ------------------------------------------------------------------
+    # Council enrichment
+    # ------------------------------------------------------------------
+
+    def _enrich_tasks_with_council_context(
+        self,
+        tasks: list[RalphTask],
+        context: dict[str, object],
+    ) -> None:
+        """Enrich existing Ralph tasks with Agent Council context.
+
+        Modifies tasks in-place to add council-aware acceptance criteria,
+        KPIs, and risk-gate references based on the council's active agents,
+        required artifacts, evidence requirements, and identified risks.
+        """
+        if not tasks:
+            return
+
+        # Gather council data
+        missing_artifacts = context.get("missing_artifact_ids", [])
+        evidence_reqs = context.get("evidence_requirements", [])
+        risks = context.get("risks", [])
+        active_agents = context.get("active_agents", [])
+        project_type = context.get("project_type", "unknown")
+
+        # Find the implementation and verification tasks
+        impl_task = next((t for t in tasks if "implementation" in t.id.lower()), None)
+        verif_task = next((t for t in tasks if "verification" in t.id.lower()), None)
+        arch_task = next((t for t in tasks if "context" in t.id.lower()), None)
+
+        # --- Enrich architecture task ---
+        if arch_task:
+            agent_count = len(active_agents) if isinstance(active_agents, list) else 0
+            arch_task.acceptance_criteria.append(
+                f"Architecture document accounts for {agent_count} Agent Council agents "
+                f"activated for project type '{project_type}'."
+            )
+            arch_task.kpis.append(
+                f"Architecture covers {agent_count} council-defined agent domains."
+            )
+
+        # --- Enrich implementation task ---
+        if impl_task:
+            # Add artifact-driven acceptance criteria
+            if isinstance(active_agents, list):
+                producers = [
+                    a for a in active_agents
+                    if isinstance(a, dict) and a.get("produces_artifacts")
+                ]
+                if producers:
+                    sample = producers[:3]
+                    hints = "; ".join(
+                        f"{a.get('role_name', '?')} → {', '.join(a.get('produces_artifacts', []))}"
+                        for a in sample
+                    )
+                    impl_task.acceptance_criteria.append(
+                        f"Implement artifacts per Agent Council plan: {hints}"
+                    )
+
+            # Add missing artifact gates
+            if missing_artifacts and isinstance(missing_artifacts, list) and len(missing_artifacts) > 0:
+                impl_task.acceptance_criteria.append(
+                    f"Address missing council artifacts: {', '.join(str(m) for m in missing_artifacts[:5])}"
+                )
+                impl_task.kpis.append(
+                    "Council-identified missing artifacts are resolved or acknowledged."
+                )
+
+            # Add risk-gate acceptance criteria
+            if isinstance(risks, list):
+                blocking = [
+                    r for r in risks
+                    if isinstance(r, dict) and r.get("severity") == "blocking"
+                ]
+                if blocking:
+                    impl_task.acceptance_criteria.append(
+                        f"Mitigate {len(blocking)} blocking council risks before completion."
+                    )
+                    impl_task.kpis.append("All blocking council risks have documented mitigations.")
+
+        # --- Enrich verification task ---
+        if verif_task:
+            # Evidence-driven verification
+            if isinstance(evidence_reqs, list) and evidence_reqs:
+                verif_task.acceptance_criteria.append(
+                    f"Collect {len(evidence_reqs)} evidence items per Agent Council requirements."
+                )
+                verif_task.kpis.append(
+                    f"Evidence collected for {len(evidence_reqs)} council-defined requirements."
+                )
+
+            # Critical artifact verification
+            critical_artifacts = context.get("required_artifacts", [])
+            if isinstance(critical_artifacts, list):
+                crit = [
+                    a for a in critical_artifacts
+                    if isinstance(a, dict) and a.get("is_critical")
+                ]
+                if crit:
+                    names = ", ".join(a.get("name", "?") for a in crit[:5])
+                    verif_task.acceptance_criteria.append(
+                        f"Verify critical council artifacts are produced: {names}"
+                    )
+                    verif_task.kpis.append(
+                        f"All {len(crit)} critical council artifacts are verified."
+                    )
 
     def plan(
         self,
@@ -609,11 +836,16 @@ class TaskPlanner:
         answers: dict[str, str] | None = None,
         profile: ProfileDecision | None = None,
         target_task_count: int | None = None,
+        agent_council_context: dict[str, object] | None = None,
     ) -> TaskPlan:
         """Run the full planning pipeline for a goal.
 
         When no ``profile`` is provided, the profile is auto-detected from
         the goal title, description, constraints, and KPIs.
+
+        If ``agent_council_context`` is provided (from Agent Council V2
+        planning), tasks are enriched with agent-aware metadata, artifact
+        references, risk gates, and evidence requirements.
 
         Args:
             goal: The project goal.
@@ -622,9 +854,13 @@ class TaskPlanner:
             target_task_count:
                 Request a specific number of tasks (>4 decomposes
                 implementation into sub-tasks). 4 by default.
+            agent_council_context:
+                Optional planning context dict from Agent Council V2.
+                When provided, task generation incorporates agent roles,
+                artifact requirements, and risk/evidence gates.
 
         Returns a ``TaskPlan`` containing clarifying questions, a project
-        spec, and generated RalphTasks.
+        spec, generated RalphTasks, and optional agent council context.
         """
         if profile is None:
             profile = select_profile_for_goal(
@@ -633,7 +869,18 @@ class TaskPlanner:
                 constraints=list(goal.constraints),
                 kpis=list(goal.success_kpis),
             )
-        questions = self.generate_questions(goal)
-        spec = self.build_project_spec(goal, answers)
-        tasks = self.generate_tasks(spec, profile=profile, target_task_count=target_task_count)
-        return TaskPlan(goal=goal, spec=spec, questions=questions, tasks=tasks)
+        questions = self.generate_questions(goal, agent_council_context)
+        spec = self.build_project_spec(goal, answers, agent_council_context)
+        tasks = self.generate_tasks(
+            spec,
+            profile=profile,
+            target_task_count=target_task_count,
+            agent_council_context=agent_council_context,
+        )
+        return TaskPlan(
+            goal=goal,
+            spec=spec,
+            questions=questions,
+            tasks=tasks,
+            agent_council_context=agent_council_context,
+        )
