@@ -19,6 +19,51 @@ from __future__ import annotations
 from .plan import CouncilPlanResult
 
 # ---------------------------------------------------------------------------
+# Gate expectations lookup
+# ---------------------------------------------------------------------------
+
+# Gate expectations per task role and agent layer — used for prompt injection
+_GATE_EXPECTATIONS: dict[str, list[str]] = {
+    "doer": [
+        "Implementation tasks must prove files exist and are non-empty.",
+        "Claim evidence must back any architectural or design claims.",
+    ],
+    "verifier": [
+        "Verification tasks must run deterministic commands (not echo-only).",
+        "QA tasks must validate behavior and edge cases, not just file existence.",
+        "Security tasks must include concrete checks (dep scan, secret scan, config review, threat model).",
+    ],
+    "architect": [
+        "Architecture decisions should reference Research Corpus patterns where applicable.",
+    ],
+    "arbiter": [
+        "Final Arbiter cannot approve without implementation, verification, QA, and risk evidence.",
+    ],
+    "security_engineer": [
+        "Security evidence must include threat modeling or dependency scanning.",
+    ],
+    "qa_engineer": [
+        "QA evidence must cover behavior, regression, and edge cases.",
+    ],
+    "final_arbiter": [
+        "Final approval gates require evidence from QA, security, and performance testing.",
+    ],
+}
+
+# Summary block for prompt injection
+_GATE_PROMPT_BLOCK = (
+    "Evidence Gates:\n"
+    "- Implementation tasks must prove files exist and are non-empty.\n"
+    "- Verification tasks must run deterministic commands.\n"
+    "- QA tasks must validate behavior and edge cases.\n"
+    "- Final Arbiter cannot approve without implementation, verification, QA, and risk evidence.\n"
+    "- Security tasks must include threat modeling or dependency scanning.\n"
+    "- Visual/UI tasks should include visual QA notes when applicable.\n"
+    "- Runtime artifacts (.fcc/, .fcc-ralph/, .claude/, env, logs) must not be committed."
+)
+
+
+# ---------------------------------------------------------------------------
 # Core context builder
 # ---------------------------------------------------------------------------
 
@@ -308,3 +353,94 @@ def extract_risk_task_hints(context: dict[str, object]) -> list[str]:
         hints.append(" ".join(parts))
 
     return hints
+
+
+# ---------------------------------------------------------------------------
+# Gate expectation extractors
+# ---------------------------------------------------------------------------
+
+
+def extract_gate_expectations(context: dict[str, object]) -> list[str]:
+    """Extract evidence gate expectations relevant to the planning context.
+
+    Returns gate rules that apply based on active agents and task roles.
+
+    Args:
+        context: Planning context dict.
+
+    Returns:
+        List of gate expectation strings.
+    """
+    agents = context.get("active_agents", [])
+    if not isinstance(agents, list):
+        return []
+
+    seen: set[str] = set()
+    expectations: list[str] = []
+
+    # Gate expectations from active agents
+    for agent in agents:
+        if not isinstance(agent, dict):
+            continue
+        agent_id = agent.get("agent_id", "")
+
+        # Check by agent_id
+        if agent_id in _GATE_EXPECTATIONS:
+            for exp in _GATE_EXPECTATIONS[agent_id]:
+                if exp not in seen:
+                    seen.add(exp)
+                    expectations.append(exp)
+
+        # Check by role-like patterns (agent_id often contains role hints)
+        # No further role mapping needed — we rely on agent_id directly
+
+    return expectations
+
+
+def build_gate_context_block(context: dict[str, object]) -> str:
+    """Build a concise gate expectations block for prompt injection.
+
+    Args:
+        context: Planning context dict.
+
+    Returns:
+        Formatted gate block string suitable for inclusion in prompts.
+    """
+    return _GATE_PROMPT_BLOCK
+
+
+def add_gate_context_to_planning_dict(
+    context: dict[str, object],
+) -> dict[str, object]:
+    """Enrich a planning context dict with gate-related keys.
+
+    Adds evidence_gate_requirements, blocking_gates, warning_gates,
+    gate_summary, and readiness_gate_status.
+
+    Args:
+        context: Planning context dict (mutated in place, also returned).
+
+    Returns:
+        The enriched context dict.
+    """
+    expectations = extract_gate_expectations(context)
+    block = build_gate_context_block(context)
+
+    context["evidence_gate_expectations"] = expectations
+    context["gate_prompt_block"] = block
+    context["blocking_gates"] = [
+        g for g in expectations
+        if any(kw in g.lower() for kw in ("must", "cannot", "block"))
+    ]
+    context["warning_gates"] = [
+        g for g in expectations
+        if not any(kw in g.lower() for kw in ("must", "cannot", "block"))
+    ]
+    context["gate_summary"] = (
+        f"{len(expectations)} gate expectations active "
+        f"({len(context['blocking_gates'])} blocking, "
+        f"{len(context['warning_gates'])} warning)"
+    )
+    context["readiness_gate_status"] = "pending"
+
+    return context

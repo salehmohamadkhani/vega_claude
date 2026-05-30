@@ -291,6 +291,30 @@ class TestPlannerBackwardCompatibility:
         assert len(council_questions) > 0
 
 
+class TestGateContextEnrichment:
+    """Verify build_agent_council_task_context includes gate expectations."""
+
+    def test_context_has_gate_expectations(self):
+        ctx = build_agent_council_task_context("Build a CRM", "full_stack_app")
+        assert "evidence_gate_expectations" in ctx
+        assert isinstance(ctx["evidence_gate_expectations"], list)
+
+    def test_context_has_gate_prompt_block(self):
+        ctx = build_agent_council_task_context("Build a CRM", "full_stack_app")
+        block = ctx.get("gate_prompt_block", "")
+        assert isinstance(block, str)
+        assert "Evidence Gates" in block
+
+    def test_context_has_readiness_gate_status(self):
+        ctx = build_agent_council_task_context("Build a CRM", "full_stack_app")
+        assert ctx.get("readiness_gate_status") == "pending"
+
+    def test_format_prompt_includes_gates(self):
+        ctx = build_agent_council_task_context("Build a CRM", "full_stack_app")
+        prompt = format_agent_council_context_for_prompt(ctx)
+        assert "Evidence Gates" in prompt
+
+
 class TestNoNetworkOrLLM:
     """Verify no network/LLM calls in planner_integration module."""
 

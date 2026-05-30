@@ -1145,6 +1145,50 @@ def _cmd_council_plan(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Council Gates
+# ---------------------------------------------------------------------------
+
+
+def _cmd_council_gates(args: argparse.Namespace) -> int:
+    """Run evidence gates against a Council Plan.
+
+    No LLM calls. No execution. Pure deterministic gate evaluation.
+    """
+    from .agent_council.gate_runner import (
+        gate_result_to_context,
+        run_all_gates,
+        summarize_gate_result,
+    )
+    from .agent_council.planner_integration import build_agent_council_task_context
+
+    goal = args.goal or "Unnamed project"
+    project_type = args.project_type or ""
+
+    # Build planning context from council plan
+    ctx = build_agent_council_task_context(
+        goal=goal,
+        project_type=project_type or None,
+        strict_mode=args.strict,
+    )
+
+    # Run evidence gates
+    result = run_all_gates(
+        planning_context=ctx,
+        strict_mode=args.strict,
+    )
+
+    if getattr(args, "json", False):
+        _print_json(gate_result_to_context(result))
+    else:
+        print(summarize_gate_result(result))
+
+    # Exit error if blocked
+    if result.overall_status.value in ("blocked", "failed"):
+        return EXIT_ERROR
+    return EXIT_SUCCESS
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 
@@ -1412,6 +1456,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--research-root", default="", help="Path to research corpus root")
 
+    # --- council-gates ---
+    p = sub.add_parser("council-gates", help="Run evidence gates against a Council Plan")
+    p.add_argument("--project-type", default="", help="Project type (landing_page, full_stack_app, saas_product, etc.)")
+    p.add_argument("--goal", default="", help="Project goal description")
+    p.add_argument("--strict", action="store_true", help="Enable strict mode (missing evidence blocks)")
+    p.add_argument("--json", action="store_true", help="Output in JSON format")
+
     # --- report ---
     p = sub.add_parser("report", help="Generate a run report")
     p.add_argument(
@@ -1459,6 +1510,8 @@ def _run_cli(argv: list[str]) -> int:
             return _cmd_report(args)
         elif args.command == "council-plan":
             return _cmd_council_plan(args)
+        elif args.command == "council-gates":
+            return _cmd_council_gates(args)
         else:
             parser.print_help()
             return EXIT_ERROR

@@ -13,6 +13,7 @@ No LLM calls. No network access.
 from __future__ import annotations
 
 from .planning_context import (
+    add_gate_context_to_planning_dict,
     build_planning_context_from_council_plan,
 )
 from .runtime_adapter import build_council_plan_for_goal
@@ -100,9 +101,12 @@ def build_agent_council_task_context(
 
         if not plan.is_ready_to_execute and strict_mode:
             # Plan is blocked — return the context anyway so Ralph knows why
-            return build_planning_context_from_council_plan(plan)
+            return add_gate_context_to_planning_dict(
+                build_planning_context_from_council_plan(plan)
+            )
 
-        return build_planning_context_from_council_plan(plan)
+        ctx = build_planning_context_from_council_plan(plan)
+        return add_gate_context_to_planning_dict(ctx)
 
     except Exception as exc:
         return _degraded_context(str(exc))
@@ -205,5 +209,10 @@ def format_agent_council_context_for_prompt(
                 lines.append(
                     f"- [{e.get('priority', 'medium').upper()}] {e.get('description', '')}"
                 )
+
+    # Gate expectations
+    gate_block = context.get("gate_prompt_block", "")
+    if gate_block:
+        lines.append(f"\n### {gate_block}")
 
     return "\n".join(lines)
