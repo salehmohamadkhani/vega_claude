@@ -133,8 +133,9 @@ Phase 9.15A [DONE]  Agent Council V2 Taxonomy & Research Corpus Plan:
                     Research Corpus bootstrap plan (40-50 repos).
                     No source changes — design docs only.
                         ↓
-Phase 9.15B [PLAN]  Research Corpus Bootstrap: clone 40-50 repos,
-                    generate repo cards, build indexes, summarize patterns.
+Phase 9.15B [DONE]  Research Corpus Bootstrap: 42 repos cloned (6.4GB),
+                    42 YAML cards, 42 Markdown notes, 5 index files,
+                    153 patterns catalogued across 18 categories.
                         ↓
 Phase 9.16  [PLAN]  Agent Council V2 Implementation: multi-agent runtime
                     with domain-specialized agents, artifact pipeline,
@@ -357,7 +358,7 @@ All Phase 9 work respects the Phase 8 constraints:
 
 | Capability | Phase | Dependencies |
 |---|---|---|
-| Research Corpus Bootstrap | 9.15B | 40–50 repo clones, repo cards, indexes, pattern summaries |
+| Research Corpus Bootstrap | 9.15B | ✅ 42 repos, 42 YAML cards, 42 notes, 5 indexes, 153 patterns |
 | Agent Council V2 Implementation | 9.16 | Multi-agent runtime, domain agents, artifact pipeline, Final Arbiter |
 | Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
@@ -365,7 +366,7 @@ All Phase 9 work respects the Phase 8 constraints:
 
 ---
 
-*Last updated: 2026-05-30 — Phase 9.15A complete (Agent Council V2 Taxonomy & Research Corpus Plan)*
+*Last updated: 2026-05-30 — Phase 9.15B complete (Research Corpus Bootstrap: 42 repos, 5 indexes, 153 patterns)*
 
 ---
 
@@ -658,7 +659,7 @@ Phase 9 [DONE]      Verification & KPI expansion:
                         ↓
 Phase 9.15A [DONE]  Agent Council V2 Taxonomy & Research Corpus Plan
                         ↓
-Phase 9.15B [PLAN]  Research Corpus Bootstrap
+Phase 9.15B [DONE]  Research Corpus Bootstrap (42 repos, 5 indexes)
                         ↓
 Phase 9.16  [PLAN]  Agent Council V2 Implementation
                         ↓
