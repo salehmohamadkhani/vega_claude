@@ -62,7 +62,7 @@ class AgentLayer(enum.Enum):
     @property
     def is_strategic(self) -> bool:
         """True for layers that primarily produce business/strategy artifacts."""
-        return self.value in (1, 2, 3, 4, 5, 16)
+        return self.value in (1, 2, 3, 4, 5, 15, 16)
 
     @property
     def is_technical(self) -> bool:

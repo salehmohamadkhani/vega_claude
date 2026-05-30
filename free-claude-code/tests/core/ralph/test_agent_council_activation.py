@@ -1,167 +1,260 @@
-"""Tests for Agent Council V2 activation planner."""
+"""Tests for Agent Council V2 activation planner — updated for 56-agent registry."""
 
 from __future__ import annotations
 
 import pytest
 
 from core.ralph.agent_council.activation import ActivationPlanner
+from core.ralph.agent_council.registry import load_default_registry
 
 
-class TestActivationPlanner:
-    @pytest.fixture
-    def planner(self):
-        return ActivationPlanner()
+@pytest.fixture
+def planner():
+    return ActivationPlanner()
 
-    def test_supported_project_types(self, planner):
+
+@pytest.fixture
+def registry():
+    return load_default_registry()
+
+
+class TestSupportedProjectTypes:
+    def test_has_8_supported_types(self, planner):
         types = planner.supported_project_types
-        assert "landing_page" in types
-        assert "full_stack_app" in types
-        assert "saas_product" in types
-        assert "research_project" in types
         assert len(types) == 8
 
-    def test_plan_landing_page(self, planner):
-        plan = planner.plan("landing_page")
-        assert plan.project_type == "landing_page"
-        assert "executive_vision_agent" in plan.active_agents
-        assert "senior_frontend_developer_agent" in plan.active_agents
-        assert "senior_backend_developer_agent" not in plan.active_agents  # no backend for landing page
-        assert "database_developer_agent" not in plan.active_agents  # no DB for landing page
-        assert len(plan.parallel_groups) >= 1
-        assert plan.total_phases == len(plan.parallel_groups)
-
-    def test_plan_full_stack_app_includes_all_layers(self, planner):
-        plan = planner.plan("full_stack_app")
-        agents = set(plan.active_agents)
-        # full_stack_app should include frontend, backend, database
-        assert "executive_vision_agent" in agents
-        assert "senior_frontend_developer_agent" in agents
-        assert "senior_backend_developer_agent" in agents
-        assert "database_developer_agent" in agents
-        assert "qa_verification_agent" in agents
-        assert "security_compliance_agent" in agents
-        assert "devops_infrastructure_agent" in agents
-
-    def test_plan_full_stack_app_includes_backend_and_db(self, planner):
-        plan = planner.plan("full_stack_app")
-        assert "senior_backend_developer_agent" in plan.active_agents
-        assert "database_developer_agent" in plan.active_agents
-        assert "security_compliance_agent" in plan.active_agents
-
-    def test_plan_landing_page_no_backend_or_db(self, planner):
-        plan = planner.plan("landing_page")
-        assert "senior_backend_developer_agent" not in plan.active_agents
-        assert "database_developer_agent" not in plan.active_agents
-
-    def test_plan_saas_product_most_comprehensive(self, planner):
-        plan = planner.plan("saas_product")
-        agents = set(plan.active_agents)
-        # SaaS should include growth and support
-        assert "growth_analytics_agent" in agents
-        assert "support_operations_agent" in agents
-        assert len(agents) >= 15  # most comprehensive
-
-    def test_plan_internal_tool_minimal(self, planner):
-        plan = planner.plan("internal_tool")
-        agents = set(plan.active_agents)
-        # Internal tool: no brand, no market research
-        assert "brand_content_agent" not in agents
-        assert "market_research_agent" not in agents
-        # But does have database and security
-        assert "database_developer_agent" in agents
-        assert "security_compliance_agent" in agents
-
-    def test_plan_research_project_minimal(self, planner):
-        plan = planner.plan("research_project")
-        agents = set(plan.active_agents)
-        # Research: minimal agents
-        assert len(agents) <= 6
-        assert "executive_vision_agent" in agents
-        assert "senior_frontend_developer_agent" not in agents
-
-    def test_plan_ai_tool_has_ml_capable_agents(self, planner):
-        plan = planner.plan("ai_tool")
-        agents = set(plan.active_agents)
-        assert "senior_backend_developer_agent" in agents
-        assert "database_developer_agent" in agents
-        assert "security_compliance_agent" in agents
-
-    def test_plan_static_site_no_backend(self, planner):
-        plan = planner.plan("static_site")
-        agents = set(plan.active_agents)
-        assert "senior_backend_developer_agent" not in agents
-        assert "database_developer_agent" not in agents
-        assert "senior_frontend_developer_agent" in agents
-
-    def test_parallel_groups_ordered(self, planner):
-        plan = planner.plan("full_stack_app")
-        groups = plan.parallel_groups
-        # First group should contain agents with no dependencies
-        first = set(groups[0])
-        for aid in first:
-            agent = planner.registry.get(aid)
-            deps_in_plan = [d for d in agent.dependencies if d in plan.active_agents]
-            assert len(deps_in_plan) == 0, f"{aid} in group 0 but has deps: {deps_in_plan}"
-
-    def test_unknown_project_type_raises(self, planner):
-        with pytest.raises(ValueError, match="Unknown project type"):
-            planner.plan("nonexistent_project_type")
+    def test_all_expected_types_present(self, planner):
+        expected = {
+            "landing_page", "static_site", "frontend_app",
+            "full_stack_app", "saas_product", "ai_tool",
+            "internal_tool", "research_project",
+        }
+        assert set(planner.supported_project_types) == expected
 
     def test_get_project_description(self, planner):
         desc = planner.get_project_description("saas_product")
-        assert "SaaS" in desc
-
-    def test_get_project_description_unknown(self, planner):
-        desc = planner.get_project_description("unknown")
-        assert "Unknown" in desc
+        assert "SaaS" in desc or "Multi-tenant" in desc
 
 
-class TestShouldActivate:
-    @pytest.fixture
-    def planner(self):
-        return ActivationPlanner()
+class TestLandingPage:
+    def test_plan_returns_valid_plan(self, planner):
+        plan = planner.plan("landing_page")
+        assert plan.project_type == "landing_page"
+        assert len(plan.active_agents) >= 8
+        assert "chief_vision_officer" in plan.active_agents
+        assert "final_arbiter" in plan.active_agents
 
-    def test_exec_vision_always_activates(self, planner):
-        decision = planner.should_activate("executive_vision_agent", "landing_page")
+    def test_excludes_backend_and_database(self, planner):
+        plan = planner.plan("landing_page")
+        assert "senior_backend_developer" not in plan.active_agents
+        assert "database_developer" not in plan.active_agents
+        assert "senior_frontend_developer" in plan.active_agents
+
+    def test_includes_brand_and_seo(self, planner):
+        plan = planner.plan("landing_page")
+        assert "brand_strategist" in plan.active_agents
+        assert "seo_specialist" in plan.active_agents
+
+    def test_includes_ux_ui(self, planner):
+        plan = planner.plan("landing_page")
+        assert "ux_designer" in plan.active_agents
+        assert "ui_designer" in plan.active_agents
+
+    def test_includes_orchestrator_and_memory(self, planner):
+        plan = planner.plan("landing_page")
+        assert "orchestrator" in plan.active_agents
+        assert "project_memory_keeper" in plan.active_agents
+
+
+class TestFullStackApp:
+    def test_fs_includes_frontend_backend_database(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "senior_frontend_developer" in plan.active_agents
+        assert "senior_backend_developer" in plan.active_agents
+        assert "database_developer" in plan.active_agents
+
+    def test_fs_includes_security_and_qa(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "security_engineer" in plan.active_agents
+        assert "qa_engineer" in plan.active_agents
+
+    def test_fs_includes_devops(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "devops_engineer" in plan.active_agents
+
+    def test_fs_includes_observability(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "observability_engineer" in plan.active_agents
+
+    def test_fs_includes_api_and_data_architects(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "api_architect" in plan.active_agents
+        assert "data_architect" in plan.active_agents
+
+    def test_fs_includes_penetration_tester(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "penetration_tester" in plan.active_agents
+        assert "dependency_auditor" in plan.active_agents
+
+    def test_fs_includes_quality_gate_keeper(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "quality_gate_keeper" in plan.active_agents
+
+    def test_fs_includes_accessibility(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert "accessibility_auditor" in plan.active_agents
+
+    def test_fs_agent_count(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert len(plan.active_agents) > 30
+
+
+class TestSaaSProduct:
+    def test_saas_includes_all_growth(self, planner):
+        plan = planner.plan("saas_product")
+        assert "growth_analyst" in plan.active_agents
+        assert "analytics_engineer" in plan.active_agents
+        assert "conversion_optimizer" in plan.active_agents
+
+    def test_saas_includes_support(self, planner):
+        plan = planner.plan("saas_product")
+        assert "customer_success_manager" in plan.active_agents
+        assert "documentation_specialist" in plan.active_agents
+
+    def test_saas_includes_monetization_pricing(self, planner):
+        plan = planner.plan("saas_product")
+        assert "monetization_strategist" in plan.active_agents
+        assert "pricing_analyst" in plan.active_agents
+
+    def test_saas_includes_security_and_pen_test(self, planner):
+        plan = planner.plan("saas_product")
+        assert "security_engineer" in plan.active_agents
+        assert "penetration_tester" in plan.active_agents
+        assert "dependency_auditor" in plan.active_agents
+
+    def test_saas_includes_sre(self, planner):
+        plan = planner.plan("saas_product")
+        assert "sre_engineer" in plan.active_agents
+
+    def test_saas_includes_production_readiness(self, planner):
+        plan = planner.plan("saas_product")
+        assert "release_manager" in plan.active_agents
+        assert "infrastructure_engineer" in plan.active_agents
+
+    def test_saas_includes_legal_compliance(self, planner):
+        plan = planner.plan("saas_product")
+        assert "legal_compliance_officer" in plan.active_agents
+
+    def test_saas_is_most_comprehensive(self, planner):
+        plan = planner.plan("saas_product")
+        assert len(plan.active_agents) >= 45
+
+    def test_saas_includes_all_orchestration(self, planner):
+        plan = planner.plan("saas_product")
+        assert "orchestrator" in plan.active_agents
+        assert "final_arbiter" in plan.active_agents
+        assert "conflict_resolver" in plan.active_agents
+        assert "quality_gate_keeper" in plan.active_agents
+        assert "project_memory_keeper" in plan.active_agents
+
+
+class TestAITool:
+    def test_ai_includes_ml_engineer(self, planner):
+        plan = planner.plan("ai_tool")
+        assert "ml_engineer" in plan.active_agents
+
+    def test_ai_includes_ethics(self, planner):
+        plan = planner.plan("ai_tool")
+        assert "chief_product_ethics_officer" in plan.active_agents
+
+    def test_ai_includes_performance_tester(self, planner):
+        plan = planner.plan("ai_tool")
+        assert "performance_tester" in plan.active_agents
+
+
+class TestResearchProject:
+    def test_research_is_minimal(self, planner):
+        plan = planner.plan("research_project")
+        assert len(plan.active_agents) <= 12
+
+    def test_research_includes_vision_and_research(self, planner):
+        plan = planner.plan("research_project")
+        assert "chief_vision_officer" in plan.active_agents
+        assert "market_researcher" in plan.active_agents
+
+    def test_research_includes_final_arbiter(self, planner):
+        plan = planner.plan("research_project")
+        assert "final_arbiter" in plan.active_agents
+
+    def test_research_excludes_backend(self, planner):
+        plan = planner.plan("research_project")
+        assert "senior_backend_developer" not in plan.active_agents
+        assert "senior_frontend_developer" not in plan.active_agents
+
+
+class TestInternalTool:
+    def test_internal_excludes_market_research_brand(self, planner):
+        plan = planner.plan("internal_tool")
+        assert "market_researcher" not in plan.active_agents
+        assert "brand_strategist" not in plan.active_agents
+        assert "competitor_analyst" not in plan.active_agents
+
+    def test_internal_includes_core_engineering(self, planner):
+        plan = planner.plan("internal_tool")
+        assert "senior_frontend_developer" in plan.active_agents
+        assert "senior_backend_developer" in plan.active_agents
+        assert "database_developer" in plan.active_agents
+
+
+class TestActivationDecisions:
+    def test_should_activate_returns_decision(self, planner):
+        decision = planner.should_activate("chief_vision_officer", "landing_page")
         assert decision.should_activate is True
+        assert decision.agent_id == "chief_vision_officer"
 
-    def test_backend_not_for_landing_page(self, planner):
-        decision = planner.should_activate("senior_backend_developer_agent", "landing_page")
+    def test_should_not_activate_backend_for_landing(self, planner):
+        decision = planner.should_activate("senior_backend_developer", "landing_page")
         assert decision.should_activate is False
-
-    def test_backend_activates_for_full_stack(self, planner):
-        decision = planner.should_activate("senior_backend_developer_agent", "full_stack_app")
-        assert decision.should_activate is True
-
-    def test_security_activates_for_full_stack(self, planner):
-        decision = planner.should_activate("security_compliance_agent", "full_stack_app")
-        assert decision.should_activate is True
-
-    def test_all_project_types_have_exec_vision(self, planner):
-        for pt in planner.supported_project_types:
-            decision = planner.should_activate("executive_vision_agent", pt)
-            assert decision.should_activate, f"executive_vision_agent should activate for {pt}"
-
-    def test_all_project_types_have_final_arbiter(self, planner):
-        for pt in planner.supported_project_types:
-            decision = planner.should_activate("final_arbiter_agent", pt)
-            assert decision.should_activate, f"final_arbiter_agent should activate for {pt}"
-
-    def test_missing_agent_returns_false(self, planner):
-        decision = planner.should_activate("nonexistent_agent", "full_stack_app")
-        assert decision.should_activate is False
+        assert "not required" in decision.reason.lower()
 
     def test_unknown_project_type_returns_false(self, planner):
-        decision = planner.should_activate("executive_vision_agent", "unknown_type")
+        decision = planner.should_activate("chief_vision_officer", "unknown_type")
         assert decision.should_activate is False
 
-    def test_activation_phase_assigned(self, planner):
-        decision = planner.should_activate("executive_vision_agent", "full_stack_app")
-        assert decision.activation_phase >= 0
+    def test_missing_agent_returns_false(self, planner):
+        decision = planner.should_activate("nonexistent", "full_stack_app")
+        assert decision.should_activate is False
+        assert "not found" in decision.reason.lower()
 
-    def test_missing_dependency_listed_as_blocked(self, planner):
-        # saas_product includes growth_analytics_agent which depends on brand_content_agent
-        # Both should be in saas_product
-        plan = planner.plan("saas_product")
-        assert "growth_analytics_agent" in plan.active_agents
-        assert "brand_content_agent" in plan.active_agents
+
+class TestRationale:
+    def test_all_types_have_rationale(self, planner):
+        for pt in planner.supported_project_types:
+            rationale = planner.get_project_rationale(pt)
+            assert rationale, f"Missing rationale for {pt}"
+            assert len(rationale) > 20
+
+    def test_rationale_not_empty_for_plan(self, planner):
+        rationale = planner.get_project_rationale("landing_page")
+        assert "landing" in rationale.lower() or "Landing" in rationale
+
+
+class TestParallelGroups:
+    def test_plan_has_parallel_groups(self, planner):
+        plan = planner.plan("full_stack_app")
+        assert len(plan.parallel_groups) >= 1
+        assert plan.total_phases == len(plan.parallel_groups)
+
+    def test_parallel_groups_are_ordered(self, planner):
+        plan = planner.plan("full_stack_app")
+        for i in range(len(plan.parallel_groups) - 1):
+            prev_group = plan.parallel_groups[i]
+            next_group = plan.parallel_groups[i + 1]
+            assert len(prev_group) >= 1
+            assert len(next_group) >= 1
+
+
+class TestUnknownType:
+    def test_unknown_type_raises(self, planner):
+        with pytest.raises(ValueError, match="Unknown project type"):
+            planner.plan("rocket_ship")

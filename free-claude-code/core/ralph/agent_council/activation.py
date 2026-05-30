@@ -21,224 +21,356 @@ from .models import AgentActivationDecision, AgentCouncilPlan, AgentProfile
 from .registry import AgentRegistry
 
 # ---------------------------------------------------------------------------
-# Project-type → agent activation maps
+# Project-type -> agent activation maps
 # ---------------------------------------------------------------------------
 
-# Each project type maps to a set of agent_ids that should be activated.
-# Agents not in the set are skipped for that project type.
 
 _PROJECT_TYPE_AGENTS: dict[str, frozenset[str]] = {
     "landing_page": frozenset({
-        "executive_vision_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "brand_content_agent",
-        "ux_ui_product_design_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "qa_verification_agent",
-        "devops_infrastructure_agent",
-        "final_arbiter_agent",
+        # Strategy
+        "chief_vision_officer",
+        # Market research
+        "market_researcher", "user_researcher",
+        # Product
+        "product_manager",
+        # Brand
+        "brand_strategist",
+        # UX/UI
+        "ux_designer", "ui_designer", "design_system_architect",
+        # Frontend
+        "senior_frontend_developer",
+        # SEO + conversion
+        "seo_specialist", "conversion_optimizer",
+        # Visual QA
+        "visual_qa_engineer",
+        # Deployment
+        "devops_engineer",
+        # Final gate
+        "final_arbiter",
+        # Memory
+        "project_memory_keeper",
+        # Orchestrator
+        "orchestrator",
     }),
     "static_site": frozenset({
-        "executive_vision_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "brand_content_agent",
-        "ux_ui_product_design_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "qa_verification_agent",
-        "security_compliance_agent",
-        "devops_infrastructure_agent",
-        "final_arbiter_agent",
+        "chief_vision_officer",
+        "market_researcher", "competitor_analyst", "user_researcher",
+        "product_manager",
+        "brand_strategist", "content_strategist",
+        "ux_designer", "ui_designer", "design_system_architect",
+        "software_architect",
+        "senior_frontend_developer", "frontend_performance_engineer",
+        "qa_engineer", "visual_qa_engineer",
+        "security_engineer",
+        "devops_engineer",
+        "seo_specialist",
+        "accessibility_auditor",
+        "final_arbiter",
+        "project_memory_keeper",
+        "orchestrator",
     }),
     "frontend_app": frozenset({
-        "executive_vision_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "brand_content_agent",
-        "ux_ui_product_design_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "qa_verification_agent",
-        "security_compliance_agent",
-        "devops_infrastructure_agent",
-        "growth_analytics_agent",
-        "final_arbiter_agent",
+        "chief_vision_officer",
+        "market_researcher", "competitor_analyst", "user_researcher",
+        "product_manager",
+        "brand_strategist",
+        "ux_designer", "ui_designer", "design_system_architect", "interaction_designer",
+        "software_architect", "api_architect",
+        "senior_frontend_developer", "frontend_performance_engineer",
+        "qa_engineer", "test_automation_engineer", "visual_qa_engineer",
+        "security_engineer",
+        "devops_engineer",
+        "growth_analyst", "analytics_engineer",
+        "accessibility_auditor",
+        "final_arbiter",
+        "project_memory_keeper",
+        "orchestrator",
     }),
     "full_stack_app": frozenset({
-        "executive_vision_agent",
-        "business_strategy_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "brand_content_agent",
-        "ux_ui_product_design_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "senior_backend_developer_agent",
-        "database_developer_agent",
-        "qa_verification_agent",
-        "security_compliance_agent",
-        "devops_infrastructure_agent",
-        "observability_reliability_agent",
-        "final_arbiter_agent",
+        # Layer 1-4: Strategy + Research + Product
+        "chief_vision_officer", "chief_product_ethics_officer",
+        "business_strategist",
+        "market_researcher", "competitor_analyst", "user_researcher",
+        "product_manager", "technical_product_manager",
+        # Layer 5: Brand
+        "brand_strategist",
+        # Layer 6: UX/UI
+        "ux_designer", "ui_designer", "design_system_architect", "interaction_designer",
+        # Layer 7: Architecture
+        "software_architect", "api_architect", "data_architect",
+        # Layer 8-9-10: Engineering
+        "senior_frontend_developer", "frontend_performance_engineer",
+        "senior_backend_developer", "api_developer",
+        "database_developer",
+        # Layer 11: QA
+        "qa_engineer", "test_automation_engineer", "performance_tester", "visual_qa_engineer",
+        # Layer 12: Security
+        "security_engineer", "penetration_tester", "dependency_auditor",
+        # Layer 13-14: DevOps + Observability
+        "devops_engineer", "infrastructure_engineer", "release_manager",
+        "observability_engineer",
+        # Layer 15: Growth
+        "growth_analyst", "analytics_engineer",
+        # Layer 6: A11y
+        "accessibility_auditor",
+        # Layer 17
+        "orchestrator", "project_memory_keeper", "final_arbiter", "quality_gate_keeper",
     }),
     "saas_product": frozenset({
-        "executive_vision_agent",
-        "business_strategy_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "brand_content_agent",
-        "ux_ui_product_design_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "senior_backend_developer_agent",
-        "database_developer_agent",
-        "qa_verification_agent",
-        "security_compliance_agent",
-        "devops_infrastructure_agent",
-        "observability_reliability_agent",
-        "growth_analytics_agent",
-        "support_operations_agent",
-        "final_arbiter_agent",
+        # All strategy
+        "chief_vision_officer", "chief_product_ethics_officer", "strategic_alignment_auditor",
+        "business_strategist", "monetization_strategist", "legal_compliance_officer",
+        "market_researcher", "competitor_analyst", "user_researcher", "pricing_analyst",
+        "product_manager", "technical_product_manager", "scope_manager",
+        # Brand + Content + Marketing
+        "brand_strategist", "content_strategist", "marketing_lead", "seo_specialist",
+        # UX/UI all
+        "ux_designer", "ui_designer", "design_system_architect", "interaction_designer",
+        "accessibility_auditor",
+        # Architecture all
+        "software_architect", "api_architect", "data_architect",
+        # All engineering
+        "senior_frontend_developer", "frontend_performance_engineer",
+        "senior_backend_developer", "api_developer", "integration_engineer",
+        "database_developer", "data_engineer",
+        # All QA
+        "qa_engineer", "test_automation_engineer", "performance_tester", "visual_qa_engineer",
+        # All security
+        "security_engineer", "penetration_tester", "dependency_auditor",
+        # All DevOps
+        "devops_engineer", "infrastructure_engineer", "release_manager",
+        "observability_engineer", "sre_engineer",
+        # All Growth
+        "growth_analyst", "analytics_engineer", "conversion_optimizer",
+        # Support
+        "customer_success_manager", "documentation_specialist",
+        # All orchestration
+        "orchestrator", "project_memory_keeper", "final_arbiter",
+        "conflict_resolver", "quality_gate_keeper",
     }),
     "ai_tool": frozenset({
-        "executive_vision_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "senior_backend_developer_agent",
-        "database_developer_agent",
-        "qa_verification_agent",
-        "security_compliance_agent",
-        "devops_infrastructure_agent",
-        "final_arbiter_agent",
+        "chief_vision_officer", "chief_product_ethics_officer",
+        "market_researcher", "user_researcher",
+        "product_manager", "technical_product_manager",
+        "ux_designer", "ui_designer", "design_system_architect",
+        "software_architect", "api_architect", "data_architect",
+        "senior_frontend_developer",
+        "senior_backend_developer", "api_developer",
+        "database_developer", "data_engineer", "ml_engineer",
+        "qa_engineer", "test_automation_engineer", "performance_tester",
+        "security_engineer", "dependency_auditor",
+        "devops_engineer",
+        "observability_engineer",
+        "analytics_engineer",
+        "final_arbiter",
+        "project_memory_keeper",
+        "orchestrator",
     }),
     "internal_tool": frozenset({
-        "executive_vision_agent",
-        "product_manager_agent",
-        "software_architect_agent",
-        "senior_frontend_developer_agent",
-        "senior_backend_developer_agent",
-        "database_developer_agent",
-        "qa_verification_agent",
-        "security_compliance_agent",
-        "devops_infrastructure_agent",
-        "final_arbiter_agent",
+        "chief_vision_officer",
+        "product_manager",
+        "ux_designer", "ui_designer", "design_system_architect",
+        "software_architect", "api_architect",
+        "senior_frontend_developer",
+        "senior_backend_developer", "api_developer",
+        "database_developer",
+        "qa_engineer", "test_automation_engineer",
+        "security_engineer",
+        "devops_engineer",
+        "final_arbiter",
+        "project_memory_keeper",
+        "orchestrator",
     }),
     "research_project": frozenset({
-        "executive_vision_agent",
-        "market_research_agent",
-        "product_manager_agent",
-        "final_arbiter_agent",
+        "chief_vision_officer",
+        "market_researcher", "competitor_analyst",
+        "product_manager",
+        "chief_product_ethics_officer",
+        "final_arbiter",
+        "project_memory_keeper",
+        "orchestrator",
     }),
 }
-
 
 # Artifact dependencies for each project type
 _PROJECT_TYPE_ARTIFACTS: dict[str, frozenset[str]] = {
     "landing_page": frozenset({
         "business_brief", "strategic_direction",
-        "market_research_report", "competitor_map",
+        "market_research_report", "target_personas",
         "product_requirements_doc", "user_stories", "acceptance_criteria",
         "brand_strategy", "brand_book",
-        "UX_flow_map", "design_system", "UI_spec",
-        "architecture_spec",
-        "test_plan", "QA_report",
-        "deployment_plan", "release_readiness_report",
+        "UX_flow_map", "design_system", "UI_spec", "wireframes",
+        "frontend_implementation_plan",
+        "visual_QA_report",
+        "deployment_plan",
         "final_arbiter_decision",
     }),
     "static_site": frozenset({
         "business_brief", "strategic_direction",
-        "market_research_report", "competitor_map",
+        "market_research_report", "competitor_map", "target_personas",
         "product_requirements_doc", "user_stories", "acceptance_criteria",
-        "brand_strategy", "brand_book",
+        "brand_strategy", "brand_book", "content_strategy",
         "UX_flow_map", "design_system", "UI_spec",
         "architecture_spec",
+        "frontend_implementation_plan",
         "security_requirements",
-        "test_plan", "QA_report",
-        "deployment_plan", "release_readiness_report",
+        "test_plan", "QA_report", "visual_QA_report",
+        "deployment_plan",
+        "seo_strategy",
+        "accessibility_audit_report",
         "final_arbiter_decision",
     }),
     "frontend_app": frozenset({
         "business_brief", "strategic_direction",
-        "market_research_report", "competitor_map",
+        "market_research_report", "competitor_map", "target_personas",
         "product_requirements_doc", "user_stories", "acceptance_criteria",
-        "brand_strategy", "brand_book",
+        "brand_strategy",
         "UX_flow_map", "design_system", "UI_spec",
         "architecture_spec", "API_contract",
+        "frontend_implementation_plan",
         "security_requirements",
-        "test_plan", "QA_report",
-        "deployment_plan", "release_readiness_report",
+        "test_plan", "QA_report", "visual_QA_report",
+        "deployment_plan",
+        "growth_strategy", "analytics_spec",
+        "accessibility_audit_report",
         "final_arbiter_decision",
     }),
     "full_stack_app": frozenset({
-        "business_brief", "strategic_direction",
-        "market_research_report", "competitor_map", "target_personas",
-        "product_requirements_doc", "user_stories", "acceptance_criteria",
-        "brand_strategy", "brand_book",
-        "UX_flow_map", "design_system", "UI_spec",
-        "architecture_spec", "API_contract", "database_schema_spec",
-        "security_requirements",
-        "test_plan", "QA_report",
-        "deployment_plan", "release_readiness_report",
-        "final_arbiter_decision",
-    }),
-    "saas_product": frozenset({
         "business_brief", "strategic_direction",
         "market_research_report", "competitor_map", "target_personas",
         "user_journey_maps",
         "product_requirements_doc", "user_stories", "acceptance_criteria",
         "brand_strategy", "brand_book",
         "UX_flow_map", "design_system", "UI_spec",
-        "architecture_spec", "API_contract", "database_schema_spec",
-        "security_requirements",
-        "test_plan", "QA_report",
+        "architecture_spec", "API_contract", "data_architecture_spec",
+        "database_schema_spec",
+        "frontend_implementation_plan", "backend_implementation_plan",
+        "security_requirements", "threat_model",
+        "test_plan", "QA_report", "performance_report", "visual_QA_report",
         "deployment_plan", "release_readiness_report",
+        "observability_spec",
+        "growth_strategy", "analytics_spec",
+        "accessibility_audit_report",
+        "pentest_report", "dependency_audit_report",
+        "ethics_audit_report",
         "final_arbiter_decision",
+        "gate_status_report",
+    }),
+    "saas_product": frozenset({
+        "business_brief", "strategic_direction",
+        "market_research_report", "competitor_map", "target_personas",
+        "user_journey_maps", "user_needs_analysis",
+        "product_requirements_doc", "user_stories", "acceptance_criteria",
+        "product_roadmap",
+        "business_model_canvas", "pricing_strategy", "gtm_plan",
+        "monetization_spec", "pricing_analysis",
+        "compliance_requirements", "legal_risk_assessment",
+        "brand_strategy", "brand_book", "content_strategy", "messaging_framework",
+        "marketing_plan", "seo_strategy",
+        "UX_flow_map", "information_architecture", "design_system", "UI_spec",
+        "wireframes", "interaction_spec",
+        "architecture_spec", "API_contract", "data_architecture_spec",
+        "database_schema_spec",
+        "frontend_implementation_plan", "backend_implementation_plan",
+        "security_requirements", "threat_model",
+        "test_plan", "QA_report", "performance_report", "visual_QA_report",
+        "deployment_plan", "release_readiness_report",
+        "observability_spec", "reliability_spec",
+        "growth_strategy", "analytics_spec", "cro_strategy",
+        "customer_success_plan",
+        "documentation_plan",
+        "accessibility_audit_report",
+        "pentest_report", "dependency_audit_report",
+        "alignment_audit_report", "ethics_audit_report",
+        "project_memory",
+        "final_arbiter_decision",
+        "gate_status_report",
     }),
     "ai_tool": frozenset({
         "business_brief", "strategic_direction",
-        "market_research_report", "competitor_map",
+        "market_research_report", "target_personas",
         "product_requirements_doc", "user_stories", "acceptance_criteria",
         "UX_flow_map", "design_system", "UI_spec",
-        "architecture_spec", "API_contract", "database_schema_spec",
+        "architecture_spec", "API_contract", "data_architecture_spec",
+        "database_schema_spec",
+        "frontend_implementation_plan", "backend_implementation_plan",
+        "ml_system_design",
         "security_requirements",
-        "test_plan", "QA_report",
-        "deployment_plan", "release_readiness_report",
+        "test_plan", "QA_report", "performance_report",
+        "deployment_plan",
+        "observability_spec",
+        "analytics_spec",
+        "dependency_audit_report",
+        "ethics_audit_report",
         "final_arbiter_decision",
     }),
     "internal_tool": frozenset({
         "business_brief", "strategic_direction",
         "product_requirements_doc", "user_stories", "acceptance_criteria",
         "UX_flow_map", "design_system", "UI_spec",
-        "architecture_spec", "API_contract", "database_schema_spec",
+        "architecture_spec", "API_contract",
+        "database_schema_spec",
+        "frontend_implementation_plan", "backend_implementation_plan",
         "security_requirements",
         "test_plan", "QA_report",
-        "deployment_plan", "release_readiness_report",
+        "deployment_plan",
         "final_arbiter_decision",
     }),
     "research_project": frozenset({
         "business_brief", "strategic_direction",
         "market_research_report", "competitor_map",
         "product_requirements_doc",
+        "ethics_audit_report",
         "final_arbiter_decision",
     }),
 }
 
-
-# Human-readable descriptions for each project type
+# Human-readable descriptions
 _PROJECT_TYPE_DESCRIPTIONS: dict[str, str] = {
-    "landing_page": "Single-page marketing landing page with brand, design, and deployment",
-    "static_site": "Multi-page static site (blog, portfolio, docs) with security considerations",
-    "frontend_app": "Client-side SPA with API dependency but no backend implementation",
-    "full_stack_app": "Full-stack web application with frontend, backend, and database",
-    "saas_product": "Multi-tenant SaaS with auth, payments, analytics, and support",
-    "ai_tool": "AI-powered tool with ML features, API, and UI",
-    "internal_tool": "Internal dashboard or admin tool with authentication and database",
-    "research_project": "Research-only project producing analysis and recommendations",
+    "landing_page": "Single-page marketing landing page with brand, design, SEO, and deployment. No backend/database.",
+    "static_site": "Multi-page static site (blog, portfolio, docs) with security, performance, and a11y.",
+    "frontend_app": "Client-side SPA with API dependency, analytics, and full frontend stack.",
+    "full_stack_app": "Full-stack web application with frontend, backend, database, security, QA, DevOps, and observability.",
+    "saas_product": "Multi-tenant SaaS with auth, payments, analytics, growth, support, and full security/compliance.",
+    "ai_tool": "AI-powered tool with ML features, API, UI, ethics review, and performance monitoring.",
+    "internal_tool": "Internal dashboard or admin tool with authentication and database. No brand/market research.",
+    "research_project": "Research-only project producing analysis, evidence, and recommendations.",
+}
+
+# Per-project-type rationale strings
+_PROJECT_TYPE_RATIONALE: dict[str, str] = {
+    "landing_page": (
+        "Landing page needs brand, SEO, UX/UI, frontend, and deployment. "
+        "Excludes backend/database as it is a static page."
+    ),
+    "static_site": (
+        "Static site adds security, performance, content strategy, and accessibility "
+        "to the landing page stack."
+    ),
+    "frontend_app": (
+        "Frontend SPA needs API architecture, interaction design, analytics, "
+        "and comprehensive frontend testing."
+    ),
+    "full_stack_app": (
+        "Full-stack app activates frontend, backend, database, QA, security, "
+        "DevOps, observability, and growth layers."
+    ),
+    "saas_product": (
+        "SaaS product activates all 17 layers including monetization, legal compliance, "
+        "growth, support, SRE, and full orchestration with quality gates."
+    ),
+    "ai_tool": (
+        "AI tool activates product, architecture, frontend/backend, ML engineering, "
+        "ethics review, performance testing, and security."
+    ),
+    "internal_tool": (
+        "Internal tool skips brand, market research, and growth. "
+        "Focuses on core engineering, QA, security, and deployment."
+    ),
+    "research_project": (
+        "Research project focuses on vision, market analysis, product definition, "
+        "ethics, and final arbitration. Minimal engineering."
+    ),
 }
 
 
@@ -274,7 +406,7 @@ class ActivationPlanner:
 
         Returns:
             AgentCouncilPlan with active agents, required artifacts,
-            parallel groups, critical path, and missing prerequisites.
+            parallel groups, critical path, rationale, and missing prerequisites.
 
         Raises:
             ValueError: If project_type is unknown.
@@ -333,22 +465,30 @@ class ActivationPlanner:
 
         # Compute depth for each agent
         depths: dict[str, int] = {}
+        visiting: set[str] = set()
 
         def _depth(aid: str) -> int:
             if aid in depths:
                 return depths[aid]
+            if aid in visiting:
+                # Cycle detected — break it by returning current max known depth
+                return 0
             agent = agent_map.get(aid)
             if agent is None or not agent.dependencies:
                 depths[aid] = 0
                 return 0
-            max_dep = 0
-            for dep_id in agent.dependencies:
-                if dep_id in agent_ids:
-                    d = _depth(dep_id)
-                    if d > max_dep:
-                        max_dep = d
-            depths[aid] = max_dep + 1
-            return depths[aid]
+            visiting.add(aid)
+            try:
+                max_dep = 0
+                for dep_id in agent.dependencies:
+                    if dep_id in agent_ids:
+                        d = _depth(dep_id)
+                        if d > max_dep:
+                            max_dep = d
+                depths[aid] = max_dep + 1
+                return depths[aid]
+            finally:
+                visiting.discard(aid)
 
         for aid in sorted(agent_ids):
             _depth(aid)
@@ -365,6 +505,12 @@ class ActivationPlanner:
         """Return a human-readable description of the project type."""
         return _PROJECT_TYPE_DESCRIPTIONS.get(
             project_type, f"Unknown project type: {project_type}"
+        )
+
+    def get_project_rationale(self, project_type: str) -> str:
+        """Return the rationale for agent activation for a project type."""
+        return _PROJECT_TYPE_RATIONALE.get(
+            project_type, f"Standard activation for {project_type}"
         )
 
     def should_activate(
@@ -419,7 +565,7 @@ class ActivationPlanner:
         return AgentActivationDecision(
             agent_id=agent_id,
             should_activate=True,
-            reason=f"Required for {project_type}",
+            reason=f"Required for {project_type}: {self.get_project_rationale(project_type)}",
             required_artifacts_available=len(blocked) == 0,
             activation_phase=phase,
             blocked_by=tuple(blocked),

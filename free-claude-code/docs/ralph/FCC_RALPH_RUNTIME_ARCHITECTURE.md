@@ -151,9 +151,10 @@ Phase 9.16A [DONE]  Agent Council V2 Core Foundation: models, registry (17 agent
                     dependency graph, artifact contracts (23), activation planner
                     (8 project types), research map, evidence model. 142 tests.
                     Core foundation complete — no LLM calls, no network access.
-Phase 9.16B [NEXT]  Agent Council V2 Agent Specialization: expand 17→56 agents
-                    from full taxonomy, specialized agent profiles, initial
-                    Orchestrator decision pipeline.
+Phase 9.16B [DONE]  Agent Council V2 Agent Specialization: expanded 17→56 agents
+                    from full taxonomy (AGENT_COUNCIL_V2_TAXONOMY.md), 33 artifact
+                    contracts, 8 project-type plans, grouping methods, artifact
+                    chain validation. 196 tests. No cycles.
                         ↓
 Phase 10   [DEFERRED] Future: Playwright KPI verifier, browser-based
                     acceptance testing, async loop, admin UI
@@ -376,14 +377,14 @@ All Phase 9 work respects the Phase 8 constraints:
 | Research Corpus Quality Audit | 9.15C | ✅ All cards/indexes/repos validated (0 errors), corpus rated USABLE |
 | Security Corpus Expansion | 9.15D | ✅ 7 security repos added, Layer 12 Strong, 49 repos, 181 patterns |
 | Agent Council V2 Core Foundation | 9.16A | ✅ Models, registry (17 agents), dependency graph, 23 artifact contracts, activation planner (8 types), research map, evidence model. 142 tests. |
-| Agent Council V2 Specialization | 9.16B | Expand 17→56 agents, specialized profiles, Orchestrator pipeline |
+| Agent Council V2 Specialization | 9.16B | ✅ Expanded 17→56 agents, 33 artifact contracts, grouping methods, artifact chain validation, 196 tests, zero cycles. |
 | Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
 | Playwright KPI Verifier | deferred | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-30 — Phase 9.16A complete (Agent Council V2 Core Foundation: 8 modules, 142 tests, 0 LLM calls)*
+*Last updated: 2026-05-30 — Phase 9.16B complete (Agent Council V2 Specialization: 56 agents, 33 contracts, 196 tests, 0 cycles)*
 
 ---
 
@@ -682,7 +683,7 @@ Phase 9.15C [DONE]  Research Corpus Quality Audit (validated, 0 errors)
                         ↓
 Phase 9.15D [DONE]  Security Corpus Expansion (7 repos, Layer 12 Strong)
                         ↓
-Phase 9.16  [NEXT]  Agent Council V2 Implementation
+Phase 9.16  [DONE]  Agent Council V2 Implementation (9.16A + 9.16B complete)
                         ↓
 Phase 10   [DEFERRED] Playwright KPI verifier, browser-based acceptance
                     testing, async loop, admin UI

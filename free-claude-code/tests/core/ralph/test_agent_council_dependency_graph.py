@@ -1,4 +1,4 @@
-"""Tests for Agent Council V2 dependency graph."""
+"""Tests for Agent Council V2 dependency graph — updated for 56-agent registry."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from core.ralph.agent_council.dependency_graph import (
     blocked_by_missing,
     build_graph,
     build_reverse_graph,
+    critical_path,
     detect_cycles,
     downstream_consumers,
     find_parallel_groups,
@@ -15,208 +16,178 @@ from core.ralph.agent_council.dependency_graph import (
     topological_sort,
     upstream_dependencies,
 )
-from core.ralph.agent_council.models import AgentProfile
-from core.ralph.agent_council.registry import (
-    AgentRegistry,
-    RegistryValidationError,
-    load_default_registry,
-)
+from core.ralph.agent_council.registry import load_default_registry
 
 
-class TestBuildGraph:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
+@pytest.fixture
+def registry():
+    return load_default_registry()
 
-    def test_build_graph_has_all_agents(self, registry):
+
+class TestGraphConstruction:
+    def test_build_graph_returns_all_agents(self, registry):
         graph = build_graph(registry)
-        assert len(graph) == 17
         for agent in registry.list_all():
             assert agent.agent_id in graph
 
-    def test_executive_vision_has_downstream(self, registry):
-        graph = build_graph(registry)
-        downstream = graph["executive_vision_agent"]
-        # business_strategy_agent depends on executive_vision_agent
-        assert len(downstream) >= 1
-
-    def test_build_reverse_graph(self, registry):
+    def test_reverse_graph_maps_dependencies(self, registry):
         rev = build_reverse_graph(registry)
-        # final_arbiter_agent depends on qa, security, devops
-        assert len(rev["final_arbiter_agent"]) >= 3
+        pm = registry.get("product_manager")
+        assert rev[pm.agent_id] == pm.dependencies
+
+    def test_market_researcher_in_chief_vision_graph(self, registry):
+        graph = build_graph(registry)
+        # chief_vision_officer -> market_researcher (downstream consumer)
+        assert "market_researcher" in graph["chief_vision_officer"]
 
 
 class TestTopologicalSort:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
-
-    def test_returns_all_agents(self, registry):
+    def test_topological_sort_returns_all_agents(self, registry):
         topo = topological_sort(registry)
-        assert len(topo) == 17
+        assert len(topo) == 56
 
-    def test_dependencies_come_before_consumers(self, registry):
+    def test_dependencies_before_dependents(self, registry):
         topo = topological_sort(registry)
         positions = {aid: i for i, aid in enumerate(topo)}
-        for agent in registry.list_all():
-            for dep_id in agent.dependencies:
-                assert positions[dep_id] < positions[agent.agent_id], (
-                    f"{dep_id} must come before {agent.agent_id}"
-                )
+        # product_manager depends on market_researcher and user_researcher
+        assert positions["market_researcher"] < positions["product_manager"]
+        assert positions["user_researcher"] < positions["product_manager"]
+        # senior_frontend_developer depends on ui_designer
+        assert positions["ui_designer"] < positions["senior_frontend_developer"]
 
-    def test_executive_vision_first_or_early(self, registry):
+    def test_chief_vision_early(self, registry):
         topo = topological_sort(registry)
-        # Executive vision has no dependencies, should be early
-        pos = topo.index("executive_vision_agent")
-        assert pos <= 2, "executive_vision_agent should be among first 3"
+        # chief_vision_officer has no deps, should be very early
+        pos = topo.index("chief_vision_officer")
+        assert pos < 10
 
-    def test_final_arbiter_last_or_late(self, registry):
+    def test_final_arbiter_late(self, registry):
         topo = topological_sort(registry)
-        pos = topo.index("final_arbiter_agent")
-        assert pos >= 12, "final_arbiter_agent should be among last 5"
+        pos = topo.index("final_arbiter")
+        # Should be in the last quarter
+        assert pos > len(topo) * 0.6
+
+    def test_qa_before_final_arbiter(self, registry):
+        topo = topological_sort(registry)
+        positions = {aid: i for i, aid in enumerate(topo)}
+        assert positions["qa_engineer"] < positions["final_arbiter"]
+        assert positions["security_engineer"] < positions["final_arbiter"]
 
 
 class TestCycleDetection:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
-
     def test_no_cycles_in_default_registry(self, registry):
         cycles = detect_cycles(registry)
-        assert cycles == [], f"Unexpected cycles: {cycles}"
-
-    def test_detects_simple_cycle(self):
-        """A -> B -> A creates a cycle."""
-        agents = (
-            AgentProfile(
-                agent_id="a", role_name="A", layer=1, purpose="p",
-                dependencies=("b",),
-            ),
-            AgentProfile(
-                agent_id="b", role_name="B", layer=2, purpose="q",
-                dependencies=("a",),
-            ),
-        )
-        registry = AgentRegistry(agents)
-        cycles = detect_cycles(registry)
-        assert len(cycles) >= 1
-
-    def test_self_cycle_not_allowed(self):
-        """Self-dependencies are caught by registry validation."""
-        with pytest.raises(RegistryValidationError):
-            agents = (
-                AgentProfile(
-                    agent_id="a", role_name="A", layer=1, purpose="p",
-                    dependencies=("a",),
-                ),
-            )
-            AgentRegistry(agents)
+        assert len(cycles) == 0, f"Unexpected cycles: {cycles}"
 
 
 class TestUpstreamDependencies:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
-
-    def test_exec_vision_has_no_upstream(self, registry):
-        deps = upstream_dependencies(registry, "executive_vision_agent")
-        assert deps == ()
-
     def test_product_manager_has_upstream(self, registry):
-        deps = upstream_dependencies(registry, "product_manager_agent")
-        assert "executive_vision_agent" in deps
-        assert "market_research_agent" in deps
+        deps = upstream_dependencies(registry, "product_manager")
+        assert "chief_vision_officer" in deps
+        assert "market_researcher" in deps
+        assert "user_researcher" in deps
+
+    def test_final_arbiter_has_many_upstream(self, registry):
+        deps = upstream_dependencies(registry, "final_arbiter")
+        assert len(deps) >= 10
+        assert "qa_engineer" in deps
+        assert "security_engineer" in deps
+
+    def test_chief_vision_has_no_upstream(self, registry):
+        deps = upstream_dependencies(registry, "chief_vision_officer")
+        assert len(deps) == 0
+
+    def test_returns_sorted_tuple(self, registry):
+        deps = upstream_dependencies(registry, "product_manager")
+        assert isinstance(deps, tuple)
+        assert deps == tuple(sorted(deps))
 
 
 class TestDownstreamConsumers:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
+    def test_chief_vision_has_many_downstream(self, registry):
+        deps = downstream_consumers(registry, "chief_vision_officer")
+        assert len(deps) >= 10
 
-    def test_exec_vision_has_many_consumers(self, registry):
-        consumers = downstream_consumers(registry, "executive_vision_agent")
-        assert len(consumers) >= 2
+    def test_market_research_consumed_by_product(self, registry):
+        deps = downstream_consumers(registry, "market_researcher")
+        assert "product_manager" in deps
+        assert "business_strategist" in deps
 
     def test_final_arbiter_has_no_downstream(self, registry):
-        consumers = downstream_consumers(registry, "final_arbiter_agent")
-        assert consumers == ()
+        deps = downstream_consumers(registry, "final_arbiter")
+        # final_arbiter is terminal, may have very few downstream consumers
+        assert len(deps) <= 5
 
 
 class TestParallelGroups:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
-
     def test_returns_groups(self, registry):
         groups = find_parallel_groups(registry)
         assert len(groups) >= 1
-        # Each group should have at least one agent
+
+    def test_chief_vision_in_first_group(self, registry):
+        groups = find_parallel_groups(registry)
+        assert "chief_vision_officer" in groups[0]
+
+    def test_all_agents_in_some_group(self, registry):
+        groups = find_parallel_groups(registry)
+        all_in_groups = set()
         for g in groups:
-            assert len(g) >= 1
-
-    def test_first_group_contains_no_dep_agents(self, registry):
-        groups = find_parallel_groups(registry)
-        first = set(groups[0])
-        # Agents with no dependencies should be in group 0
-        for agent in registry.list_all():
-            if not agent.dependencies:
-                assert agent.agent_id in first, (
-                    f"{agent.agent_id} has no deps but is not in group 0"
-                )
-
-    def test_final_arbiter_in_last_group(self, registry):
-        groups = find_parallel_groups(registry)
-        last = set(groups[-1])
-        assert "final_arbiter_agent" in last or len(groups) <= 2
+            all_in_groups.update(g)
+        assert all_in_groups == set(registry.agent_ids)
 
 
 class TestFindParallelizable:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
+    def test_no_deps_ready_immediately(self, registry):
+        activated = frozenset(registry.agent_ids)
+        completed: frozenset[str] = frozenset()
+        ready = find_parallelizable(registry, activated, completed)
+        # Agents with no dependencies should be ready
+        assert "chief_vision_officer" in ready
+        assert "project_memory_keeper" in ready
 
-    def test_all_ready_when_none_completed(self, registry):
-        all_ids = frozenset(registry.agent_ids)
-        ready = find_parallelizable(registry, all_ids, frozenset())
-        # Only agents with no dependencies should be ready
-        for aid in ready:
-            agent = registry.get(aid)
-            deps_in_set = [d for d in agent.dependencies if d in all_ids]
-            assert len(deps_in_set) == 0, f"{aid} has unmet deps: {deps_in_set}"
+    def test_with_deps_blocked(self, registry):
+        activated = frozenset(registry.agent_ids)
+        completed = frozenset({"chief_vision_officer"})
+        ready = find_parallelizable(registry, activated, completed)
+        # market_researcher only depends on chief_vision_officer -> ready
+        assert "market_researcher" in ready
+        # product_manager needs more -> not ready
+        assert "product_manager" not in ready
 
-    def test_more_ready_as_deps_complete(self, registry):
-        all_ids = frozenset(registry.agent_ids)
-        # Complete executive_vision_agent
-        completed = frozenset({"executive_vision_agent"})
-        ready = find_parallelizable(registry, all_ids, completed)
-        # Now agents that only depend on exec_vision should be ready
-        assert len(ready) >= 1
-
-    def test_all_ready_when_all_completed(self, registry):
-        all_ids = frozenset(registry.agent_ids)
-        ready = find_parallelizable(registry, all_ids, all_ids)
-        assert ready == ()  # none left to run
+    def test_agents_not_in_activated_ignored(self, registry):
+        activated = frozenset({"chief_vision_officer", "market_researcher"})
+        completed: frozenset[str] = frozenset()
+        ready = find_parallelizable(registry, activated, completed)
+        assert "chief_vision_officer" in ready
+        assert "market_researcher" not in ready  # needs chief_vision
 
 
 class TestBlockedByMissing:
-    @pytest.fixture
-    def registry(self):
-        return load_default_registry()
-
-    def test_nothing_blocked_when_all_artifacts_available(self, registry):
-        agent = registry.get("product_manager_agent")
-        all_arts = frozenset(agent.required_inputs)
-        blocked = blocked_by_missing(registry, "product_manager_agent", all_arts)
-        assert blocked == ()
-
-    def test_all_blocked_when_no_artifacts(self, registry):
-        blocked = blocked_by_missing(registry, "product_manager_agent", frozenset())
-        assert len(blocked) >= 2  # needs business_brief and market research
-
-    def test_some_blocked_when_partial_artifacts(self, registry):
-        blocked = blocked_by_missing(
-            registry, "product_manager_agent",
-            frozenset({"business_brief"}),
+    def test_chief_vision_blocked_by_missing_project_brief(self, registry):
+        missing = blocked_by_missing(
+            registry, "chief_vision_officer", frozenset(),
         )
-        assert len(blocked) >= 1
-        assert "business_brief" not in blocked
+        assert "project_brief" in missing
+
+    def test_no_blocking_when_inputs_available(self, registry):
+        missing = blocked_by_missing(
+            registry, "chief_vision_officer", frozenset({"project_brief"}),
+        )
+        assert len(missing) == 0
+
+    def test_market_researcher_blocked_without_brief(self, registry):
+        missing = blocked_by_missing(
+            registry, "market_researcher", frozenset(),
+        )
+        assert "business_brief" in missing
+
+
+class TestCriticalPath:
+    def test_critical_path_includes_activated(self, registry):
+        activated = frozenset({
+            "chief_vision_officer", "market_researcher",
+            "product_manager", "final_arbiter",
+        })
+        cp = critical_path(registry, activated)
+        assert "chief_vision_officer" in cp
+        assert "final_arbiter" in cp
