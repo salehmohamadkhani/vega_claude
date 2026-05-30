@@ -1,0 +1,29 @@
+{
+  "task_id": "TASK-VERIFY-002",
+  "task_title": "Valid verification with real commands",
+  "task": {
+    "agent_role": "verifier",
+    "verification_commands": [
+      "uv run pytest tests/core/ralph -q",
+      "uv run ruff check core/ralph tests/core/ralph",
+      "uv run ty check core/ralph"
+    ],
+    "acceptance_criteria": [
+      "All new code has corresponding tests.",
+      "Tests pass for the implementation.",
+      "Edge cases for input validation must be covered.",
+      "Regression tests must pass."
+    ]
+  },
+  "changed_files": [
+    "tests/core/ralph/test_new_feature.py"
+  ],
+  "stdout_summary": "Verification: 395 tests passed, 0 failed. All ruff checks pass.",
+  "quality_gate_result": {
+    "final_status": "passed",
+    "arbiter_decision": {
+      "action": "approve",
+      "reason": "All verification checks passed."
+    }
+  }
+}

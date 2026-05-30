@@ -1,0 +1,29 @@
+{
+  "task_id": "TASK-IMPL-002",
+  "task_title": "Valid implementation",
+  "task": {
+    "agent_role": "doer",
+    "verification_commands": [
+      "uv run pytest tests/core/ralph -q",
+      "uv run ruff check core/ralph"
+    ],
+    "acceptance_criteria": [
+      "All acceptance criteria must be met.",
+      "Edge cases for input validation must be covered.",
+      "Implementation must produce app.js and index.html."
+    ]
+  },
+  "changed_files": [
+    "core/ralph/cli.py",
+    "tests/test_app.js",
+    "index.html"
+  ],
+  "stdout_summary": "Implementation produced 3 files and passed all tests.",
+  "quality_gate_result": {
+    "final_status": "passed",
+    "arbiter_decision": {
+      "action": "approve",
+      "reason": "All acceptance criteria met."
+    }
+  }
+}

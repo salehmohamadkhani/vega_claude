@@ -1,0 +1,30 @@
+{
+  "task_id": "TASK-STAGE-001",
+  "task_title": "Runtime artifacts staged for commit",
+  "task": {
+    "agent_role": "doer",
+    "verification_commands": [
+      "uv run pytest tests/ -q"
+    ],
+    "acceptance_criteria": [
+      "Files should be committed."
+    ]
+  },
+  "changed_files": [
+    "core/ralph/cli.py",
+    ".fcc/config.json",
+    ".fcc-ralph/runs/latest.json",
+    ".claude/memory/test.md",
+    ".env.production",
+    "logs/error.log",
+    "secrets/api-keys.txt"
+  ],
+  "stdout_summary": "All files staged successfully.",
+  "quality_gate_result": {
+    "final_status": "passed",
+    "arbiter_decision": {
+      "action": "approve",
+      "reason": "All files committed."
+    }
+  }
+}

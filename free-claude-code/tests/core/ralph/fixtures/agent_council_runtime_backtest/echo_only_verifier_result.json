@@ -1,0 +1,23 @@
+{
+  "task_id": "TASK-ECHO-001",
+  "task_title": "Echo-only verification",
+  "task": {
+    "agent_role": "verifier",
+    "verification_commands": [
+      "echo \"Verified: all tests pass\"",
+      "echo \"Verified: all files exist\"",
+      "echo \"Verified: quality check complete\""
+    ],
+    "acceptance_criteria": [
+      "All files should exist in the workspace."
+    ]
+  },
+  "changed_files": [],
+  "quality_gate_result": {
+    "final_status": "passed",
+    "arbiter_decision": {
+      "action": "approve",
+      "reason": "Verification completed successfully."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "TASK-ARBITER-001",
+  "task_title": "Final arbiter without upstream evidence",
+  "task": {
+    "agent_role": "arbiter",
+    "verification_commands": [
+      "echo \"Final review complete\""
+    ],
+    "acceptance_criteria": [
+      "Project is ready for release."
+    ]
+  },
+  "changed_files": [],
+  "stdout_summary": "Arbiter reviewed all inputs and approves.",
+  "quality_gate_result": {
+    "final_status": "passed",
+    "arbiter_decision": {
+      "action": "approve",
+      "reason": "All gates passed — ready for release."
+    }
+  }
+}

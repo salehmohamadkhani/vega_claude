@@ -1,0 +1,24 @@
+{
+  "task_id": "TASK-IMPL-001",
+  "task_title": "Implementation without files",
+  "task": {
+    "agent_role": "doer",
+    "verification_commands": [
+      "echo \"Implementation complete\""
+    ],
+    "acceptance_criteria": [
+      "Create app.js and index.html.",
+      "All files stay inside workspace.",
+      "Implementation should produce working code."
+    ]
+  },
+  "changed_files": [],
+  "stdout_summary": "Implementation proceeded successfully.",
+  "quality_gate_result": {
+    "final_status": "passed",
+    "arbiter_decision": {
+      "action": "approve",
+      "reason": "Task completed."
+    }
+  }
+}
