@@ -142,6 +142,11 @@ Phase 9.15C [DONE]  Research Corpus Quality Audit: validated all 42 cards
                     (healthy), coverage gaps documented (Security critical),
                     corpus rated USABLE for Phase 9.16.
                         ↓
+Phase 9.15D [DONE]  Security Corpus Expansion: 7 security repos added
+                    (Semgrep, Gitleaks, Checkov, Nuclei, Grype, Syft,
+                    OWASP ZAP). Layer 12 upgraded to Strong. 49 repos,
+                    181 patterns. Phase 9.16 now safe to start.
+                        ↓
 Phase 9.16  [NEXT]  Agent Council V2 Implementation: multi-agent runtime
                     with domain-specialized agents, artifact pipeline,
                     Final Arbiter, Quality Gate Keeper integration.
@@ -365,6 +370,7 @@ All Phase 9 work respects the Phase 8 constraints:
 |---|---|---|
 | Research Corpus Bootstrap | 9.15B | ✅ 42 repos, 42 YAML cards, 42 notes, 5 indexes, 153 patterns |
 | Research Corpus Quality Audit | 9.15C | ✅ All cards/indexes/repos validated (0 errors), corpus rated USABLE |
+| Security Corpus Expansion | 9.15D | ✅ 7 security repos added, Layer 12 Strong, 49 repos, 181 patterns |
 | Agent Council V2 Implementation | 9.16 | Multi-agent runtime, domain agents, artifact pipeline, Final Arbiter |
 | Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
@@ -372,7 +378,7 @@ All Phase 9 work respects the Phase 8 constraints:
 
 ---
 
-*Last updated: 2026-05-30 — Phase 9.15C complete (Research Corpus validated: 0 errors, 42 repos healthy, 153 patterns)*
+*Last updated: 2026-05-30 — Phase 9.15D complete (Security corpus expanded: 49 repos, 181 patterns, Layer 12 Strong)*
 
 ---
 
@@ -668,6 +674,8 @@ Phase 9.15A [DONE]  Agent Council V2 Taxonomy & Research Corpus Plan
 Phase 9.15B [DONE]  Research Corpus Bootstrap (42 repos, 5 indexes)
                         ↓
 Phase 9.15C [DONE]  Research Corpus Quality Audit (validated, 0 errors)
+                        ↓
+Phase 9.15D [DONE]  Security Corpus Expansion (7 repos, Layer 12 Strong)
                         ↓
 Phase 9.16  [NEXT]  Agent Council V2 Implementation
                         ↓
