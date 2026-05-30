@@ -127,8 +127,21 @@ Phase 9 [DONE]      Verification & KPI expansion: verification policy layer,
                     CLI --verify/--kpi/--smoke-target flags, smoke adapter
                     expansion (ralph targets), 62 passing policy/KPI/smoke tests
                         ↓
-Phase 10            Future: Playwright KPI verifier, browser-based acceptance
-                    testing, async loop, admin UI
+Phase 9.15A [DONE]  Agent Council V2 Taxonomy & Research Corpus Plan:
+                    SEPCC operator transition, 56-agent taxonomy across
+                    17 layers, artifact contracts (33 artifacts defined),
+                    Research Corpus bootstrap plan (40-50 repos).
+                    No source changes — design docs only.
+                        ↓
+Phase 9.15B [PLAN]  Research Corpus Bootstrap: clone 40-50 repos,
+                    generate repo cards, build indexes, summarize patterns.
+                        ↓
+Phase 9.16  [PLAN]  Agent Council V2 Implementation: multi-agent runtime
+                    with domain-specialized agents, artifact pipeline,
+                    Final Arbiter, Quality Gate Keeper integration.
+                        ↓
+Phase 10   [DEFERRED] Future: Playwright KPI verifier, browser-based
+                    acceptance testing, async loop, admin UI
 ```
 
 ## Phase 8 — Controlled Real Execution Pilot
@@ -340,22 +353,19 @@ All Phase 9 work respects the Phase 8 constraints:
 4. **Provider-agnostic** — Roles are abstract enums, not provider names
 5. **Testable** — Every function returns deterministic output from deterministic input
 
-## What Remains for Phase 10+
+## What Remains for Phase 9.15+
 
 | Capability | Phase | Dependencies |
 |---|---|---|
-| CLI — fcc-ralph plan/review/approve/run/status/report | 6 | `core/ralph/cli.py`, `pyproject.toml` entry point |
-| CLI hardening — RunExecutor delegation, Policy A | 6.1 | `core/ralph/cli.py`, `run_lifecycle.py`, `run_executor.py` |
-| Loop — CLI-driven multi-iteration loop | 7.1 | `core/ralph/loop_runner.py`, `loop_policy.py` |
-| Real execution pilot | 8 | `core/ralph/real_pilot.py`, `execution_guard.py` |
-| Verification & KPI expansion | 9 | `core/ralph/verification_policy.py`, `kpi.py`, CLI flags |
+| Research Corpus Bootstrap | 9.15B | 40–50 repo clones, repo cards, indexes, pattern summaries |
+| Agent Council V2 Implementation | 9.16 | Multi-agent runtime, domain agents, artifact pipeline, Final Arbiter |
 | Admin UI — Ralph tab in FCC admin | deferred | FCC `api/admin_routes.py` |
 | Full Ralph Loop — Async Claude Code loop | deferred | `core/ralph/run_executor.py`, FCC `cli/manager.py` |
 | Playwright KPI Verifier | deferred | Playwright, FCC smoke tests |
 
 ---
 
-*Last updated: 2026-05-28 — Phase 9 complete*
+*Last updated: 2026-05-30 — Phase 9.15A complete (Agent Council V2 Taxonomy & Research Corpus Plan)*
 
 ---
 
@@ -646,6 +656,12 @@ Phase 9 [DONE]      Verification & KPI expansion:
                     - smoke adapter expansion (ralph targets)
                     - 62 passing policy/KPI/smoke tests
                         ↓
-Phase 10            Future: Playwright KPI verifier, browser-based acceptance
+Phase 9.15A [DONE]  Agent Council V2 Taxonomy & Research Corpus Plan
+                        ↓
+Phase 9.15B [PLAN]  Research Corpus Bootstrap
+                        ↓
+Phase 9.16  [PLAN]  Agent Council V2 Implementation
+                        ↓
+Phase 10   [DEFERRED] Playwright KPI verifier, browser-based acceptance
                     testing, async loop, admin UI
 ```
