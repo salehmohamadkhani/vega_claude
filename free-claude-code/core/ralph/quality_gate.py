@@ -168,6 +168,9 @@ class QualityGate:
         score_card: ScoreCard | None = None,
         retry_count: int = 0,
         critic_rejection_count: int = 0,
+        agent_council_context: dict[str, object] | None = None,
+        use_agent_council_gates: bool = False,
+        strict_agent_council_gates: bool = False,
     ) -> QualityGateResult:
         """Run the full quality gate pipeline for a single task.
 
@@ -184,6 +187,12 @@ class QualityGate:
             How many times this task has been retried.
         critic_rejection_count:
             How many times the critic has rejected this task.
+        agent_council_context:
+            Optional Agent Council planning context for evidence gate enforcement.
+        use_agent_council_gates:
+            If True, enforce Agent Council evidence gates against the task result.
+        strict_agent_council_gates:
+            If True, blocking gate failures prevent task approval.
 
         Returns
         -------
@@ -290,7 +299,46 @@ class QualityGate:
             if kpi_any_skipped:
                 summary_parts.append("kpi-skip")
 
-        return QualityGateResult(
+        # --- Agent Council evidence gate enforcement (optional) ---
+        council_enforcement_meta: dict[str, object] | None = None
+        if use_agent_council_gates:
+            try:
+                from .agent_council.runtime_gate_enforcer import (
+                    enforce_runtime_evidence_gates,
+                    should_block_task_approval,
+                )
+                # Build a minimal task result wrapper for the enforcer
+                class _TaskResultWrapper:
+                    __slots__ = ("quality_gate_result", "task", "task_id", "task_title")
+                    def __init__(self, task_id, task_title, task, qg_result):
+                        self.task_id = task_id
+                        self.task_title = task_title
+                        self.task = task
+                        self.quality_gate_result = qg_result
+
+                wrapper = _TaskResultWrapper(task.id, task.title, task, None)
+                gate_result = enforce_runtime_evidence_gates(
+                    task_result=wrapper,
+                    planning_context=agent_council_context,
+                    strict_mode=strict_agent_council_gates,
+                )
+                # If gates block approval, override final status
+                if should_block_task_approval(gate_result):
+                    final_status = TaskStatus.BLOCKED
+                    all_passed = False
+                    summary_parts.append("council-gates=blocked")
+                    if gate_result.blocking_issues:
+                        summary_parts.append(f"council-blocking={len(gate_result.blocking_issues)}")
+                else:
+                    summary_parts.append("council-gates=ok")
+                    if gate_result.gates_warned > 0:
+                        summary_parts.append(f"council-warnings={gate_result.gates_warned}")
+
+            except Exception:
+                # Graceful degradation — council enforcement failed, proceed without it
+                summary_parts.append("council-gates=error")
+
+        result = QualityGateResult(
             task_id=task.id,
             task_title=task.title,
             verification_plan=plan,
@@ -304,3 +352,4 @@ class QualityGate:
             summary=" | ".join(summary_parts),
             all_passed=all_passed,
         )
+        return result
