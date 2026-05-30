@@ -379,6 +379,24 @@ def _cmd_approve(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _build_gate_config_from_args(args: argparse.Namespace) -> object | None:
+    """Build a RuntimeGateConfig from CLI arguments.
+
+    Returns None if gates are not enabled (preserving old behavior).
+    """
+    use_gates = getattr(args, "use_agent_council_gates", False)
+    strict_gates = getattr(args, "strict_agent_council_gates", False)
+    if not use_gates and not strict_gates:
+        return None
+    from .agent_council.runtime_gate_config import runtime_gate_config_from_options
+    ptype: str | None = getattr(args, "run_project_type", None) or None
+    return runtime_gate_config_from_options(
+        use_agent_council_gates=use_gates,
+        strict_agent_council_gates=strict_gates,
+        project_type=ptype,
+    )
+
+
 def _cmd_run(args: argparse.Namespace) -> int:
     """Run approved tasks through the Ralph runtime (dry-run by default).
 
@@ -456,9 +474,10 @@ def _cmd_run(args: argparse.Namespace) -> int:
     # stop_on_debug=False: in dry-run the quality gate always returns
     # DEBUG (no verification results), so stopping on debug would
     # prevent multi-task dry-runs.
+    gate_config = _build_gate_config_from_args(args)
     executor = RunExecutor(
         workspace=ws,
-        config=RunExecutorConfig(stop_on_debug=False),
+        config=RunExecutorConfig(stop_on_debug=False, gate_config=gate_config),
     )
 
     if args.task:
@@ -827,8 +846,12 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
         kpi_evaluator=kpi_evaluator,
     )
 
+    gate_config = _build_gate_config_from_args(args)
     iteration_runner = IterationRunner(
-        config=IterationRunnerConfig(execution_mode=execution_mode),
+        config=IterationRunnerConfig(
+            execution_mode=execution_mode,
+            gate_config=gate_config,
+        ),
         workspace=ws,
         task_library=task_lib,
         execution_adapter=execution_adapter,
@@ -1435,6 +1458,24 @@ def _build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Smoke verification target (repeatable)",
+    )
+    p.add_argument(
+        "--use-agent-council-gates",
+        action="store_true",
+        default=False,
+        help="Enable Agent Council evidence gate enforcement (gates block approval when enabled)",
+    )
+    p.add_argument(
+        "--strict-agent-council-gates",
+        action="store_true",
+        default=False,
+        help="Enable strict Agent Council gate enforcement (missing evidence blocks approval)",
+    )
+    p.add_argument(
+        "--project-type",
+        default=None,
+        dest="run_project_type",
+        help="Project type for Agent Council gate enforcement (landing_page, full_stack_app, etc.)",
     )
 
     # --- status ---

@@ -33,12 +33,16 @@ class RunExecutorConfig:
     """Configuration for RunExecutor behavior.
 
     Safe defaults: no auto-approval, stop on debug/escalate.
+
+    When ``gate_config`` is provided, Agent Council evidence gates are
+    enforced against task results during execution.
     """
 
     auto_approve_pending_tasks: bool = False
     max_iterations_per_task: int = 1
     stop_on_debug: bool = True
     stop_on_escalate: bool = True
+    gate_config: object | None = None  # RuntimeGateConfig
 
 
 @dataclass
@@ -102,6 +106,12 @@ class RunExecutor:
         )
         self._loop_guard = loop_guard or LoopGuard()
         self._arbiter = arbiter or ArbiterEngine()
+
+        # Propagate gate_config from RunExecutorConfig to IterationRunner
+        if self._config.gate_config is not None:
+            irc = self._iteration_runner._config
+            if irc.gate_config is None:
+                irc.gate_config = self._config.gate_config
 
     # ------------------------------------------------------------------
     # Public API

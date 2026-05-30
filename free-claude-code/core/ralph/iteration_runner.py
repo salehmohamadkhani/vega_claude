@@ -34,9 +34,13 @@ class IterationRunnerConfig:
 
     Safe default: dry-run only. Real execution requires explicit
     opt-in via ``execution_mode=ExecutionMode.REAL``.
+
+    When ``gate_config`` is provided, Agent Council evidence gates are
+    enforced against task results during the quality gate step.
     """
 
     execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
+    gate_config: object | None = None  # RuntimeGateConfig (lazy to avoid circular import)
 
 
 @dataclass
@@ -141,9 +145,33 @@ class IterationRunner:
         exec_result = self._adapter.execute(exec_request)
 
         # Step 4: Run quality gate (uses empty verification result in dry-run)
+        gate_args: dict[str, Any] = {}
+        gc = self._config.gate_config
+        if gc is not None:
+            use_gates = getattr(gc, "use_agent_council_gates", False)
+            strict_gates = getattr(gc, "strict_agent_council_gates", False)
+            if use_gates:
+                gate_args["use_agent_council_gates"] = True
+                gate_args["strict_agent_council_gates"] = strict_gates
+                # Build council context if project type is available
+                ptype = getattr(gc, "project_type", None) or ""
+                pgoal = getattr(gc, "project_goal", None) or goal.title if goal else ""
+                if ptype or pgoal:
+                    try:
+                        from .agent_council.planner_integration import build_agent_council_task_context
+                        council_ctx = build_agent_council_task_context(
+                            goal=str(pgoal) if pgoal else task.title,
+                            project_type=ptype or None,
+                            strict_mode=strict_gates,
+                        )
+                        gate_args["agent_council_context"] = council_ctx
+                    except Exception:
+                        pass
+
         gate_result = self._quality_gate.evaluate(
             task=task,
             retry_count=iteration_number - 1,
+            **gate_args,
         )
 
         # Step 5: Determine next action and pass/fail
