@@ -84,4 +84,23 @@ approval before starting.
 | GitHub verification | _pending_ |
 | next task | TBD |
 
+### Entry: U6-LITE
+
+| Field | Value |
+|-------|-------|
+| task id | U6-LITE |
+| date | 2026-05-31 |
+| mode | direct |
+| fan-out used | no |
+| why fan-out not used | new file only, 0% risk |
+| estimated LLM calls | 0 |
+| actual LLM calls | 0 |
+| files changed | `scripts/vega_project_snapshot.py`, `tests/ralph/test_vega_project_snapshot.py` |
+| tests run | 9 \| 9 passed |
+| commit hash | `266a519` |
+| push result | synced to origin |
+| branch | `ralph-r1-temp` |
+| GitHub verification | [266a519](https://github.com/salehmohamadkhani/vega_claude/commit/266a519) |
+| next task | TBD |
+
 U5_TASK_LEDGER_READY
