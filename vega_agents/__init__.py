@@ -15,6 +15,16 @@ from .executor import (
     summarize_execution_plan,
     should_execute_fanout,
 )
+from .blueprints import (
+    AgentBlueprint,
+    get_agent_blueprint_catalog,
+    get_blueprint_count,
+    list_blueprints,
+    get_categories,
+    find_blueprint,
+    search_blueprints,
+    propose_blueprints_for_task,
+)
 
 __all__ = [
     "AgentRole",
@@ -22,6 +32,7 @@ __all__ = [
     "AgentSelectionDecision",
     "AgentExecutionStep",
     "AgentExecutionPlan",
+    "AgentBlueprint",
     "get_default_agent_registry",
     "find_agent_role",
     "list_enabled_agents",
@@ -31,4 +42,11 @@ __all__ = [
     "build_execution_plan",
     "summarize_execution_plan",
     "should_execute_fanout",
+    "get_agent_blueprint_catalog",
+    "get_blueprint_count",
+    "list_blueprints",
+    "get_categories",
+    "find_blueprint",
+    "search_blueprints",
+    "propose_blueprints_for_task",
 ]
