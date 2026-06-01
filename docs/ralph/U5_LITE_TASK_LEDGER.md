@@ -141,4 +141,26 @@ approval before starting.
 | GitHub verification | [267dd50](https://github.com/salehmohamadkhani/vega_claude/commit/267dd50) |
 | next task | agent task runner / CLI command |
 
+### Entry: U9-LITE
+
+| Field | Value |
+|-------|-------|
+| task id | U9-LITE |
+| date | 2026-06-01 |
+| mode | direct |
+| fan-out used | no |
+| why fan-out not used | docs + test creation only, 0% risk — no LLM calls, no network, stdlib only |
+| estimated LLM calls | 0 |
+| actual LLM calls | 0 |
+| DeepSeek calls used | 0 |
+| research sources inspected | `vega_agents/__init__.py`, `vega_agents/registry.py`, `vega_agents/selector.py`, `vega_agents/executor.py`, `tests/ralph/test_vega_agent_runtime.py`, `tests/ralph/test_vega_agent_executor.py`, `docs/ralph/U5_LITE_TASK_LEDGER.md`, `research/repos/` (6 dirs listed but no files read) |
+| files changed | `docs/vega_cloud/VEGA_CLOUD_RESEARCH_AND_DEV_PLAN.md` (new), `tests/ralph/test_vega_cloud_research_plan.py` (new), `docs/ralph/U5_LITE_TASK_LEDGER.md` (updated) |
+| tests run | 11 \| 11 passed |
+| selected next dev task | Task A: Agent CLI Runner (`scripts/vega_agent_runner.py`) |
+| commit hash | _pending_ |
+| push result | _pending_ |
+| branch | `ralph-r1-temp` |
+| GitHub verification | _pending_ |
+| next task | Agent CLI runner implementation |
+
 U5_TASK_LEDGER_READY
