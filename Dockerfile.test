@@ -17,6 +17,9 @@ WORKDIR /app
 # Copy the vega_agents package (the module under test)
 COPY vega_agents/ vega_agents/
 
+# Copy scripts needed by test fixtures
+COPY scripts/ scripts/
+
 # Copy test suite
 COPY tests/ tests/
 
@@ -25,8 +28,7 @@ COPY free-claude-code/pyproject.toml free-claude-code/uv.lock ./free-claude-code
 
 # Install only dev/test dependencies (pytest)
 # We run from /app with vega_agents on sys.path via the test fixtures
-RUN cd free-claude-code && uv sync --no-install-project --group dev --frozen 2>/dev/null || \
-    pip install --no-cache-dir pytest pytest-asyncio 2>/dev/null || true
+RUN pip install --no-cache-dir pytest pytest-asyncio
 
 # Set PYTHONPATH so vega_agents is importable from project root
 ENV PYTHONPATH=/app

@@ -7,9 +7,10 @@
 | Docker installed | yes |
 | Docker version | 29.1.3 |
 | Docker daemon reachable | yes (socket exists) |
-| Docker socket permission | denied — `spcops` not in `docker` group |
+| Docker socket permission | granted — `spcops` in `docker` group |
 | Passwordless sudo | not available |
-| Docker test run | blocked — see blocker below |
+| Docker test run | ✅ PASSED — 107/107 tests passing |
+| Dockerfile fixes applied | `pip install` direct (no uv sync fallback), `scripts/` copied into image |
 
 ## Files Created
 
@@ -46,10 +47,12 @@ The sandbox enforces:
 
 ## Risks
 
-- **Python 3.14 slim image**: Python 3.14 is under rapid development; the image must be kept current.
-- **uv sync failure**: If uv sync fails, Dockerfile falls back to `pip install pytest` — adequate for the stdlib-only test suite.
-- **Docker daemon dependency**: Build and run require a running Docker daemon on the host.
-- **No service integration tests**: These are unit/contract tests only. Integration tests requiring running services are not covered.
+| Risk | Status |
+|------|--------|
+| **Python 3.14 slim image**: Python 3.14 is under rapid development; the image must be kept current. | Active |
+| **pip install reliability**: Direct `pip install pytest pytest-asyncio` — no uv sync fallback needed. | ✅ Stable |
+| **Docker daemon dependency**: Build and run require a running Docker daemon on the host. | Active |
+| **No service integration tests**: These are unit/contract tests only. Integration tests requiring running services are not covered. | Active |
 
 ## How to Run
 
@@ -65,13 +68,13 @@ docker run --rm vega-agent-test-sandbox:u13
 uv run pytest tests/ralph/test_docker_agent_sandbox_contract.py -q
 ```
 
-## Blocker
+## Blocker (Resolved)
 
 | Issue | Detail |
 |-------|--------|
-| Docker socket permission | `spcops` user is not in the `docker` group and passwordless sudo is unavailable. |
-| Resolution | Add user to docker group: `sudo usermod -aG docker spcops && newgrp docker` |
+| Docker socket permission | `spcops` user was not in the `docker` group. |
+| Resolution | `sudo usermod -aG docker spcops` applied by sysadmin. Verified with `sg docker` to work around session-level group cache. |
 
 ## Final Marker
 
-U13_DOCKER_SANDBOX_READY — U13_DOCKER_BLOCKED_SOCKET_PERMISSION
+U13_DOCKER_SANDBOX_READY — ✅ All 107 tests passed (2026-06-01)
