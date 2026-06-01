@@ -1,0 +1,39 @@
+# U13-DOCKER-LITE — Isolated Docker Test Sandbox for Vega Agent Tests
+#
+# Rules:
+# - No secrets, no env files copied
+# - No network runtime dependency for tests
+# - Python base only — stdlib + pytest
+# - Tests import vega_agents from project root
+
+FROM python:3.14-slim AS base
+
+# Install uv for fast dependency resolution
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy only necessary project files
+WORKDIR /app
+
+# Copy the vega_agents package (the module under test)
+COPY vega_agents/ vega_agents/
+
+# Copy test suite
+COPY tests/ tests/
+
+# Copy pyproject.toml and uv.lock for dependency installation
+COPY free-claude-code/pyproject.toml free-claude-code/uv.lock ./free-claude-code/
+
+# Install only dev/test dependencies (pytest)
+# We run from /app with vega_agents on sys.path via the test fixtures
+RUN cd free-claude-code && uv sync --no-install-project --group dev --frozen 2>/dev/null || \
+    pip install --no-cache-dir pytest pytest-asyncio 2>/dev/null || true
+
+# Set PYTHONPATH so vega_agents is importable from project root
+ENV PYTHONPATH=/app
+
+# Default: run agent-related tests
+CMD ["python3", "-m", "pytest", "-q", \
+     "tests/ralph/test_vega_agent_runtime.py", \
+     "tests/ralph/test_vega_agent_executor.py", \
+     "tests/ralph/test_vega_agent_runner_cli.py", \
+     "tests/ralph/test_vega_agent_blueprints.py"]

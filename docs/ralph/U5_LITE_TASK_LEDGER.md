@@ -205,4 +205,27 @@ approval before starting.
 | GitHub verification | _pending_ |
 | next task | TBD |
 
+### Entry: U13-DOCKER-LITE
+
+| Field | Value |
+|-------|-------|
+| task id | U13-DOCKER-LITE |
+| date | 2026-06-01 |
+| mode | direct |
+| fan-out used | no |
+| why fan-out not used | new infrastructure files only, 0% risk — no LLM calls, no network, no production service changes |
+| estimated LLM calls | 0 |
+| actual LLM calls | 0 |
+| DeepSeek calls used | 0 |
+| files changed | `Dockerfile.test` (new), `scripts/run_agent_tests_in_docker.sh` (new), `tests/ralph/test_docker_agent_sandbox_contract.py` (new), `docs/vega_cloud/U13_DOCKER_TEST_SANDBOX_REPORT.md` (new), `docs/ralph/U5_LITE_TASK_LEDGER.md` (updated) |
+| tests run | 7 \| 7 passed (contract tests) |
+| Docker available | yes (v29.1.3) |
+| Docker socket access | blocked — `spcops` not in `docker` group, no passwordless sudo |
+| Docker test run | blocked by socket permission |
+| commit hash | `6541fff` |
+| push result | synced to origin (GITHUB_SYNC_OK) |
+| branch | `ralph-r1-temp` |
+| GitHub verification | _pending_ |
+| next task | TBD |
+
 U5_TASK_LEDGER_READY
