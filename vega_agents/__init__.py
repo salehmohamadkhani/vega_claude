@@ -25,6 +25,14 @@ from .blueprints import (
     search_blueprints,
     propose_blueprints_for_task,
 )
+from .engine import (
+    ProposedAgentBlueprint,
+    GapResult,
+    TaskAgentProposal,
+    create_proposal,
+    propose_agents,
+    has_gap,
+)
 
 __all__ = [
     "AgentRole",
@@ -33,6 +41,9 @@ __all__ = [
     "AgentExecutionStep",
     "AgentExecutionPlan",
     "AgentBlueprint",
+    "ProposedAgentBlueprint",
+    "GapResult",
+    "TaskAgentProposal",
     "get_default_agent_registry",
     "find_agent_role",
     "list_enabled_agents",
@@ -49,4 +60,7 @@ __all__ = [
     "find_blueprint",
     "search_blueprints",
     "propose_blueprints_for_task",
+    "create_proposal",
+    "propose_agents",
+    "has_gap",
 ]
