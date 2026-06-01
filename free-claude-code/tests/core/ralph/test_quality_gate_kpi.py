@@ -63,9 +63,7 @@ class TestQualityGateKpi:
 
     def test_kpi_results_in_score_card(self) -> None:
         """KPI results are reflected in the ScoreCard kpi score."""
-        task = _make_task(
-            kpis=["KPI: passes", "KPI: also passes", "KPI: fails"]
-        )
+        task = _make_task(kpis=["KPI: passes", "KPI: also passes", "KPI: fails"])
         kpi_evaluator = MagicMock(spec=KPIEvaluator)
         kpi_evaluator.evaluate_all.return_value = [
             MagicMock(passed=True, status=KPIStatus.PASSED, kpi_id="k1"),

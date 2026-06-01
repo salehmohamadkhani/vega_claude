@@ -187,7 +187,7 @@ class RunExecutor:
         - Arbiter returns STOP
         - Arbiter returns DEBUG and ``stop_on_debug=True``
         - Arbiter returns ESCALATE and ``stop_on_escalate=True``
-        - Arbiter returns RETRY (multi-iteration not yet implemented)
+        - ``max_iterations_per_task`` exceeded (was reached via RETRY)
         - Loop guard returns STOP
         - ``max_tasks`` limit is reached
         """
@@ -326,19 +326,14 @@ class RunExecutor:
                     ),
                 )
 
-            # RETRY: multi-iteration not yet implemented — stop safely
+            # RETRY: reset task to APPROVED so the next loop iteration
+            # re-picks it up. The iteration counter already incremented,
+            # so max_iterations_per_task enforcement is automatic.
             if action == ArbiterAction.RETRY:
-                return RunExecutorResult(
-                    run=run,
-                    task_results=task_results,
-                    completed=False,
-                    retry_required=True,
-                    stopped_reason=(
-                        f"Arbiter requested retry on task {task.id}: "
-                        f"{result.quality_gate_result.arbiter_decision.reason}. "
-                        f"Multi-iteration not yet implemented."
-                    ),
-                )
+                task.status = TaskStatus.APPROVED
+                self._run_lifecycle.approve_task(task.id)
+                run.updated_at = _now_utc()
+                continue
 
             # DEBUG: stop if configured
             if action == ArbiterAction.DEBUG:

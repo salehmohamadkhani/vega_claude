@@ -12,6 +12,7 @@ Prove:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 
 import pytest
@@ -66,7 +67,7 @@ class TestRuntimeGateConfig:
 
     def test_frozen_dataclass(self):
         config = RuntimeGateConfig(project_type="landing_page")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             config.project_type = "other"  # type: ignore[misc]
 
 
@@ -145,6 +146,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import runtime_gate_config
+
         source = runtime_gate_config.__file__
         if source:
             with open(str(source)) as f:

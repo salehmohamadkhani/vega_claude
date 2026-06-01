@@ -91,7 +91,6 @@ def build_planning_context_from_council_plan(
         "is_ready_to_execute": plan.is_ready_to_execute,
         "next_action": plan.next_action.value,
         "next_action_label": plan.next_action_label,
-
         # -- Agents --
         "active_agent_count": plan.total_active_agents,
         "total_phases": plan.total_phases,
@@ -107,11 +106,9 @@ def build_planning_context_from_council_plan(
             }
             for a in plan.active_agents
         ],
-
         # -- Execution structure --
         "critical_path": list(plan.critical_path),
         "parallel_groups": [list(g) for g in plan.parallel_groups],
-
         # -- Artifacts --
         "required_artifacts": [
             {
@@ -125,7 +122,6 @@ def build_planning_context_from_council_plan(
         ],
         "missing_artifact_ids": list(plan.missing_artifacts),
         "artifact_contract_ids": list(plan.artifact_contracts),
-
         # -- Research & Evidence --
         "research_references": [
             {
@@ -147,7 +143,6 @@ def build_planning_context_from_council_plan(
             }
             for e in plan.evidence_requirements
         ],
-
         # -- Risks --
         "risks": [
             {
@@ -160,7 +155,6 @@ def build_planning_context_from_council_plan(
             }
             for r in plan.risks
         ],
-
         # -- Meta --
         "warnings": list(plan.warnings),
         "summary": plan.summary,
@@ -199,7 +193,9 @@ def summarize_planning_context(context: dict[str, object]) -> str:
         lines.append(f"Required artifacts: {len(arts)}")
         critical = [a for a in arts if isinstance(a, dict) and a.get("is_critical")]
         if critical:
-            lines.append(f"  Critical: {', '.join(a.get('name', '?') for a in critical)}")
+            lines.append(
+                f"  Critical: {', '.join(a.get('name', '?') for a in critical)}"
+            )
 
     missing = context.get("missing_artifact_ids", [])
     if missing and isinstance(missing, list) and len(missing) > 0:
@@ -207,9 +203,13 @@ def summarize_planning_context(context: dict[str, object]) -> str:
 
     risks = context.get("risks", [])
     if isinstance(risks, list):
-        blocking = [r for r in risks if isinstance(r, dict) and r.get("severity") == "blocking"]
+        blocking = [
+            r for r in risks if isinstance(r, dict) and r.get("severity") == "blocking"
+        ]
         high = [r for r in risks if isinstance(r, dict) and r.get("severity") == "high"]
-        lines.append(f"Risks: {len(risks)} ({len(blocking)} blocking, {len(high)} high)")
+        lines.append(
+            f"Risks: {len(risks)} ({len(blocking)} blocking, {len(high)} high)"
+        )
 
     evidence = context.get("evidence_requirements", [])
     if isinstance(evidence, list):
@@ -429,11 +429,13 @@ def add_gate_context_to_planning_dict(
     context["evidence_gate_expectations"] = expectations
     context["gate_prompt_block"] = block
     context["blocking_gates"] = [
-        g for g in expectations
+        g
+        for g in expectations
         if any(kw in g.lower() for kw in ("must", "cannot", "block"))
     ]
     context["warning_gates"] = [
-        g for g in expectations
+        g
+        for g in expectations
         if not any(kw in g.lower() for kw in ("must", "cannot", "block"))
     ]
     context["gate_summary"] = (

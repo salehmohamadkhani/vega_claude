@@ -118,7 +118,9 @@ _DOCUMENTATION_KEYWORDS: set[str] = {
 _APP_FILE_EXTENSIONS: set[str] = {".html", ".js", ".css", ".mjs"}
 
 
-def _collect_goal_text(title: str, description: str, constraints: list[str], kpis: list[str]) -> str:
+def _collect_goal_text(
+    title: str, description: str, constraints: list[str], kpis: list[str]
+) -> str:
     """Concatenate all goal text into a single lowercased string for keyword matching."""
     return f"{title} {description} {' '.join(constraints)} {' '.join(kpis)}".lower()
 
@@ -171,9 +173,7 @@ def select_profile_for_goal(
 
     The function is fully deterministic — no LLM calls, no provider calls.
     """
-    text = _collect_goal_text(
-        title, description, constraints or [], kpis or []
-    )
+    text = _collect_goal_text(title, description, constraints or [], kpis or [])
 
     # Throwaway app detection (highest priority)
     if _is_throwaway_app(text) or _has_app_file_pattern(text):
@@ -217,7 +217,10 @@ def select_profile_for_goal(
             },
             recommended_kpis={
                 "architect": ["Architecture document covers all affected modules."],
-                "doer": ["Implementation passes ruff linting.", "All pytest tests pass."],
+                "doer": [
+                    "Implementation passes ruff linting.",
+                    "All pytest tests pass.",
+                ],
                 "verifier": [
                     "All ruff checks pass.",
                     "All ty (strict type) checks pass.",
@@ -277,7 +280,9 @@ def _build_throwaway_app_decision(reason: str) -> ProfileDecision:
     )
 
 
-def make_profile_decision(profile: VerificationProfile, reason: str = "") -> ProfileDecision:
+def make_profile_decision(
+    profile: VerificationProfile, reason: str = ""
+) -> ProfileDecision:
     """Create a ProfileDecision for a given profile enum value.
 
     This is used when the profile is explicitly specified (e.g. via CLI)
@@ -320,7 +325,10 @@ def make_profile_decision(profile: VerificationProfile, reason: str = "") -> Pro
             },
             recommended_kpis={
                 "architect": ["Architecture document covers all affected modules."],
-                "doer": ["Implementation passes ruff linting.", "All pytest tests pass."],
+                "doer": [
+                    "Implementation passes ruff linting.",
+                    "All pytest tests pass.",
+                ],
                 "verifier": [
                     "All ruff checks pass.",
                     "All ty (strict type) checks pass.",
@@ -352,6 +360,4 @@ def profile_from_string(name: str) -> VerificationProfile:
         if profile.value == name.lower() or profile.name.lower() == normalized:
             return profile
     valid = ", ".join(p.value for p in VerificationProfile)
-    raise ValueError(
-        f"Unknown verification profile: {name!r}. Valid profiles: {valid}"
-    )
+    raise ValueError(f"Unknown verification profile: {name!r}. Valid profiles: {valid}")

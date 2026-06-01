@@ -9,8 +9,6 @@ Prove:
 
 from __future__ import annotations
 
-import pytest
-
 from core.ralph.agent_council.plan import (
     CouncilPlanNextAction,
     CouncilPlanResult,
@@ -64,7 +62,9 @@ class TestSummarizeCouncilPlan:
     """Test human-readable summary generation."""
 
     def test_summary_includes_active_agents(self):
-        plan = build_council_plan_for_goal("Build a landing page", project_type="landing_page")
+        plan = build_council_plan_for_goal(
+            "Build a landing page", project_type="landing_page"
+        )
         summary = summarize_council_plan(plan)
 
         assert "Active Agents" in summary
@@ -73,19 +73,25 @@ class TestSummarizeCouncilPlan:
         assert "Project Type" in summary
 
     def test_summary_includes_artifacts(self):
-        plan = build_council_plan_for_goal("Build a full stack app", project_type="full_stack_app")
+        plan = build_council_plan_for_goal(
+            "Build a full stack app", project_type="full_stack_app"
+        )
         summary = summarize_council_plan(plan)
 
         assert "Required Artifacts" in summary
 
     def test_summary_includes_risks(self):
-        plan = build_council_plan_for_goal("Build a SaaS product", project_type="saas_product")
+        plan = build_council_plan_for_goal(
+            "Build a SaaS product", project_type="saas_product"
+        )
         summary = summarize_council_plan(plan)
 
         assert "Risks" in summary
 
     def test_summary_includes_next_action(self):
-        plan = build_council_plan_for_goal("Build a landing page", project_type="landing_page")
+        plan = build_council_plan_for_goal(
+            "Build a landing page", project_type="landing_page"
+        )
         summary = summarize_council_plan(plan)
 
         assert "Next Action" in summary
@@ -95,9 +101,9 @@ class TestSummarizeCouncilPlan:
         """Summary works even for blocked plans."""
         # Create a blocked plan manually
         from core.ralph.agent_council.plan import (
-            CouncilPlanNextAction,
             CouncilPlanResult,
         )
+
         blocked = CouncilPlanResult(
             project_type="unknown",
             project_goal="Bad project",
@@ -135,22 +141,38 @@ class TestCouncilPlanToContext:
         assert len(ctx) > 0
 
     def test_context_has_required_keys(self):
-        plan = build_council_plan_for_goal("Build a test app", project_type="full_stack_app")
+        plan = build_council_plan_for_goal(
+            "Build a test app", project_type="full_stack_app"
+        )
         ctx = council_plan_to_context(plan)
 
         expected_keys = {
-            "project_type", "project_goal", "is_ready_to_execute",
-            "next_action", "next_action_label", "total_active_agents",
-            "total_phases", "active_agents", "critical_path",
-            "parallel_groups", "required_artifacts", "missing_artifacts",
-            "artifact_contracts", "research_references",
-            "evidence_requirements", "risks", "warnings", "summary",
+            "project_type",
+            "project_goal",
+            "is_ready_to_execute",
+            "next_action",
+            "next_action_label",
+            "total_active_agents",
+            "total_phases",
+            "active_agents",
+            "critical_path",
+            "parallel_groups",
+            "required_artifacts",
+            "missing_artifacts",
+            "artifact_contracts",
+            "research_references",
+            "evidence_requirements",
+            "risks",
+            "warnings",
+            "summary",
         }
         missing = expected_keys - set(ctx.keys())
         assert not missing, f"Missing keys in context: {missing}"
 
     def test_context_active_agents_are_dicts(self):
-        plan = build_council_plan_for_goal("Build a landing page", project_type="landing_page")
+        plan = build_council_plan_for_goal(
+            "Build a landing page", project_type="landing_page"
+        )
         ctx = council_plan_to_context(plan)
 
         agents = ctx["active_agents"]
@@ -166,7 +188,9 @@ class TestCouncilPlanToContext:
         assert "produces_artifacts" in agent
 
     def test_context_artifacts_are_dicts(self):
-        plan = build_council_plan_for_goal("Build a test app", project_type="full_stack_app")
+        plan = build_council_plan_for_goal(
+            "Build a test app", project_type="full_stack_app"
+        )
         ctx = council_plan_to_context(plan)
 
         artifacts = ctx["required_artifacts"]
@@ -179,7 +203,9 @@ class TestCouncilPlanToContext:
             assert "status" in art
 
     def test_context_critical_path_is_list(self):
-        plan = build_council_plan_for_goal("Build a test app", project_type="full_stack_app")
+        plan = build_council_plan_for_goal(
+            "Build a test app", project_type="full_stack_app"
+        )
         ctx = council_plan_to_context(plan)
 
         cp = ctx["critical_path"]
@@ -190,7 +216,9 @@ class TestCouncilPlanToContext:
         """Context dict should be JSON-serializable."""
         import json
 
-        plan = build_council_plan_for_goal("Build a test app", project_type="full_stack_app")
+        plan = build_council_plan_for_goal(
+            "Build a test app", project_type="full_stack_app"
+        )
         ctx = council_plan_to_context(plan)
 
         # Should not raise
@@ -249,8 +277,12 @@ class TestFastAndDeterministic:
 
     def test_deterministic_output(self):
         """Same input should produce same plan structure."""
-        plan1 = build_council_plan_for_goal("Build a CRM", project_type="full_stack_app")
-        plan2 = build_council_plan_for_goal("Build a CRM", project_type="full_stack_app")
+        plan1 = build_council_plan_for_goal(
+            "Build a CRM", project_type="full_stack_app"
+        )
+        plan2 = build_council_plan_for_goal(
+            "Build a CRM", project_type="full_stack_app"
+        )
 
         assert plan1.project_type == plan2.project_type
         assert plan1.total_active_agents == plan2.total_active_agents

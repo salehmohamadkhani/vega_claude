@@ -10,14 +10,13 @@ Prove:
 
 from __future__ import annotations
 
-import json
+import contextlib
 
 from core.ralph.cli import (
     EXIT_ERROR,
-    EXIT_INVALID_INPUT,
     EXIT_SUCCESS,
-    _build_parser,
     _build_gate_config_from_args,
+    _build_parser,
 )
 
 
@@ -26,17 +25,25 @@ class TestCLIParsingGateFlags:
 
     def test_run_parser_has_gate_flags(self):
         parser = _build_parser()
-        args = parser.parse_args([
-            "run", "--use-agent-council-gates", "--project-type", "full_stack_app",
-        ])
+        args = parser.parse_args(
+            [
+                "run",
+                "--use-agent-council-gates",
+                "--project-type",
+                "full_stack_app",
+            ]
+        )
         assert args.use_agent_council_gates is True
         assert args.run_project_type == "full_stack_app"
 
     def test_run_parser_has_strict_flag(self):
         parser = _build_parser()
-        args = parser.parse_args([
-            "run", "--strict-agent-council-gates",
-        ])
+        args = parser.parse_args(
+            [
+                "run",
+                "--strict-agent-council-gates",
+            ]
+        )
         assert args.strict_agent_council_gates is True
 
     def test_run_parser_defaults(self):
@@ -48,20 +55,29 @@ class TestCLIParsingGateFlags:
 
     def test_run_parser_gates_without_strict(self):
         parser = _build_parser()
-        args = parser.parse_args([
-            "run", "--use-agent-council-gates",
-        ])
+        args = parser.parse_args(
+            [
+                "run",
+                "--use-agent-council-gates",
+            ]
+        )
         assert args.use_agent_council_gates is True
         assert args.strict_agent_council_gates is False
 
     def test_run_parser_combined(self):
         parser = _build_parser()
-        args = parser.parse_args([
-            "run", "--loop", "--use-agent-council-gates",
-            "--strict-agent-council-gates",
-            "--project-type", "saas_product",
-            "--max-iterations", "5",
-        ])
+        args = parser.parse_args(
+            [
+                "run",
+                "--loop",
+                "--use-agent-council-gates",
+                "--strict-agent-council-gates",
+                "--project-type",
+                "saas_product",
+                "--max-iterations",
+                "5",
+            ]
+        )
         assert args.loop is True
         assert args.use_agent_council_gates is True
         assert args.strict_agent_council_gates is True
@@ -70,10 +86,8 @@ class TestCLIParsingGateFlags:
 
     def test_run_help_includes_gate_flags(self, capsys):
         parser = _build_parser()
-        try:
+        with contextlib.suppress(SystemExit):
             parser.parse_args(["run", "--help"])
-        except SystemExit:
-            pass
         captured = capsys.readouterr()
         assert "use-agent-council-gates" in captured.out
 
@@ -98,25 +112,29 @@ class TestBuildGateConfigFromArgs:
         args = parser.parse_args(["run", "--use-agent-council-gates"])
         config = _build_gate_config_from_args(args)
         assert config is not None
-        assert getattr(config, "use_agent_council_gates") is True
+        assert config.use_agent_council_gates is True
 
     def test_strict_returns_config(self):
         parser = _build_parser()
         args = parser.parse_args(["run", "--strict-agent-council-gates"])
         config = _build_gate_config_from_args(args)
         assert config is not None
-        assert getattr(config, "use_agent_council_gates") is True  # strict implies use
-        assert getattr(config, "strict_agent_council_gates") is True
+        assert config.use_agent_council_gates is True  # strict implies use
+        assert config.strict_agent_council_gates is True
 
     def test_with_project_type(self):
         parser = _build_parser()
-        args = parser.parse_args([
-            "run", "--use-agent-council-gates",
-            "--project-type", "landing_page",
-        ])
+        args = parser.parse_args(
+            [
+                "run",
+                "--use-agent-council-gates",
+                "--project-type",
+                "landing_page",
+            ]
+        )
         config = _build_gate_config_from_args(args)
         assert config is not None
-        assert getattr(config, "project_type") == "landing_page"
+        assert config.project_type == "landing_page"
 
 
 class TestOldCLIBehaviorUnchanged:
@@ -124,6 +142,7 @@ class TestOldCLIBehaviorUnchanged:
 
     def test_plan_still_works(self, capsys):
         from core.ralph.cli import _run_cli
+
         result = _run_cli(["plan", "Test goal"])
         captured = capsys.readouterr()
         assert result in (EXIT_SUCCESS, EXIT_ERROR)
@@ -132,18 +151,21 @@ class TestOldCLIBehaviorUnchanged:
 
     def test_review_still_works(self, capsys):
         from core.ralph.cli import _run_cli
+
         # Review without workspace returns error — which is correct old behavior
         result = _run_cli(["review"])
         assert result in (EXIT_SUCCESS, EXIT_ERROR)
 
     def test_approve_help_still_works(self, capsys):
         from core.ralph.cli import _run_cli
+
         _run_cli(["approve", "--help"])
         captured = capsys.readouterr()
         assert "approve" in captured.out.lower()
 
     def test_help_mentions_run_subcommand(self, capsys):
         from core.ralph.cli import _run_cli
+
         _run_cli(["--help"])
         captured = capsys.readouterr()
         assert "run" in captured.out
@@ -154,12 +176,18 @@ class TestNoNetwork:
 
     def test_fast_parsing(self):
         import time
+
         start = time.monotonic()
         parser = _build_parser()
-        args = parser.parse_args([
-            "run", "--loop", "--use-agent-council-gates",
-            "--strict-agent-council-gates",
-            "--project-type", "full_stack_app",
-        ])
+        parser.parse_args(
+            [
+                "run",
+                "--loop",
+                "--use-agent-council-gates",
+                "--strict-agent-council-gates",
+                "--project-type",
+                "full_stack_app",
+            ]
+        )
         elapsed = time.monotonic() - start
         assert elapsed < 1.0, f"Parsing took {elapsed:.3f}s"

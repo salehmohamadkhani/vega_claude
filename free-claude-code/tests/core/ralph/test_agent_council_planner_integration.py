@@ -12,14 +12,12 @@ Prove:
 
 from __future__ import annotations
 
-import pytest
-
 from core.ralph.agent_council.planner_integration import (
     build_agent_council_task_context,
     format_agent_council_context_for_prompt,
 )
-from core.ralph.planner import TaskPlanner
 from core.ralph.models import ProjectGoal
+from core.ralph.planner import TaskPlanner
 
 
 class TestBuildAgentCouncilTaskContext:
@@ -277,9 +275,14 @@ class TestPlannerBackwardCompatibility:
         )
         # Mark as having blocking risks
         ctx["risks"] = [
-            {"risk_id": "test", "description": "Blocking test risk",
-             "severity": "blocking", "mitigation": "Fix it",
-             "affected_agents": [], "affected_artifacts": []}
+            {
+                "risk_id": "test",
+                "description": "Blocking test risk",
+                "severity": "blocking",
+                "mitigation": "Fix it",
+                "affected_agents": [],
+                "affected_artifacts": [],
+            }
         ]
 
         planner = TaskPlanner()
@@ -320,6 +323,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import planner_integration
+
         source = planner_integration.__file__
         if source:
             with open(str(source)) as f:
@@ -348,4 +352,6 @@ class TestFormatPromptConciseness:
         prompt = format_agent_council_context_for_prompt(ctx)
 
         # Prompt should not be excessively long
-        assert len(prompt.split("\n")) < 60, f"Prompt too long: {len(prompt.split('\n'))} lines"
+        assert len(prompt.split("\n")) < 60, (
+            f"Prompt too long: {len(prompt.split('\n'))} lines"
+        )

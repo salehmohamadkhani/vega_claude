@@ -107,7 +107,7 @@ def _detect_git_repo(path: Path) -> tuple[bool, bool, list[str]]:
             elif len(parts) == 1:
                 changed.append(parts[0])
         return True, True, changed
-    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+    except subprocess.SubprocessError, FileNotFoundError, OSError:
         return True, False, []
 
 
@@ -185,8 +185,7 @@ def check_real_execution_safety(
     for forbidden in _FORBIDDEN_WORKSPACE_ROOTS:
         if ws == forbidden:
             reasons.append(
-                f"Real execution blocked: workspace {ws} is a "
-                f"forbidden path."
+                f"Real execution blocked: workspace {ws} is a forbidden path."
             )
             break
 

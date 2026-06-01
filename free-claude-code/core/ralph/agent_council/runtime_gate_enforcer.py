@@ -100,13 +100,9 @@ def should_block_task_approval(gate_result: EvidenceGateResult) -> bool:
     """
     if gate_result.overall_status == EvidenceGateStatus.BLOCKED:
         return True
-    if any(
-        f.status == EvidenceGateStatus.BLOCKED for f in gate_result.findings
-    ):
+    if any(f.status == EvidenceGateStatus.BLOCKED for f in gate_result.findings):
         return True
-    if gate_result.blocking_issues:
-        return True
-    return False
+    return bool(gate_result.blocking_issues)
 
 
 # ---------------------------------------------------------------------------
@@ -131,12 +127,16 @@ def summarize_runtime_gate_enforcement(
     lines.append("")
     lines.append(summarize_gate_result(gate_result))
     lines.append("")
-    lines.append(f"APPROVAL BLOCKED: {'YES' if should_block_task_approval(gate_result) else 'NO'}")
+    lines.append(
+        f"APPROVAL BLOCKED: {'YES' if should_block_task_approval(gate_result) else 'NO'}"
+    )
     lines.append("=" * 60)
     return "\n".join(lines)
 
 
-def runtime_gate_result_to_metadata(gate_result: EvidenceGateResult) -> dict[str, object]:
+def runtime_gate_result_to_metadata(
+    gate_result: EvidenceGateResult,
+) -> dict[str, object]:
     """Convert gate enforcement result to task metadata dict.
 
     Suitable for attaching to Ralph task results, iteration results,
@@ -283,10 +283,17 @@ def _extract_staged_violations(bundle: RuntimeTaskEvidenceBundle) -> set[str]:
     """Find file paths that look like runtime artifacts (.fcc/, .env, logs)."""
     violations: set[str] = set()
     forbidden_patterns = (
-        ".fcc/", ".fcc-ralph/", ".claude/", ".env",
-        ".git-credentials", "secrets", "credentials",
-        "raw_research_repos", "/opt/vega-cloud/research/repos",
-        "server_tracker", "logs/",
+        ".fcc/",
+        ".fcc-ralph/",
+        ".claude/",
+        ".env",
+        ".git-credentials",
+        "secrets",
+        "credentials",
+        "raw_research_repos",
+        "/opt/vega-cloud/research/repos",
+        "server_tracker",
+        "logs/",
     )
     for b in bundle.bindings:
         if b.path:

@@ -13,8 +13,6 @@ Prove:
 
 from __future__ import annotations
 
-import pytest
-
 from core.ralph.agent_council.evidence_gates import (
     EvidenceGateStatus,
 )
@@ -25,8 +23,9 @@ from core.ralph.agent_council.gate_runner import (
     summarize_gate_result,
 )
 from core.ralph.agent_council.models import EvidenceItem, EvidenceType
-from core.ralph.agent_council.planner_integration import build_agent_council_task_context
-
+from core.ralph.agent_council.planner_integration import (
+    build_agent_council_task_context,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -71,10 +70,24 @@ def _make_minimal_context(**overrides) -> dict[str, object]:
             },
         ],
         "critical_path": ["chief_vision_officer", "software_architect", "qa_engineer"],
-        "parallel_groups": [["chief_vision_officer"], ["software_architect"], ["qa_engineer"]],
+        "parallel_groups": [
+            ["chief_vision_officer"],
+            ["software_architect"],
+            ["qa_engineer"],
+        ],
         "required_artifacts": [
-            {"artifact_id": "business_brief", "name": "Business Brief", "status": "pending", "is_critical": True},
-            {"artifact_id": "architecture_spec", "name": "Architecture Spec", "status": "pending", "is_critical": True},
+            {
+                "artifact_id": "business_brief",
+                "name": "Business Brief",
+                "status": "pending",
+                "is_critical": True,
+            },
+            {
+                "artifact_id": "architecture_spec",
+                "name": "Architecture Spec",
+                "status": "pending",
+                "is_critical": True,
+            },
         ],
         "missing_artifact_ids": [],
         "artifact_contract_ids": ["business_brief", "architecture_spec"],
@@ -109,16 +122,27 @@ class TestRunAllGates:
         result = run_all_gates(ctx)
         assert result.gates_run == 12
         # At least gates_passed + gates_warned + gates_failed + gates_blocked + gates_skipped
-        total = (result.gates_passed + result.gates_warned +
-                 result.gates_failed + result.gates_blocked + result.gates_skipped)
+        total = (
+            result.gates_passed
+            + result.gates_warned
+            + result.gates_failed
+            + result.gates_blocked
+            + result.gates_skipped
+        )
         assert total == result.gates_run
 
     def test_non_strict_produces_warnings(self):
         """Non-strict mode warns rather than blocks for most gates."""
         ctx = _make_minimal_context(
             active_agents=[
-                {"agent_id": "qa_engineer", "role_name": "QA Engineer", "layer": 11, "phase": 0,
-                 "depends_on": [], "produces_artifacts": []},
+                {
+                    "agent_id": "qa_engineer",
+                    "role_name": "QA Engineer",
+                    "layer": 11,
+                    "phase": 0,
+                    "depends_on": [],
+                    "produces_artifacts": [],
+                },
             ],
         )
         result = run_all_gates(ctx, strict_mode=False)
@@ -129,13 +153,21 @@ class TestRunAllGates:
         """Strict mode on a minimal context should produce failed/blocked gates."""
         ctx = _make_minimal_context(
             active_agents=[
-                {"agent_id": "final_arbiter", "role_name": "Final Arbiter", "layer": 17, "phase": 0,
-                 "depends_on": [], "produces_artifacts": []},
+                {
+                    "agent_id": "final_arbiter",
+                    "role_name": "Final Arbiter",
+                    "layer": 17,
+                    "phase": 0,
+                    "depends_on": [],
+                    "produces_artifacts": [],
+                },
             ],
         )
         result = run_all_gates(ctx, strict_mode=True)
         # With final_arbiter active and strict mode, should have some failures/blocks
-        assert result.gates_failed + result.gates_blocked >= 0  # at minimum doesn't crash
+        assert (
+            result.gates_failed + result.gates_blocked >= 0
+        )  # at minimum doesn't crash
 
 
 class TestRunEvidenceGatesWithContext:
@@ -162,10 +194,18 @@ class TestRunEvidenceGatesWithContext:
                 agent_source="security_engineer",
             ),
         ]
-        ctx = _make_minimal_context(active_agents=[
-            {"agent_id": "final_arbiter", "role_name": "Final Arbiter", "layer": 17, "phase": 0,
-             "depends_on": [], "produces_artifacts": []},
-        ])
+        ctx = _make_minimal_context(
+            active_agents=[
+                {
+                    "agent_id": "final_arbiter",
+                    "role_name": "Final Arbiter",
+                    "layer": 17,
+                    "phase": 0,
+                    "depends_on": [],
+                    "produces_artifacts": [],
+                },
+            ]
+        )
         result = run_evidence_gates(
             planning_context=ctx,
             evidence_items=items,
@@ -191,10 +231,17 @@ class TestRunEvidenceGatesWithContext:
         assert result.gates_run == 12
         # Clean staging should pass the exclusion gate
         exclusion_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
-        if exclusion_finding and exclusion_finding.status != EvidenceGateStatus.NOT_APPLICABLE:
+        if (
+            exclusion_finding
+            and exclusion_finding.status != EvidenceGateStatus.NOT_APPLICABLE
+        ):
             assert exclusion_finding.status == EvidenceGateStatus.PASSED
 
     def test_staged_fcc_is_blocked(self):
@@ -204,7 +251,11 @@ class TestRunEvidenceGatesWithContext:
             staged_paths={".fcc/config.json"},
         )
         exclusion = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         assert exclusion is not None
@@ -285,10 +336,20 @@ class TestGateResultToContext:
         out = gate_result_to_context(result)
 
         expected = {
-            "gate_id", "overall_status", "is_ready", "has_warnings",
-            "gates_run", "gates_passed", "gates_warned", "gates_failed",
-            "gates_blocked", "gates_skipped", "blocking_issues",
-            "warnings", "summary", "findings",
+            "gate_id",
+            "overall_status",
+            "is_ready",
+            "has_warnings",
+            "gates_run",
+            "gates_passed",
+            "gates_warned",
+            "gates_failed",
+            "gates_blocked",
+            "gates_skipped",
+            "blocking_issues",
+            "warnings",
+            "summary",
+            "findings",
         }
         missing = expected - set(out.keys())
         assert not missing, f"Missing keys: {missing}"
@@ -366,6 +427,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import gate_runner
+
         source = gate_runner.__file__
         if source:
             with open(str(source)) as f:

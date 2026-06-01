@@ -18,10 +18,7 @@ import json
 import os
 import tempfile
 
-import pytest
-
 from core.ralph.agent_council.runtime_sandbox import (
-    FORBIDDEN_PATH_PATTERNS,
     cleanup_sandbox_run,
     collect_sandbox_artifacts,
     create_backtest_run,
@@ -32,7 +29,6 @@ from core.ralph.agent_council.runtime_sandbox import (
     validate_sandbox_cleanliness,
     write_sandbox_manifest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -151,7 +147,7 @@ class TestArtifactCollection:
 
     def test_detects_empty_files(self):
         run_dir = _make_temp_run_dir()
-        with open(os.path.join(run_dir, "empty.txt"), "w") as f:
+        with open(os.path.join(run_dir, "empty.txt"), "w"):
             pass  # intentionally empty
 
         artifacts = collect_sandbox_artifacts(run_dir)
@@ -265,7 +261,7 @@ class TestValidateSandboxCleanliness:
 
     def test_warns_on_empty_files(self):
         run_dir = _make_temp_run_dir()
-        with open(os.path.join(run_dir, "empty.py"), "w") as f:
+        with open(os.path.join(run_dir, "empty.py"), "w"):
             pass
 
         result = validate_sandbox_cleanliness(run_dir)
@@ -286,13 +282,16 @@ class TestValidateSandboxCleanliness:
 class TestSummarizeSandboxRun:
     def test_summary_for_new_run(self):
         run_dir = _make_temp_run_dir()
-        write_sandbox_manifest(run_dir, {
-            "run_id": "test-summary",
-            "project_type": "landing_page",
-            "project_goal": "Test goal",
-            "phase": "test",
-            "evidence_gate_mode": "warning",
-        })
+        write_sandbox_manifest(
+            run_dir,
+            {
+                "run_id": "test-summary",
+                "project_type": "landing_page",
+                "project_goal": "Test goal",
+                "phase": "test",
+                "evidence_gate_mode": "warning",
+            },
+        )
         with open(os.path.join(run_dir, "app.py"), "w") as f:
             f.write("print('hello')")
 
@@ -367,7 +366,9 @@ class TestSandboxEvidenceGateIntegration:
         assert "results.json" in paths
 
         # These paths can be used as available_paths for gate enforcement
-        from core.ralph.agent_council.runtime_gate_enforcer import enforce_runtime_evidence_gates
+        from core.ralph.agent_council.runtime_gate_enforcer import (
+            enforce_runtime_evidence_gates,
+        )
 
         task_result = {
             "task_id": "sandbox-task-001",
@@ -398,7 +399,9 @@ class TestSandboxEvidenceGateIntegration:
         assert len(artifacts["files_forbidden"]) > 0
 
         # Pass forbidden paths as changed_files to gate enforcement
-        from core.ralph.agent_council.runtime_gate_enforcer import enforce_runtime_evidence_gates
+        from core.ralph.agent_council.runtime_gate_enforcer import (
+            enforce_runtime_evidence_gates,
+        )
 
         task_result = {
             "task_id": "sandbox-task-002",
@@ -409,7 +412,11 @@ class TestSandboxEvidenceGateIntegration:
             strict_mode=True,
         )
         excl_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         if excl_finding and excl_finding.status.value != "not_applicable":
@@ -444,6 +451,7 @@ class TestCleanup:
 class TestNoNetworkOrLLM:
     def test_no_network_imports(self):
         from core.ralph.agent_council import runtime_sandbox
+
         source = runtime_sandbox.__file__
         if source:
             with open(str(source)) as f:

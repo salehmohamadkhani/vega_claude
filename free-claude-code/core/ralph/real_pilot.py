@@ -253,4 +253,5 @@ class RealPilot:
 
 def _new_pilot_id() -> str:
     import uuid
+
     return f"PILOT-{uuid.uuid4().hex[:8]}"

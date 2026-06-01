@@ -17,19 +17,16 @@ Prove:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-
-import pytest
 
 from core.ralph.agent_council.evidence_gates import (
     EvidenceGateFinding,
     EvidenceGateResult,
     EvidenceGateStatus,
 )
-from core.ralph.agent_council.planner_integration import build_agent_council_task_context
+from core.ralph.agent_council.planner_integration import (
+    build_agent_council_task_context,
+)
 from core.ralph.agent_council.runtime_evidence import (
-    RuntimeEvidenceBindingStatus,
-    RuntimeTaskEvidenceBundle,
     extract_runtime_evidence_from_task_result,
 )
 from core.ralph.agent_council.runtime_gate_enforcer import (
@@ -38,7 +35,6 @@ from core.ralph.agent_council.runtime_gate_enforcer import (
     should_block_task_approval,
     summarize_runtime_gate_enforcement,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,9 +78,11 @@ class TestEnforceRuntimeEvidenceGates:
             project_type="full_stack_app",
         )
         task_result = _make_task_result(
-            task={"agent_role": "doer",
-                  "verification_commands": ["uv run pytest tests/ -q"],
-                  "acceptance_criteria": ["Tests pass"]},
+            task={
+                "agent_role": "doer",
+                "verification_commands": ["uv run pytest tests/ -q"],
+                "acceptance_criteria": ["Tests pass"],
+            },
         )
         result = enforce_runtime_evidence_gates(
             task_result,
@@ -95,9 +93,11 @@ class TestEnforceRuntimeEvidenceGates:
 
     def test_enforce_with_strict_mode(self):
         task_result = _make_task_result(
-            task={"agent_role": "verifier",
-                  "verification_commands": ['echo "verified"'],
-                  "acceptance_criteria": []},
+            task={
+                "agent_role": "verifier",
+                "verification_commands": ['echo "verified"'],
+                "acceptance_criteria": [],
+            },
         )
         result = enforce_runtime_evidence_gates(task_result, strict_mode=True)
         # Echo-only + strict should produce blocking issues
@@ -133,9 +133,16 @@ class TestEnforceRuntimeEvidenceGates:
         )
         result = enforce_runtime_evidence_gates(
             task_result,
-            planning_context={"council_plan_available": True, "active_agents": [
-                {"agent_id": "security_engineer", "role_name": "Security Engineer", "layer": 12}
-            ]},
+            planning_context={
+                "council_plan_available": True,
+                "active_agents": [
+                    {
+                        "agent_id": "security_engineer",
+                        "role_name": "Security Engineer",
+                        "layer": 12,
+                    }
+                ],
+            },
             strict_mode=False,
         )
         sec_finding = next(
@@ -151,7 +158,11 @@ class TestEnforceRuntimeEvidenceGates:
         )
         result = enforce_runtime_evidence_gates(task_result, strict_mode=True)
         excl_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         if excl_finding and excl_finding.status != EvidenceGateStatus.NOT_APPLICABLE:
@@ -163,7 +174,11 @@ class TestEnforceRuntimeEvidenceGates:
         )
         result = enforce_runtime_evidence_gates(task_result, strict_mode=True)
         excl_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         if excl_finding and excl_finding.status != EvidenceGateStatus.NOT_APPLICABLE:
@@ -172,13 +187,19 @@ class TestEnforceRuntimeEvidenceGates:
     def test_enforce_with_clean_paths(self):
         task_result = _make_task_result(
             changed_files=["core/ralph/cli.py", "tests/test_app.py"],
-            task={"agent_role": "doer",
-                  "verification_commands": ["uv run pytest tests/ -q"],
-                  "acceptance_criteria": ["Tests pass"]},
+            task={
+                "agent_role": "doer",
+                "verification_commands": ["uv run pytest tests/ -q"],
+                "acceptance_criteria": ["Tests pass"],
+            },
         )
         result = enforce_runtime_evidence_gates(task_result, strict_mode=True)
         excl_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         if excl_finding and excl_finding.status != EvidenceGateStatus.NOT_APPLICABLE:
@@ -305,17 +326,18 @@ class TestNonStrictVsStrict:
         result_ns = enforce_runtime_evidence_gates(task_result, strict_mode=False)
         result_s = enforce_runtime_evidence_gates(task_result, strict_mode=True)
         # Strict mode should not have fewer failed+blocked than non-strict
-        assert (result_s.gates_failed + result_s.gates_blocked) >= \
-               (result_ns.gates_failed + result_ns.gates_blocked)
+        assert (result_s.gates_failed + result_s.gates_blocked) >= (
+            result_ns.gates_failed + result_ns.gates_blocked
+        )
 
 
 class TestBackwardCompatibility:
     """Verify old QualityGate behavior is unchanged when council is disabled."""
 
     def test_quality_gate_defaults_still_work(self):
-        from core.ralph.models import ProjectGoal, RalphTask, TaskStatus
-        from core.ralph.roles import AgentRole
+        from core.ralph.models import RalphTask, TaskStatus
         from core.ralph.quality_gate import QualityGate
+        from core.ralph.roles import AgentRole
 
         task = RalphTask(
             id="TASK-BACKWARD-001",
@@ -332,8 +354,8 @@ class TestBackwardCompatibility:
     def test_quality_gate_with_council_disabled(self):
         """Explicitly disabled council enforcement behaves like default."""
         from core.ralph.models import RalphTask, TaskStatus
-        from core.ralph.roles import AgentRole
         from core.ralph.quality_gate import QualityGate
+        from core.ralph.roles import AgentRole
 
         task = RalphTask(
             id="TASK-BACKWARD-002",
@@ -353,8 +375,8 @@ class TestBackwardCompatibility:
     def test_quality_gate_with_council_enabled(self):
         """Council gates enabled should still complete without crash."""
         from core.ralph.models import RalphTask, TaskStatus
-        from core.ralph.roles import AgentRole
         from core.ralph.quality_gate import QualityGate
+        from core.ralph.roles import AgentRole
 
         task = RalphTask(
             id="TASK-BACKWARD-003",
@@ -378,6 +400,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import runtime_gate_enforcer
+
         source = runtime_gate_enforcer.__file__
         if source:
             with open(str(source)) as f:

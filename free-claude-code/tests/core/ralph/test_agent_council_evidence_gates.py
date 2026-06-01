@@ -14,8 +14,6 @@ Prove:
 
 from __future__ import annotations
 
-import pytest
-
 from core.ralph.agent_council.evidence_gates import (
     EvidenceGateFinding,
     EvidenceGateRequirement,
@@ -41,7 +39,6 @@ from core.ralph.agent_council.evidence_gates import (
 )
 from core.ralph.agent_council.models import EvidenceItem, EvidenceType
 
-
 # ---------------------------------------------------------------------------
 # Enum tests
 # ---------------------------------------------------------------------------
@@ -49,13 +46,22 @@ from core.ralph.agent_council.models import EvidenceItem, EvidenceType
 
 class TestEvidenceGateSeverity:
     def test_all_values_exist(self):
-        assert {e.value for e in EvidenceGateSeverity} == {"info", "warning", "error", "critical"}
+        assert {e.value for e in EvidenceGateSeverity} == {
+            "info",
+            "warning",
+            "error",
+            "critical",
+        }
 
 
 class TestEvidenceGateStatus:
     def test_all_values_exist(self):
         assert {e.value for e in EvidenceGateStatus} == {
-            "passed", "warning", "failed", "blocked", "not_applicable",
+            "passed",
+            "warning",
+            "failed",
+            "blocked",
+            "not_applicable",
         }
 
 
@@ -137,9 +143,15 @@ class TestEvidenceGateResult:
     def test_result_aggregation(self):
         findings = [
             EvidenceGateFinding(gate_id="g1", status=EvidenceGateStatus.PASSED),
-            EvidenceGateFinding(gate_id="g2", status=EvidenceGateStatus.WARNING, message="warn"),
-            EvidenceGateFinding(gate_id="g3", status=EvidenceGateStatus.FAILED, message="fail"),
-            EvidenceGateFinding(gate_id="g4", status=EvidenceGateStatus.BLOCKED, message="block"),
+            EvidenceGateFinding(
+                gate_id="g2", status=EvidenceGateStatus.WARNING, message="warn"
+            ),
+            EvidenceGateFinding(
+                gate_id="g3", status=EvidenceGateStatus.FAILED, message="fail"
+            ),
+            EvidenceGateFinding(
+                gate_id="g4", status=EvidenceGateStatus.BLOCKED, message="block"
+            ),
         ]
         r = EvidenceGateResult(
             gate_id="test_run",
@@ -312,7 +324,9 @@ class TestClaimHasEvidenceGate:
         assert finding.status == EvidenceGateStatus.PASSED
 
     def test_fails_with_invalid_evidence(self):
-        item = EvidenceItem(source_path="", claim="", evidence_type=EvidenceType.TEST_RESULT)
+        item = EvidenceItem(
+            source_path="", claim="", evidence_type=EvidenceType.TEST_RESULT
+        )
         ctx = GateEvaluationContext(evidence_items=(item,))
         finding = _gate_claim_has_evidence(ctx)
         assert finding.status == EvidenceGateStatus.FAILED
@@ -550,8 +564,11 @@ class TestFinalArbiterGate:
             active_agent_ids=("final_arbiter",),
             evidence_items=items,
             required_artifacts=(
-                "QA_report", "security_review", "performance_report",
-                "release_readiness_report", "deployment_plan",
+                "QA_report",
+                "security_review",
+                "performance_report",
+                "release_readiness_report",
+                "deployment_plan",
             ),
         )
         finding = _gate_final_arbiter(ctx)
@@ -586,12 +603,16 @@ class TestRuntimeArtifactExclusion:
         assert finding.status == EvidenceGateStatus.NOT_APPLICABLE
 
     def test_passes_with_clean_staging(self):
-        ctx = GateEvaluationContext(staged_paths=("core/ralph/cli.py", "tests/test_foo.py"))
+        ctx = GateEvaluationContext(
+            staged_paths=("core/ralph/cli.py", "tests/test_foo.py")
+        )
         finding = _gate_runtime_artifact_exclusion(ctx)
         assert finding.status == EvidenceGateStatus.PASSED
 
     def test_blocks_on_fcc_staged(self):
-        ctx = GateEvaluationContext(staged_paths=(".fcc/some_config.json", "core/ralph/cli.py"))
+        ctx = GateEvaluationContext(
+            staged_paths=(".fcc/some_config.json", "core/ralph/cli.py")
+        )
         finding = _gate_runtime_artifact_exclusion(ctx)
         assert finding.status == EvidenceGateStatus.BLOCKED
 
@@ -628,6 +649,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import evidence_gates
+
         source = evidence_gates.__file__
         if source:
             with open(str(source)) as f:

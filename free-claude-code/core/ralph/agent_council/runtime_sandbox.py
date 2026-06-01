@@ -22,8 +22,7 @@ import os
 import shutil
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-
+from datetime import UTC, datetime
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -47,11 +46,34 @@ FORBIDDEN_PATH_PATTERNS: tuple[str, ...] = (
 )
 
 ALLOWED_EXTENSIONS: tuple[str, ...] = (
-    ".py", ".json", ".yaml", ".yml", ".toml", ".cfg",
-    ".md", ".txt", ".html", ".css", ".js", ".jsx", ".ts", ".tsx",
-    ".rs", ".go", ".java", ".c", ".h", ".cpp", ".hpp",
-    ".sh", ".sql", ".graphql",
-    ".svg", ".png", ".jpg", ".jpeg",
+    ".py",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".cfg",
+    ".md",
+    ".txt",
+    ".html",
+    ".css",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".rs",
+    ".go",
+    ".java",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".sh",
+    ".sql",
+    ".graphql",
+    ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
 )
 
 
@@ -114,7 +136,9 @@ def resolve_sandbox_root(requested: str = "") -> str:
     """
     if requested and os.path.isdir(requested):
         return requested
-    if os.path.isdir(INTENDED_SANDBOX_ROOT) and os.access(INTENDED_SANDBOX_ROOT, os.W_OK):
+    if os.path.isdir(INTENDED_SANDBOX_ROOT) and os.access(
+        INTENDED_SANDBOX_ROOT, os.W_OK
+    ):
         return INTENDED_SANDBOX_ROOT
     return FALLBACK_SANDBOX_ROOT
 
@@ -141,7 +165,7 @@ def create_sandbox_run_dir(
         OSError: If the directory cannot be created.
     """
     sandbox_root = resolve_sandbox_root(root)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     dirname = f"{prefix}-{timestamp}"
     run_dir = os.path.join(sandbox_root, "runs", dirname)
     os.makedirs(run_dir, exist_ok=True)
@@ -169,7 +193,7 @@ def write_sandbox_manifest(
     """
     os.makedirs(run_dir, exist_ok=True)
     manifest.setdefault("run_id", _make_run_id())
-    manifest.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+    manifest.setdefault("created_at", datetime.now(UTC).isoformat())
 
     manifest_path = os.path.join(run_dir, "manifest.json")
     with open(manifest_path, "w") as f:
@@ -295,8 +319,7 @@ def validate_sandbox_cleanliness(run_dir: str) -> dict[str, object]:
     empty = artifacts.get("files_empty", [])
 
     # Empty file warnings
-    for f in empty:
-        warnings.append(f"Empty file: {f}")
+    warnings.extend(f"Empty file: {f}" for f in empty)
 
     # Allowed extension check (warn only)
     for f in artifacts.get("files_found", []):
@@ -354,7 +377,9 @@ def summarize_sandbox_run(run_dir: str) -> str:
         lines.append(f"Gate Mode: {manifest.get('evidence_gate_mode', 'disabled')}")
 
     lines.append("")
-    lines.append(f"Clean:     {'Yes' if cleanliness['clean'] else 'NO — see violations'}")
+    lines.append(
+        f"Clean:     {'Yes' if cleanliness['clean'] else 'NO — see violations'}"
+    )
     lines.append(f"Files:     {cleanliness.get('total_files', 0)}")
     lines.append(f"Violations: {len(cleanliness.get('violations', []))}")
     lines.append(f"Warnings:  {len(cleanliness.get('warnings', []))}")
@@ -363,15 +388,13 @@ def summarize_sandbox_run(run_dir: str) -> str:
     if violations:
         lines.append("")
         lines.append("VIOLATIONS:")
-        for v in violations:
-            lines.append(f"  !! {v}")
+        lines.extend(f"  !! {v}" for v in violations)
 
     warnings_list = cleanliness.get("warnings", [])
     if warnings_list:
         lines.append("")
         lines.append("WARNINGS:")
-        for w in warnings_list[:10]:
-            lines.append(f"  ! {w}")
+        lines.extend(f"  ! {w}" for w in warnings_list[:10])
         if len(warnings_list) > 10:
             lines.append(f"  ... and {len(warnings_list) - 10} more")
 
@@ -379,8 +402,7 @@ def summarize_sandbox_run(run_dir: str) -> str:
     if empty_files:
         lines.append("")
         lines.append("EMPTY FILES:")
-        for f in empty_files[:10]:
-            lines.append(f"  - {f}")
+        lines.extend(f"  - {f}" for f in empty_files[:10])
 
     lines.append("")
     lines.append("=" * 60)

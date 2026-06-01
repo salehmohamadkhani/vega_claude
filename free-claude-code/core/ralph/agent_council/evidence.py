@@ -59,7 +59,9 @@ def create_evidence(
     if not claim:
         raise EvidenceValidationError("claim must not be empty")
 
-    eid = evidence_id if evidence_id else f"ev-{hash((source_path, claim)) & 0xFFFF:04x}"
+    eid = (
+        evidence_id if evidence_id else f"ev-{hash((source_path, claim)) & 0xFFFF:04x}"
+    )
     return EvidenceItem(
         evidence_id=eid,
         source_path=source_path,
@@ -114,9 +116,7 @@ class EvidenceCollector:
         """
         errors = validate_evidence(item)
         if errors:
-            raise EvidenceValidationError(
-                f"Invalid evidence item: {', '.join(errors)}"
-            )
+            raise EvidenceValidationError(f"Invalid evidence item: {', '.join(errors)}")
         self._items.append(item)
 
     def add_batch(self, items: tuple[EvidenceItem, ...]) -> None:
@@ -203,7 +203,8 @@ class EvidenceCollector:
         """Remove all rejected or invalid items. Returns count of items removed."""
         before = len(self._items)
         self._items = [
-            item for item in self._items
+            item
+            for item in self._items
             if not validate_evidence(item) and item.quality != "rejected"
         ]
         return before - len(self._items)

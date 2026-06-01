@@ -33,16 +33,28 @@ class TestDefaultContracts:
 
     def test_core_contracts_exist(self, contract_registry):
         core = [
-            "business_brief", "strategic_direction",
-            "market_research_report", "competitor_map",
-            "target_personas", "user_journey_maps",
-            "product_requirements_doc", "user_stories", "acceptance_criteria",
-            "brand_strategy", "brand_book",
-            "UX_flow_map", "design_system", "UI_spec",
-            "architecture_spec", "API_contract", "database_schema_spec",
+            "business_brief",
+            "strategic_direction",
+            "market_research_report",
+            "competitor_map",
+            "target_personas",
+            "user_journey_maps",
+            "product_requirements_doc",
+            "user_stories",
+            "acceptance_criteria",
+            "brand_strategy",
+            "brand_book",
+            "UX_flow_map",
+            "design_system",
+            "UI_spec",
+            "architecture_spec",
+            "API_contract",
+            "database_schema_spec",
             "security_requirements",
-            "test_plan", "QA_report",
-            "deployment_plan", "release_readiness_report",
+            "test_plan",
+            "QA_report",
+            "deployment_plan",
+            "release_readiness_report",
             "final_arbiter_decision",
         ]
         for art_id in core:
@@ -105,9 +117,14 @@ class TestDefaultContracts:
 class TestContractValidation:
     def test_empty_required_fields_fails(self):
         contract = ArtifactContract(
-            artifact_id="test", name="T", owner_agent="o",
-            required_fields=(), consumers=("c",),
-            validation_method="v", pass_criteria=("p",), fail_criteria=("f",),
+            artifact_id="test",
+            name="T",
+            owner_agent="o",
+            required_fields=(),
+            consumers=("c",),
+            validation_method="v",
+            pass_criteria=("p",),
+            fail_criteria=("f",),
         )
         cr = ContractRegistry(contracts=(contract,))
         errors = cr.validate_contract(contract)
@@ -115,9 +132,13 @@ class TestContractValidation:
 
     def test_empty_consumers_fails(self):
         contract = ArtifactContract(
-            artifact_id="test", name="T", owner_agent="o",
+            artifact_id="test",
+            name="T",
+            owner_agent="o",
             required_fields=("a",),
-            validation_method="v", pass_criteria=("p",), fail_criteria=("f",),
+            validation_method="v",
+            pass_criteria=("p",),
+            fail_criteria=("f",),
         )
         cr = ContractRegistry(contracts=(contract,))
         errors = cr.validate_contract(contract)
@@ -125,9 +146,13 @@ class TestContractValidation:
 
     def test_empty_pass_criteria_fails(self):
         contract = ArtifactContract(
-            artifact_id="test", name="T", owner_agent="o",
-            required_fields=("a",), consumers=("c",),
-            validation_method="v", fail_criteria=("f",),
+            artifact_id="test",
+            name="T",
+            owner_agent="o",
+            required_fields=("a",),
+            consumers=("c",),
+            validation_method="v",
+            fail_criteria=("f",),
         )
         cr = ContractRegistry(contracts=(contract,))
         errors = cr.validate_contract(contract)
@@ -135,9 +160,13 @@ class TestContractValidation:
 
     def test_empty_fail_criteria_fails(self):
         contract = ArtifactContract(
-            artifact_id="test", name="T", owner_agent="o",
-            required_fields=("a",), consumers=("c",),
-            validation_method="v", pass_criteria=("p",),
+            artifact_id="test",
+            name="T",
+            owner_agent="o",
+            required_fields=("a",),
+            consumers=("c",),
+            validation_method="v",
+            pass_criteria=("p",),
         )
         cr = ContractRegistry(contracts=(contract,))
         errors = cr.validate_contract(contract)
@@ -145,18 +174,28 @@ class TestContractValidation:
 
     def test_validation_against_registry_wrong_owner(self, agent_registry):
         contract = ArtifactContract(
-            artifact_id="bad_contract", name="Bad", owner_agent="nonexistent",
-            required_fields=("x",), consumers=("chief_vision_officer",),
-            validation_method="v", pass_criteria=("p",), fail_criteria=("f",),
+            artifact_id="bad_contract",
+            name="Bad",
+            owner_agent="nonexistent",
+            required_fields=("x",),
+            consumers=("chief_vision_officer",),
+            validation_method="v",
+            pass_criteria=("p",),
+            fail_criteria=("f",),
         )
         with pytest.raises(ArtifactValidationError, match="not found"):
             ContractRegistry(contracts=(contract,), agent_registry=agent_registry)
 
     def test_validation_against_registry_wrong_consumer(self, agent_registry):
         contract = ArtifactContract(
-            artifact_id="bad_contract", name="Bad", owner_agent="chief_vision_officer",
-            required_fields=("x",), consumers=("nonexistent",),
-            validation_method="v", pass_criteria=("p",), fail_criteria=("f",),
+            artifact_id="bad_contract",
+            name="Bad",
+            owner_agent="chief_vision_officer",
+            required_fields=("x",),
+            consumers=("nonexistent",),
+            validation_method="v",
+            pass_criteria=("p",),
+            fail_criteria=("f",),
         )
         with pytest.raises(ArtifactValidationError, match="not found"):
             ContractRegistry(contracts=(contract,), agent_registry=agent_registry)

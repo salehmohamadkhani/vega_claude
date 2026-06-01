@@ -150,10 +150,11 @@ class GateEvaluationContext:
 
 def _gate_artifact_exists(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Required output artifacts must exist or be explicitly marked unavailable."""
-    missing: list[str] = []
-    for art in ctx.required_artifacts:
-        if art not in ctx.available_paths and art not in ctx.missing_artifacts:
-            missing.append(art)
+    missing: list[str] = [
+        art
+        for art in ctx.required_artifacts
+        if art not in ctx.available_paths and art not in ctx.missing_artifacts
+    ]
 
     if not ctx.required_artifacts:
         return EvidenceGateFinding(
@@ -193,7 +194,8 @@ def _gate_artifact_non_empty(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     checked = 0
     for path, size in ctx.available_file_sizes.items():
         if path in ctx.required_artifacts or any(
-            path.endswith(ext) for ext in (".md", ".py", ".json", ".txt", ".yaml", ".html", ".css", ".js")
+            path.endswith(ext)
+            for ext in (".md", ".py", ".json", ".txt", ".yaml", ".html", ".css", ".js")
         ):
             checked += 1
             if size == 0:
@@ -257,7 +259,9 @@ def _gate_claim_has_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
 def _gate_implementation_file(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Implementation tasks must produce or modify expected files."""
     doer_roles = {"doer"}
-    if ctx.active_task_roles and not any(r in doer_roles for r in ctx.active_task_roles):
+    if ctx.active_task_roles and not any(
+        r in doer_roles for r in ctx.active_task_roles
+    ):
         return EvidenceGateFinding(
             gate_id="implementation_file_gate",
             status=EvidenceGateStatus.NOT_APPLICABLE,
@@ -283,7 +287,9 @@ def _gate_implementation_file(ctx: GateEvaluationContext) -> EvidenceGateFinding
 def _gate_verification_command(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Verification must include real commands, not echo-only padding."""
     verifier_types = {"verifier", "qa_engineer"}
-    if ctx.active_task_roles and not any(r in verifier_types for r in ctx.active_task_roles):
+    if ctx.active_task_roles and not any(
+        r in verifier_types for r in ctx.active_task_roles
+    ):
         return EvidenceGateFinding(
             gate_id="verification_command_gate",
             status=EvidenceGateStatus.NOT_APPLICABLE,
@@ -305,7 +311,8 @@ def _gate_verification_command(ctx: GateEvaluationContext) -> EvidenceGateFindin
     for cmd in ctx.verification_commands:
         stripped = cmd.strip()
         if stripped.startswith("echo ") and not any(
-            kw in stripped for kw in ("$(", "`", "|", "&&", "||", "test ", "grep ", "pytest", "ruff")
+            kw in stripped
+            for kw in ("$(", "`", "|", "&&", "||", "test ", "grep ", "pytest", "ruff")
         ):
             echo_only.append(stripped[:60])
         else:
@@ -339,21 +346,40 @@ def _gate_verification_command(ctx: GateEvaluationContext) -> EvidenceGateFindin
 
 def _gate_qa_behavior(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: QA must check behavior, edge cases, or AC, not just file existence."""
-    if "qa_engineer" not in ctx.active_agent_ids and "verifier" not in ctx.active_task_roles:
+    if (
+        "qa_engineer" not in ctx.active_agent_ids
+        and "verifier" not in ctx.active_task_roles
+    ):
         return EvidenceGateFinding(
             gate_id="qa_behavior_gate",
             status=EvidenceGateStatus.NOT_APPLICABLE,
             message="No QA or verifier agents active.",
         )
 
-    behavior_keywords = {"edge", "regression", "coverage", "acceptance", "behavior",
-                         "fail", "error", "corner", "boundary", "input", "output",
-                         "state", "component", "integration", "e2e", "end-to-end"}
+    behavior_keywords = {
+        "edge",
+        "regression",
+        "coverage",
+        "acceptance",
+        "behavior",
+        "fail",
+        "error",
+        "corner",
+        "boundary",
+        "input",
+        "output",
+        "state",
+        "component",
+        "integration",
+        "e2e",
+        "end-to-end",
+    }
     ac_text = " ".join(ctx.acceptance_criteria).lower()
     vc_text = " ".join(ctx.verification_commands).lower()
 
-    has_behavior_checks = any(kw in ac_text for kw in behavior_keywords) or \
-                          any(kw in vc_text for kw in behavior_keywords)
+    has_behavior_checks = any(kw in ac_text for kw in behavior_keywords) or any(
+        kw in vc_text for kw in behavior_keywords
+    )
 
     if not has_behavior_checks:
         return EvidenceGateFinding(
@@ -376,8 +402,9 @@ def _gate_security_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     security_layers = {12}  # Security / Compliance
     security_agents = {"security_engineer", "penetration_tester", "dependency_auditor"}
 
-    has_security = bool(set(ctx.active_agent_ids) & security_agents) or \
-                   bool(set(ctx.active_layers) & security_layers)
+    has_security = bool(set(ctx.active_agent_ids) & security_agents) or bool(
+        set(ctx.active_layers) & security_layers
+    )
 
     if not has_security:
         return EvidenceGateFinding(
@@ -386,9 +413,23 @@ def _gate_security_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
             message="No security agents active.",
         )
 
-    security_keywords = {"scan", "secret", "owasp", "threat", "vulnerability",
-                         "cve", "dependency", "penetration", "auth", "csrf",
-                         "xss", "injection", "compliance", "gdpr", "audit"}
+    security_keywords = {
+        "scan",
+        "secret",
+        "owasp",
+        "threat",
+        "vulnerability",
+        "cve",
+        "dependency",
+        "penetration",
+        "auth",
+        "csrf",
+        "xss",
+        "injection",
+        "compliance",
+        "gdpr",
+        "audit",
+    }
     vc_text = " ".join(ctx.verification_commands).lower()
     ac_text = " ".join(ctx.acceptance_criteria).lower()
     combined = vc_text + " " + ac_text
@@ -396,12 +437,19 @@ def _gate_security_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     has_checks = any(kw in combined for kw in security_keywords)
     has_security_artifacts = any(
         art in ctx.required_artifacts
-        for art in ("security_requirements", "threat_model", "pentest_report",
-                    "dependency_audit_report", "security_review")
+        for art in (
+            "security_requirements",
+            "threat_model",
+            "pentest_report",
+            "dependency_audit_report",
+            "security_review",
+        )
     )
 
     if not has_checks and not has_security_artifacts:
-        status = EvidenceGateStatus.BLOCKED if ctx.strict_mode else EvidenceGateStatus.FAILED
+        status = (
+            EvidenceGateStatus.BLOCKED if ctx.strict_mode else EvidenceGateStatus.FAILED
+        )
         return EvidenceGateFinding(
             gate_id="security_evidence_gate",
             status=status,
@@ -428,7 +476,12 @@ def _gate_security_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
 
 def _gate_visual_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Visual/UI tasks should include visual QA notes or reference checks."""
-    visual_agents = {"ui_designer", "ux_designer", "visual_qa_engineer", "accessibility_auditor"}
+    visual_agents = {
+        "ui_designer",
+        "ux_designer",
+        "visual_qa_engineer",
+        "accessibility_auditor",
+    }
     if not set(ctx.active_agent_ids) & visual_agents:
         return EvidenceGateFinding(
             gate_id="visual_evidence_gate",
@@ -436,17 +489,34 @@ def _gate_visual_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
             message="No visual/UI agents active.",
         )
 
-    visual_keywords = {"visual", "design", "ui", "color", "contrast", "wcag",
-                       "responsive", "layout", "screen", "pixel", "animation",
-                       "component", "dark mode"}
+    visual_keywords = {
+        "visual",
+        "design",
+        "ui",
+        "color",
+        "contrast",
+        "wcag",
+        "responsive",
+        "layout",
+        "screen",
+        "pixel",
+        "animation",
+        "component",
+        "dark mode",
+    }
     ac_text = " ".join(ctx.acceptance_criteria).lower()
     vc_text = " ".join(ctx.verification_commands).lower()
     has_checks = any(kw in (ac_text + " " + vc_text) for kw in visual_keywords)
 
     has_artifacts = any(
         art in ctx.required_artifacts
-        for art in ("visual_QA_report", "UI_spec", "design_system",
-                    "accessibility_audit_report", "design_fidelity_audit")
+        for art in (
+            "visual_QA_report",
+            "UI_spec",
+            "design_system",
+            "accessibility_audit_report",
+            "design_fidelity_audit",
+        )
     )
 
     if not has_checks and not has_artifacts:
@@ -468,10 +538,21 @@ def _gate_visual_evidence(ctx: GateEvaluationContext) -> EvidenceGateFinding:
 def _gate_research_reference(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Agent decisions citing external patterns should reference Research Corpus."""
     research_agents = {
-        a for a in ctx.active_agent_ids
-        if a in ("software_architect", "senior_frontend_developer", "senior_backend_developer",
-                 "security_engineer", "data_architect", "api_architect", "database_developer",
-                 "devops_engineer", "qa_engineer", "ml_engineer")
+        a
+        for a in ctx.active_agent_ids
+        if a
+        in (
+            "software_architect",
+            "senior_frontend_developer",
+            "senior_backend_developer",
+            "security_engineer",
+            "data_architect",
+            "api_architect",
+            "database_developer",
+            "devops_engineer",
+            "qa_engineer",
+            "ml_engineer",
+        )
     }
 
     if not research_agents:
@@ -515,20 +596,29 @@ def _gate_final_arbiter(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     missing_agents = core_agents - evidence_agents
 
     # Check required artifacts for final arbiter
-    arbiter_inputs = {"QA_report", "security_review", "performance_report",
-                      "release_readiness_report", "deployment_plan"}
+    arbiter_inputs = {
+        "QA_report",
+        "security_review",
+        "performance_report",
+        "release_readiness_report",
+        "deployment_plan",
+    }
     missing_inputs = arbiter_inputs - set(ctx.required_artifacts)
 
     issues: list[str] = []
     if missing_agents:
         issues.append(f"Missing evidence from: {', '.join(sorted(missing_agents))}")
     if missing_inputs:
-        issues.append(f"Missing arbiter input artifacts: {', '.join(sorted(missing_inputs))}")
+        issues.append(
+            f"Missing arbiter input artifacts: {', '.join(sorted(missing_inputs))}"
+        )
     if not bool(required_evidence_types & has_types):
         issues.append("No test_result or agent_output evidence items present.")
 
     if issues:
-        status = EvidenceGateStatus.BLOCKED if ctx.strict_mode else EvidenceGateStatus.FAILED
+        status = (
+            EvidenceGateStatus.BLOCKED if ctx.strict_mode else EvidenceGateStatus.FAILED
+        )
         return EvidenceGateFinding(
             gate_id="final_arbiter_gate",
             status=status,
@@ -547,7 +637,7 @@ def _gate_final_arbiter(ctx: GateEvaluationContext) -> EvidenceGateFinding:
 def _gate_no_fake_echo(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Verification must not rely only on echo keyword padding."""
     suspicious_patterns = [
-        "echo \"Verified",
+        'echo "Verified',
         "echo 'Verified",
         "echo Verified",
     ]
@@ -555,7 +645,10 @@ def _gate_no_fake_echo(ctx: GateEvaluationContext) -> EvidenceGateFinding:
         for pat in suspicious_patterns:
             if pat in cmd:
                 # Check if there's also a real check in the same command
-                has_real = any(kw in cmd for kw in ("test ", "grep ", "pytest", "ruff", "curl", "python"))
+                has_real = any(
+                    kw in cmd
+                    for kw in ("test ", "grep ", "pytest", "ruff", "curl", "python")
+                )
                 if not has_real:
                     return EvidenceGateFinding(
                         gate_id="no_fake_echo_gate",
@@ -582,10 +675,17 @@ def _gate_no_fake_echo(ctx: GateEvaluationContext) -> EvidenceGateFinding:
 def _gate_runtime_artifact_exclusion(ctx: GateEvaluationContext) -> EvidenceGateFinding:
     """Gate: Runtime artifacts must not be staged for commit."""
     forbidden_patterns = (
-        ".fcc/", ".fcc-ralph/", ".claude/", ".env",
-        ".git-credentials", "secrets", "credentials",
-        "raw_research_repos", "/opt/vega-cloud/research/repos",
-        "server_tracker", "logs/",
+        ".fcc/",
+        ".fcc-ralph/",
+        ".claude/",
+        ".env",
+        ".git-credentials",
+        "secrets",
+        "credentials",
+        "raw_research_repos",
+        "/opt/vega-cloud/research/repos",
+        "server_tracker",
+        "logs/",
     )
 
     violations: list[str] = []
@@ -644,8 +744,13 @@ _DEFAULT_GATE_METADATA: tuple[EvidenceGateRequirement, ...] = (
         gate_id="artifact_exists_gate",
         name="Artifact Existence Check",
         description="Required output artifacts must exist or be explicitly marked unavailable.",
-        applies_to_agents=("chief_vision_officer", "product_manager", "software_architect",
-                           "qa_engineer", "security_engineer"),
+        applies_to_agents=(
+            "chief_vision_officer",
+            "product_manager",
+            "software_architect",
+            "qa_engineer",
+            "security_engineer",
+        ),
         applies_to_task_roles=("architect", "doer"),
         blocking=True,
         severity=EvidenceGateSeverity.CRITICAL,
@@ -698,7 +803,11 @@ _DEFAULT_GATE_METADATA: tuple[EvidenceGateRequirement, ...] = (
         gate_id="security_evidence_gate",
         name="Security Evidence Gate",
         description="Security must include concrete checks (dep scan, secret scan, config review, threat model).",
-        applies_to_agents=("security_engineer", "penetration_tester", "dependency_auditor"),
+        applies_to_agents=(
+            "security_engineer",
+            "penetration_tester",
+            "dependency_auditor",
+        ),
         applies_to_layers=(12,),
         blocking=True,
         severity=EvidenceGateSeverity.ERROR,
@@ -707,7 +816,12 @@ _DEFAULT_GATE_METADATA: tuple[EvidenceGateRequirement, ...] = (
         gate_id="visual_evidence_gate",
         name="Visual Evidence Gate",
         description="Visual/UI tasks should include visual QA notes or screenshots when applicable.",
-        applies_to_agents=("ui_designer", "ux_designer", "visual_qa_engineer", "accessibility_auditor"),
+        applies_to_agents=(
+            "ui_designer",
+            "ux_designer",
+            "visual_qa_engineer",
+            "accessibility_auditor",
+        ),
         applies_to_layers=(6,),
         blocking=False,  # warn, not block (screenshots not always available)
         severity=EvidenceGateSeverity.WARNING,
@@ -716,8 +830,13 @@ _DEFAULT_GATE_METADATA: tuple[EvidenceGateRequirement, ...] = (
         gate_id="research_reference_gate",
         name="Research Reference Gate",
         description="Agent decisions citing external patterns should reference Research Corpus.",
-        applies_to_agents=("software_architect", "senior_frontend_developer", "senior_backend_developer",
-                           "security_engineer", "data_architect"),
+        applies_to_agents=(
+            "software_architect",
+            "senior_frontend_developer",
+            "senior_backend_developer",
+            "security_engineer",
+            "data_architect",
+        ),
         blocking=False,
         severity=EvidenceGateSeverity.WARNING,
     ),
@@ -745,8 +864,14 @@ _DEFAULT_GATE_METADATA: tuple[EvidenceGateRequirement, ...] = (
         applies_to_task_roles=(),
         blocking=True,
         severity=EvidenceGateSeverity.CRITICAL,
-        exclusive_paths=(".fcc/", ".fcc-ralph/", ".claude/", ".env",
-                         "raw_research_repos", "logs/"),
+        exclusive_paths=(
+            ".fcc/",
+            ".fcc-ralph/",
+            ".claude/",
+            ".env",
+            "raw_research_repos",
+            "logs/",
+        ),
     ),
 )
 

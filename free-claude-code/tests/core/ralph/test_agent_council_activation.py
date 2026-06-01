@@ -25,9 +25,14 @@ class TestSupportedProjectTypes:
 
     def test_all_expected_types_present(self, planner):
         expected = {
-            "landing_page", "static_site", "frontend_app",
-            "full_stack_app", "saas_product", "ai_tool",
-            "internal_tool", "research_project",
+            "landing_page",
+            "static_site",
+            "frontend_app",
+            "full_stack_app",
+            "saas_product",
+            "ai_tool",
+            "internal_tool",
+            "research_project",
         }
         assert set(planner.supported_project_types) == expected
 

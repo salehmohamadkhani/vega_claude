@@ -290,8 +290,8 @@ class TestRunExecutor:
         assert result.failed is False
         assert len(result.task_results) == 2
 
-    def test_retry_returns_retry_required(self) -> None:
-        """When arbiter returns RETRY, executor reports retry_required."""
+    def test_retry_resets_task_and_continues(self) -> None:
+        """RETRY resets task to APPROVED and continues; max_iterations stops retry loop."""
         tasks = [_make_task("task-1", TaskStatus.APPROVED)]
         run = _make_run(tasks)
         lifecycle = _make_lifecycle_with_table(tasks)
@@ -304,9 +304,31 @@ class TestRunExecutor:
             iteration_runner=mock_runner,
         )
         result = executor.run_until_blocked(run)
-        assert result.retry_required is True
+        # RETRY resets APPROVED and loops; default max_iterations=1 stops
+        # after the second iteration attempt
+        assert result.retry_required is False
         assert result.completed is False
-        assert "RETRY" in result.stopped_reason or "retry" in result.stopped_reason
+        assert "max iterations" in result.stopped_reason.lower()
+
+    def test_retry_with_max_iterations_above_one(self) -> None:
+        """With max_iterations_per_task=3, RETRY reruns the same task until exhausted."""
+        tasks = [_make_task("task-1", TaskStatus.APPROVED)]
+        run = _make_run(tasks)
+        lifecycle = _make_lifecycle_with_table(tasks)
+        mock_runner = MagicMock()
+        mock_runner.run_iteration.return_value = _make_dry_fail(
+            "task-1", ArbiterAction.RETRY
+        )
+        config = RunExecutorConfig(max_iterations_per_task=3)
+        executor = RunExecutor(
+            config=config,
+            run_lifecycle=lifecycle,
+            iteration_runner=mock_runner,
+        )
+        result = executor.run_until_blocked(run)
+        assert len(result.task_results) == 3
+        assert result.completed is False
+        assert "max iterations" in result.stopped_reason.lower()
 
     def test_stop_returns_failed(self) -> None:
         """When arbiter returns STOP, executor reports failed."""

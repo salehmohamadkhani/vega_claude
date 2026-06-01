@@ -40,7 +40,9 @@ class IterationRunnerConfig:
     """
 
     execution_mode: ExecutionMode = ExecutionMode.DRY_RUN
-    gate_config: object | None = None  # RuntimeGateConfig (lazy to avoid circular import)
+    gate_config: object | None = (
+        None  # RuntimeGateConfig (lazy to avoid circular import)
+    )
 
 
 @dataclass
@@ -158,7 +160,10 @@ class IterationRunner:
                 pgoal = getattr(gc, "project_goal", None) or goal.title if goal else ""
                 if ptype or pgoal:
                     try:
-                        from .agent_council.planner_integration import build_agent_council_task_context
+                        from .agent_council.planner_integration import (
+                            build_agent_council_task_context,
+                        )
+
                         council_ctx = build_agent_council_task_context(
                             goal=str(pgoal) if pgoal else task.title,
                             project_type=ptype or None,

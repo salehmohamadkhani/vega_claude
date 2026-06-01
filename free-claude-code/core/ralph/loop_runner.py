@@ -349,9 +349,7 @@ class RalphLoopRunner:
         stopped_reason = ""
         iters_run = 0
 
-        checkpoint_count_before = len(
-            self._checkpoint_store.list_for_run(run.id)
-        )
+        checkpoint_count_before = len(self._checkpoint_store.list_for_run(run.id))
 
         for iteration_number in range(1, policy.max_iterations_per_task + 1):
             # Mark task running on first iteration
@@ -437,8 +435,7 @@ class RalphLoopRunner:
         # If we didn't return during the loop, determine final state
         if not stopped_reason and iters_run >= policy.max_iterations_per_task:
             stopped_reason = (
-                f"Task {task.id} completed {iters_run} iteration(s) "
-                f"without passing."
+                f"Task {task.id} completed {iters_run} iteration(s) without passing."
             )
 
         return TaskLoopResult(
@@ -509,7 +506,11 @@ class RalphLoopRunner:
                     f"Iteration {iteration_number} of task {task.id} "
                     f"({task.title}): {status}, action={action}"
                 ),
-                tags=[f"task:{task.id}", f"iteration:{iteration_number}", status.lower()],
+                tags=[
+                    f"task:{task.id}",
+                    f"iteration:{iteration_number}",
+                    status.lower(),
+                ],
                 source="ralph_loop_runner",
                 importance=50 if result.passed else 70,
             )

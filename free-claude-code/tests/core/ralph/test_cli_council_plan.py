@@ -13,9 +13,6 @@ Prove:
 from __future__ import annotations
 
 import json
-import sys
-
-import pytest
 
 from core.ralph.cli import EXIT_ERROR, EXIT_SUCCESS, _run_cli
 
@@ -35,11 +32,15 @@ class TestCouncilPlanCLIBasic:
 
     def test_council_plan_landing_page(self, capsys):
         """Generate a council plan for a landing page."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "landing_page",
-            "--goal", "Build a landing page for a whiteboard business",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "landing_page",
+                "--goal",
+                "Build a landing page for a whiteboard business",
+            ]
+        )
         assert result == EXIT_SUCCESS
 
         captured = capsys.readouterr()
@@ -48,11 +49,15 @@ class TestCouncilPlanCLIBasic:
 
     def test_council_plan_full_stack_app(self, capsys):
         """Generate a council plan for a full_stack_app."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a small CRM",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a small CRM",
+            ]
+        )
         assert result == EXIT_SUCCESS
 
         captured = capsys.readouterr()
@@ -60,12 +65,16 @@ class TestCouncilPlanCLIBasic:
 
     def test_council_plan_json_output(self, capsys):
         """--json flag produces structured JSON."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a small CRM",
-            "--json",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a small CRM",
+                "--json",
+            ]
+        )
         assert result == EXIT_SUCCESS
 
         captured = capsys.readouterr()
@@ -83,12 +92,16 @@ class TestCouncilPlanCLIStrictMode:
 
     def test_council_plan_strict_mode(self, capsys):
         """--strict flag enables strict mode."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a CRM",
-            "--strict",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a CRM",
+                "--strict",
+            ]
+        )
         # With strict mode but full_stack_app — should still succeed
         # because agents produce the critical artifacts
         # But it might fail if required agents are missing
@@ -100,11 +113,15 @@ class TestCouncilPlanCLIStrictMode:
 
     def test_council_plan_non_strict_default(self, capsys):
         """Without --strict, plan is non-strict by default."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a test application",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a test application",
+            ]
+        )
         assert result == EXIT_SUCCESS
 
 
@@ -113,11 +130,15 @@ class TestCouncilPlanCLIEdgeCases:
 
     def test_council_plan_unknown_type_non_strict(self, capsys):
         """Unknown project type in non-strict mode falls back."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "bogus_type_xyz",
-            "--goal", "Test project",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "bogus_type_xyz",
+                "--goal",
+                "Test project",
+            ]
+        )
         # Non-strict falls back to full_stack_app — should succeed
         assert result == EXIT_SUCCESS
 
@@ -126,11 +147,15 @@ class TestCouncilPlanCLIEdgeCases:
 
     def test_council_plan_empty_goal(self, capsys):
         """Empty goal doesn't crash."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "",
-        ])
+        _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "",
+            ]
+        )
         # Should not crash — may or may not be blocked
         captured = capsys.readouterr()
         assert "COUNCIL PLAN SUMMARY" in captured.out
@@ -145,12 +170,17 @@ class TestCouncilPlanCLIEdgeCases:
 
     def test_council_plan_with_exclusions(self, capsys):
         """--exclude-agent removes agents from plan."""
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a CRM without content",
-            "--exclude-agent", "brand_strategist",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a CRM without content",
+                "--exclude-agent",
+                "brand_strategist",
+            ]
+        )
         assert result == EXIT_SUCCESS
 
     def test_json_output_no_network_calls(self, capsys):
@@ -158,12 +188,16 @@ class TestCouncilPlanCLIEdgeCases:
         import time
 
         start = time.monotonic()
-        result = _run_cli([
-            "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a test application quickly",
-            "--json",
-        ])
+        result = _run_cli(
+            [
+                "council-plan",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a test application quickly",
+                "--json",
+            ]
+        )
         elapsed = time.monotonic() - start
 
         # Should be very fast — no network calls
@@ -176,11 +210,15 @@ class TestCouncilPlanCLIEdgeCases:
 
         planner = ActivationPlanner()
         for ptype in planner.supported_project_types:
-            result = _run_cli([
-                "council-plan",
-                "--project-type", ptype,
-                "--goal", f"Build a {ptype}",
-            ])
+            result = _run_cli(
+                [
+                    "council-plan",
+                    "--project-type",
+                    ptype,
+                    "--goal",
+                    f"Build a {ptype}",
+                ]
+            )
             assert result == EXIT_SUCCESS, f"Failed for project type: {ptype}"
 
 
@@ -191,8 +229,10 @@ class TestCouncilPlanCLIDeterminism:
         """Same input produces same JSON output."""
         args = [
             "council-plan",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a CRM",
+            "--project-type",
+            "full_stack_app",
+            "--goal",
+            "Build a CRM",
             "--json",
         ]
 

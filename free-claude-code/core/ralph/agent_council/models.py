@@ -191,9 +191,13 @@ class AgentCouncilPlan:
     project_type: str
     active_agents: tuple[str, ...]  # agent_ids to activate
     required_artifacts: tuple[str, ...]  # artifact_ids needed
-    parallel_groups: tuple[tuple[str, ...], ...]  # groups of agents that can run together
+    parallel_groups: tuple[
+        tuple[str, ...], ...
+    ]  # groups of agents that can run together
     critical_path: tuple[str, ...]  # longest dependency chain
-    missing_prerequisites: tuple[str, ...] = ()  # agents/artifacts that are needed but unavailable
+    missing_prerequisites: tuple[
+        str, ...
+    ] = ()  # agents/artifacts that are needed but unavailable
     total_phases: int = 0  # computed from parallel_groups
 
 

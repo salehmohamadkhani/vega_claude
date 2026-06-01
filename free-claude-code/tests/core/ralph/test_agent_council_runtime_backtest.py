@@ -23,12 +23,11 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pytest
 
 from core.ralph.agent_council.evidence_gates import (
-    EvidenceGateResult,
     EvidenceGateStatus,
 )
 from core.ralph.agent_council.runtime_evidence import (
@@ -41,10 +40,6 @@ from core.ralph.agent_council.runtime_gate_enforcer import (
     should_block_task_approval,
     summarize_runtime_gate_enforcement,
 )
-from core.ralph.agent_council.runtime_gate_config import (
-    RuntimeGateConfig,
-)
-
 
 # ---------------------------------------------------------------------------
 # Fixture helpers
@@ -66,11 +61,11 @@ def _load_fixture(name: str) -> dict:
 
 def _load_all_fixtures() -> list[dict]:
     """Load all backtest fixtures."""
-    fixtures = []
-    for fname in sorted(os.listdir(FIXTURE_DIR)):
-        if fname.endswith(".json"):
-            fixtures.append(_load_fixture(fname))
-    return fixtures
+    return [
+        _load_fixture(fname)
+        for fname in sorted(os.listdir(FIXTURE_DIR))
+        if fname.endswith(".json")
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -180,12 +175,10 @@ for bc in BACKTEST_MATRIX:
 # Generate pytest params from the matrix
 def _matrix_ids(bc: BacktestCase) -> str:
     mode = "strict" if bc.strict_mode else "non-strict"
-    return f"{bc.fixture_name.replace('.json','')}_{mode}"
+    return f"{bc.fixture_name.replace('.json', '')}_{mode}"
 
 
-MATRIX_PARAMS = [
-    pytest.param(bc, id=_matrix_ids(bc)) for bc in _UNIQUE_MATRIX
-]
+MATRIX_PARAMS = [pytest.param(bc, id=_matrix_ids(bc)) for bc in _UNIQUE_MATRIX]
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +271,7 @@ class TestBacktestGateEnforcement:
         """Echo-only verifier should block task approval."""
         fixture = _load_fixture("echo_only_verifier_result.json")
         result = enforce_runtime_evidence_gates(fixture, strict_mode=True)
-        blocked = should_block_task_approval(result)
+        should_block_task_approval(result)
         # With strict mode and echo-only, blocking issues may exist
         # At minimum, verification command gate should fail
         assert result.gates_failed + result.gates_blocked > 0
@@ -329,11 +322,18 @@ class TestBacktestGateEnforcement:
         ctx = {
             "council_plan_available": True,
             "active_agents": [
-                {"agent_id": "final_arbiter", "role_name": "Final Arbiter", "layer": 17, "phase": 0},
+                {
+                    "agent_id": "final_arbiter",
+                    "role_name": "Final Arbiter",
+                    "layer": 17,
+                    "phase": 0,
+                },
             ],
             "required_artifacts": [],
         }
-        result = enforce_runtime_evidence_gates(fixture, planning_context=ctx, strict_mode=True)
+        result = enforce_runtime_evidence_gates(
+            fixture, planning_context=ctx, strict_mode=True
+        )
         arb_finding = next(
             (f for f in result.findings if f.gate_id == "final_arbiter_gate"),
             None,
@@ -343,19 +343,26 @@ class TestBacktestGateEnforcement:
             assert arb_finding.status in (
                 EvidenceGateStatus.FAILED,
                 EvidenceGateStatus.BLOCKED,
-            ), f"Final arbiter gate should fail without evidence, got {arb_finding.status.value}"
+            ), (
+                f"Final arbiter gate should fail without evidence, got {arb_finding.status.value}"
+            )
 
     def test_runtime_artifacts_blocked_strict(self):
         """Runtime artifacts (.fcc/, .claude/, .env, logs) must be blocked in strict mode."""
         fixture = _load_fixture("runtime_artifact_staged_result.json")
         result = enforce_runtime_evidence_gates(fixture, strict_mode=True)
         excl_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         assert excl_finding is not None
-        assert excl_finding.status == EvidenceGateStatus.BLOCKED, \
+        assert excl_finding.status == EvidenceGateStatus.BLOCKED, (
             f"Runtime artifacts should be BLOCKED, got {excl_finding.status.value}"
+        )
 
         blocked = should_block_task_approval(result)
         assert blocked, "Runtime artifact staging should block approval"
@@ -365,19 +372,28 @@ class TestBacktestGateEnforcement:
         fixture = _load_fixture("runtime_artifact_staged_result.json")
         result = enforce_runtime_evidence_gates(fixture, strict_mode=False)
         excl_finding = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         assert excl_finding is not None
-        assert excl_finding.status == EvidenceGateStatus.BLOCKED, \
+        assert excl_finding.status == EvidenceGateStatus.BLOCKED, (
             f"Runtime artifacts should be BLOCKED even in non-strict, got {excl_finding.status.value}"
+        )
 
     def test_runtime_artifacts_specific_paths_blocked(self):
         """Each forbidden path category must be blocked."""
         fixture = _load_fixture("runtime_artifact_staged_result.json")
         result = enforce_runtime_evidence_gates(fixture, strict_mode=True)
         excl = next(
-            (f for f in result.findings if f.gate_id == "runtime_artifact_exclusion_gate"),
+            (
+                f
+                for f in result.findings
+                if f.gate_id == "runtime_artifact_exclusion_gate"
+            ),
             None,
         )
         assert excl is not None
@@ -411,7 +427,9 @@ class TestBacktestDisabledGates:
         fixture = _load_fixture("echo_only_verifier_result.json")
         # Extract evidence still runs (it's always run)
         bundle = extract_runtime_evidence_from_task_result(fixture)
-        assert bundle.status == RuntimeEvidenceBindingStatus.BLOCKED  # extraction detects it
+        assert (
+            bundle.status == RuntimeEvidenceBindingStatus.BLOCKED
+        )  # extraction detects it
         # But enforcement without strict mode + no planning context = no blocking
         result = enforce_runtime_evidence_gates(fixture, strict_mode=False)
         # Without planning context providing agent info, some gates are NA
@@ -541,13 +559,8 @@ class TestBacktestMatrix:
 
     def test_matrix_covers_all_fixtures(self):
         """Backtest matrix covers all fixture files."""
-        matrix_fixtures = {
-            bc.fixture_name
-            for bc in BACKTEST_MATRIX
-        }
-        all_fixtures = {
-            f for f in os.listdir(FIXTURE_DIR) if f.endswith(".json")
-        }
+        matrix_fixtures = {bc.fixture_name for bc in BACKTEST_MATRIX}
+        all_fixtures = {f for f in os.listdir(FIXTURE_DIR) if f.endswith(".json")}
         missing = all_fixtures - matrix_fixtures
         assert not missing, f"Fixtures not in matrix: {missing}"
 
@@ -572,7 +585,11 @@ class TestBacktestMatrix:
             ctx = {
                 "council_plan_available": True,
                 "active_agents": [
-                    {"agent_id": "final_arbiter", "role_name": "Final Arbiter", "layer": 17},
+                    {
+                        "agent_id": "final_arbiter",
+                        "role_name": "Final Arbiter",
+                        "layer": 17,
+                    },
                 ],
             }
 
@@ -619,7 +636,11 @@ class TestNoNetworkOrLLM:
             with open(source) as f:
                 content = f.read()
             # Check import statements only, not docstrings
-            import_lines = [l for l in content.split("\n") if l.strip().startswith(("import ", "from "))]
+            import_lines = [
+                line
+                for line in content.split("\n")
+                if line.strip().startswith(("import ", "from "))
+            ]
             import_text = "\n".join(import_lines)
             assert "anthropic" not in import_text
             assert "requests" not in import_text

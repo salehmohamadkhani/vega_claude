@@ -90,7 +90,9 @@ class TestResearchMapWithTempIndexes:
 
             # Write a malformed agent index
             with open(os.path.join(indexes, "AGENT_TO_REPO_INDEX.md"), "w") as f:
-                f.write("# Agent to Repo\n\n| `security_engineer` | Trivy, E2B, Semgrep |\n")
+                f.write(
+                    "# Agent to Repo\n\n| `security_engineer` | Trivy, E2B, Semgrep |\n"
+                )
                 f.write("This is not a valid row|\n")
                 f.write("---\n")
 

@@ -34,29 +34,62 @@ class VerificationPolicyDecision:
 
 
 # Tokens that indicate a command is destructive or unsafe.
-_DESTRUCTIVE_TOKENS: frozenset[str] = frozenset({
-    "rm", "rmdir", "del", "erase", "format",
-    "shutdown", "reboot", "halt", "poweroff",
-    "dd", "mkfs", "fdisk", "parted",
-})
+_DESTRUCTIVE_TOKENS: frozenset[str] = frozenset(
+    {
+        "rm",
+        "rmdir",
+        "del",
+        "erase",
+        "format",
+        "shutdown",
+        "reboot",
+        "halt",
+        "poweroff",
+        "dd",
+        "mkfs",
+        "fdisk",
+        "parted",
+    }
+)
 
 # Tokens that indicate a network fetch (blocked in verification).
-_NETWORK_TOKENS: frozenset[str] = frozenset({
-    "curl", "wget", "fetch", "Invoke-WebRequest",
-    "iwr", "Invoke-RestMethod", "irm",
-})
+_NETWORK_TOKENS: frozenset[str] = frozenset(
+    {
+        "curl",
+        "wget",
+        "fetch",
+        "Invoke-WebRequest",
+        "iwr",
+        "Invoke-RestMethod",
+        "irm",
+    }
+)
 
 # CLI tools that modify git state (blocked in verification; normal
 # git workflow outside the runner is unaffected).
-_GIT_WRITE_TOKENS: frozenset[str] = frozenset({
-    "commit", "push", "pull", "merge", "rebase",
-    "reset", "clean", "cherry-pick", "revert",
-})
+_GIT_WRITE_TOKENS: frozenset[str] = frozenset(
+    {
+        "commit",
+        "push",
+        "pull",
+        "merge",
+        "rebase",
+        "reset",
+        "clean",
+        "cherry-pick",
+        "revert",
+    }
+)
 
 # Pip/install commands (blocked — verification must not mutate env).
-_INSTALL_TOKENS: frozenset[str] = frozenset({
-    "install", "add", "remove", "upgrade",
-})
+_INSTALL_TOKENS: frozenset[str] = frozenset(
+    {
+        "install",
+        "add",
+        "remove",
+        "upgrade",
+    }
+)
 
 
 def _classify_internal(argv: list[str]) -> VerificationPolicyDecision:

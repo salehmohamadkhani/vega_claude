@@ -233,9 +233,7 @@ class TestTaskPlanner:
                 assert "pytest" not in cmd, (
                     f"Task {task.id} should not have pytest: {cmd}"
                 )
-                assert "ruff" not in cmd, (
-                    f"Task {task.id} should not have ruff: {cmd}"
-                )
+                assert "ruff" not in cmd, f"Task {task.id} should not have ruff: {cmd}"
 
     def test_calculator_goal_implementation_checks_file_existence(self) -> None:
         """Throwaway app implementation task should check file existence."""
@@ -248,7 +246,10 @@ class TestTaskPlanner:
 
         impl_task = plan_result.tasks[1]  # TASK-002
         assert impl_task.id == "TASK-002-implementation"
-        assert any("test -f" in cmd or "find " in cmd for cmd in impl_task.verification_commands)
+        assert any(
+            "test -f" in cmd or "find " in cmd
+            for cmd in impl_task.verification_commands
+        )
 
     def test_ralph_runtime_goal_includes_pytest_verification(self) -> None:
         """Ralph Runtime goal should include pytest verification."""

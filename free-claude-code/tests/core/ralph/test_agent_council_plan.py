@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from core.ralph.agent_council.plan import (
@@ -75,7 +77,7 @@ class TestCouncilPlanRequest:
 
     def test_request_is_immutable(self):
         req = CouncilPlanRequest(project_goal="Test")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             req.project_goal = "Changed"  # type: ignore[misc]
 
 
@@ -198,7 +200,7 @@ class TestCouncilPlanAgentNode:
 
     def test_node_immutable(self):
         node = CouncilPlanAgentNode(agent_id="a", role_name="R", layer=1, phase=0)
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             node.agent_id = "b"  # type: ignore[misc]
 
 

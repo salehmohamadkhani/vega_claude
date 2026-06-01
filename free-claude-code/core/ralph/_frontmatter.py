@@ -36,9 +36,12 @@ def dumps(data: dict[str, Any]) -> str:
                 lines.append(f"{key}:")
                 lines.extend(f"- {_repr_scalar(item)}" for item in value)
         elif isinstance(value, dict):
-            lines.append(f"{key}:")
-            for k, v in value.items():
-                lines.append(f"  {k}: {_repr_scalar(v)}")
+            if not value:
+                lines.append(f"{key}: {{}}")
+            else:
+                lines.append(f"{key}:")
+                for k, v in value.items():
+                    lines.append(f"  {k}: {_repr_scalar(v)}")
         else:
             lines.append(f"{key}: {_repr_scalar(value)}")
     return "\n".join(lines) + "\n"
@@ -109,11 +112,12 @@ def safe_load(text: str) -> dict[str, Any]:
         if ":" not in stripped:
             raise FrontmatterError(f"Expected key:value pair, got: {stripped!r}")
 
-        # Flush previous list/dict if any
+        # Flush previous list/dict if any (only non-empty -- preserve
+        # the "" placeholder for empty values like ``key:``)
         if current_key is not None:
-            if current_list is not None:
+            if current_list is not None and current_list:
                 result[current_key] = current_list
-            elif current_dict is not None:
+            elif current_dict is not None and current_dict:
                 result[current_key] = current_dict
 
         current_key, _, raw_value = stripped.partition(":")

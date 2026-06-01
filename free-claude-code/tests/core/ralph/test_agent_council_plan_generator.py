@@ -15,8 +15,6 @@ Prove:
 
 from __future__ import annotations
 
-import pytest
-
 from core.ralph.agent_council.plan import (
     CouncilPlanNextAction,
     CouncilPlanRequest,
@@ -473,7 +471,6 @@ class TestNoNetworkOrLLMCalls:
 
     def test_generate_does_not_import_network_modules(self):
         """Plan generator should not import requests, urllib, or anthropic SDK."""
-        import sys
 
         # Check that the generator module doesn't bring in network modules
         # This is a structural check — if these were imported, they'd be in sys.modules
@@ -537,6 +534,8 @@ class TestGeneratorClass:
         )
 
         assert result.is_ready_to_execute is False
-        assert result.next_action == CouncilPlanNextAction.BLOCKED_BY_UNKNOWN_PROJECT_TYPE
+        assert (
+            result.next_action == CouncilPlanNextAction.BLOCKED_BY_UNKNOWN_PROJECT_TYPE
+        )
         assert len(result.risks) == 1
         assert result.risks[0].severity.value == "blocking"

@@ -87,7 +87,9 @@ class TestDefaultRegistryLookups:
 
     def test_lookup_by_layer_3_market_research(self, registry):
         layer3 = registry.list_by_layer(3)
-        assert len(layer3) == 4  # market_researcher, competitor_analyst, user_researcher, pricing_analyst
+        assert (
+            len(layer3) == 4
+        )  # market_researcher, competitor_analyst, user_researcher, pricing_analyst
         ids = [a.agent_id for a in layer3]
         assert "market_researcher" in ids
         assert "competitor_analyst" in ids
@@ -180,19 +182,25 @@ class TestRegistryGrouping:
 class TestRegistryValidation:
     def test_duplicate_ids_raise(self):
         agents = (
-            __import__("core.ralph.agent_council.models", fromlist=["AgentProfile"]).AgentProfile(
-                agent_id="dup", role_name="A", layer=1, purpose="p"),
-            __import__("core.ralph.agent_council.models", fromlist=["AgentProfile"]).AgentProfile(
-                agent_id="dup", role_name="B", layer=2, purpose="q"),
+            __import__(
+                "core.ralph.agent_council.models", fromlist=["AgentProfile"]
+            ).AgentProfile(agent_id="dup", role_name="A", layer=1, purpose="p"),
+            __import__(
+                "core.ralph.agent_council.models", fromlist=["AgentProfile"]
+            ).AgentProfile(agent_id="dup", role_name="B", layer=2, purpose="q"),
         )
         with pytest.raises(RegistryValidationError, match="Duplicate"):
             AgentRegistry(agents)
 
     def test_self_dependency_raises(self):
         from core.ralph.agent_council.models import AgentProfile
+
         agents = (
             AgentProfile(
-                agent_id="self_ref", role_name="S", layer=1, purpose="p",
+                agent_id="self_ref",
+                role_name="S",
+                layer=1,
+                purpose="p",
                 dependencies=("self_ref",),
             ),
         )
@@ -201,9 +209,13 @@ class TestRegistryValidation:
 
     def test_unknown_dependency_raises(self):
         from core.ralph.agent_council.models import AgentProfile
+
         agents = (
             AgentProfile(
-                agent_id="dep_missing", role_name="D", layer=1, purpose="p",
+                agent_id="dep_missing",
+                role_name="D",
+                layer=1,
+                purpose="p",
                 dependencies=("nonexistent_dep",),
             ),
         )
@@ -212,9 +224,13 @@ class TestRegistryValidation:
 
     def test_unknown_reviewer_raises(self):
         from core.ralph.agent_council.models import AgentProfile
+
         agents = (
             AgentProfile(
-                agent_id="bad_reviewer", role_name="B", layer=1, purpose="p",
+                agent_id="bad_reviewer",
+                role_name="B",
+                layer=1,
+                purpose="p",
                 reviewers=("no_such_reviewer",),
             ),
         )
@@ -223,6 +239,7 @@ class TestRegistryValidation:
 
     def test_invalid_layer_raises(self):
         from core.ralph.agent_council.models import AgentProfile
+
         agents = (
             AgentProfile(agent_id="bad_layer", role_name="B", layer=99, purpose="p"),
         )
@@ -237,9 +254,14 @@ class TestArtifactChainValidation:
 
     def test_all_produced_artifacts_have_consumers_or_are_terminal(self, registry):
         terminal = {
-            "final_arbiter_decision", "release_approval", "conflict_resolution",
-            "project_memory", "lessons_learned", "context_handoff",
-            "decisions_log", "trade_off_journal",
+            "final_arbiter_decision",
+            "release_approval",
+            "conflict_resolution",
+            "project_memory",
+            "lessons_learned",
+            "context_handoff",
+            "decisions_log",
+            "trade_off_journal",
         }
         for agent in registry.list_all():
             for art_id in agent.produced_artifacts:
@@ -257,9 +279,14 @@ class TestArtifactChainValidation:
     def test_find_orphan_artifacts_returns_only_non_terminal(self, registry):
         orchans = registry.find_orphan_artifacts()
         terminal = {
-            "final_arbiter_decision", "release_approval", "conflict_resolution",
-            "project_memory", "lessons_learned", "context_handoff",
-            "decisions_log", "trade_off_journal",
+            "final_arbiter_decision",
+            "release_approval",
+            "conflict_resolution",
+            "project_memory",
+            "lessons_learned",
+            "context_handoff",
+            "decisions_log",
+            "trade_off_journal",
         }
         for art_id in orchans:
             assert art_id not in terminal
@@ -443,5 +470,6 @@ class TestNoDependencyCycles:
 
     def test_no_cycles_in_default_registry(self, registry):
         from core.ralph.agent_council.dependency_graph import detect_cycles
+
         cycles = detect_cycles(registry)
         assert len(cycles) == 0, f"Cycles found: {cycles}"

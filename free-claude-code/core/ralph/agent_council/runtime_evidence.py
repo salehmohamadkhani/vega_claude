@@ -125,7 +125,10 @@ def _has_echo_only_verification(commands: list[str]) -> bool:
     real_count = 0
     for cmd in commands:
         stripped = cmd.strip()
-        if not stripped.startswith("echo ") or any(kw in stripped for kw in ("$(", "`", "|", "&&", "||", "test ", "grep ", "pytest", "ruff")):
+        if not stripped.startswith("echo ") or any(
+            kw in stripped
+            for kw in ("$(", "`", "|", "&&", "||", "test ", "grep ", "pytest", "ruff")
+        ):
             real_count += 1
     return real_count == 0 and len(commands) > 0
 
@@ -140,9 +143,22 @@ def _has_real_verification(commands: list[str]) -> bool:
 def _check_behavior_keywords(texts: list[str]) -> bool:
     """Check for behavior/edge-case-related keywords."""
     behavior_keywords = {
-        "edge", "regression", "coverage", "acceptance", "behavior",
-        "fail", "error", "corner", "boundary", "input", "output",
-        "state", "component", "integration", "e2e", "end-to-end",
+        "edge",
+        "regression",
+        "coverage",
+        "acceptance",
+        "behavior",
+        "fail",
+        "error",
+        "corner",
+        "boundary",
+        "input",
+        "output",
+        "state",
+        "component",
+        "integration",
+        "e2e",
+        "end-to-end",
     }
     combined = " ".join(texts).lower()
     return any(kw in combined for kw in behavior_keywords)
@@ -151,9 +167,21 @@ def _check_behavior_keywords(texts: list[str]) -> bool:
 def _check_security_keywords(texts: list[str]) -> bool:
     """Check for security-related keywords."""
     security_keywords = {
-        "scan", "secret", "owasp", "threat", "vulnerability",
-        "cve", "dependency", "penetration", "auth", "csrf",
-        "xss", "injection", "compliance", "gdpr", "audit",
+        "scan",
+        "secret",
+        "owasp",
+        "threat",
+        "vulnerability",
+        "cve",
+        "dependency",
+        "penetration",
+        "auth",
+        "csrf",
+        "xss",
+        "injection",
+        "compliance",
+        "gdpr",
+        "audit",
     }
     combined = " ".join(texts).lower()
     return any(kw in combined for kw in security_keywords)
@@ -258,24 +286,30 @@ def extract_runtime_evidence_from_task_result(
     # --- Bind file evidence ---
     if all_files:
         for f in all_files:
-            bindings.append(RuntimeEvidenceBinding(
-                source=RuntimeEvidenceSource.FILE_EXISTENCE,
-                path=str(f),
-                summary=f"File produced or modified: {f}",
-                passed=True,
-            ))
-            bindings.append(RuntimeEvidenceBinding(
-                source=RuntimeEvidenceSource.FILE_MODIFIED,
-                path=str(f),
-                summary=f"File exists on disk: {f}",
-                passed=True,
-            ))
+            bindings.append(
+                RuntimeEvidenceBinding(
+                    source=RuntimeEvidenceSource.FILE_EXISTENCE,
+                    path=str(f),
+                    summary=f"File produced or modified: {f}",
+                    passed=True,
+                )
+            )
+            bindings.append(
+                RuntimeEvidenceBinding(
+                    source=RuntimeEvidenceSource.FILE_MODIFIED,
+                    path=str(f),
+                    summary=f"File exists on disk: {f}",
+                    passed=True,
+                )
+            )
     else:
-        bindings.append(RuntimeEvidenceBinding(
-            source=RuntimeEvidenceSource.FILE_EXISTENCE,
-            summary="No files were produced or modified.",
-            passed=False,
-        ))
+        bindings.append(
+            RuntimeEvidenceBinding(
+                source=RuntimeEvidenceSource.FILE_EXISTENCE,
+                summary="No files were produced or modified.",
+                passed=False,
+            )
+        )
 
     # --- Bind command evidence ---
     if verif_commands:
@@ -283,38 +317,62 @@ def extract_runtime_evidence_from_task_result(
         for cmd in verif_commands:
             stripped = cmd.strip()
             echo_only = stripped.startswith("echo ") and not any(
-                kw in stripped for kw in ("$(", "`", "|", "&&", "||", "test ", "grep ", "pytest", "ruff")
+                kw in stripped
+                for kw in (
+                    "$(",
+                    "`",
+                    "|",
+                    "&&",
+                    "||",
+                    "test ",
+                    "grep ",
+                    "pytest",
+                    "ruff",
+                )
             )
-            bindings.append(RuntimeEvidenceBinding(
-                source=RuntimeEvidenceSource.COMMAND_OUTPUT,
-                summary=f"Verification command: {stripped[:80]}",
-                passed=not echo_only,
-                is_echo_only=echo_only,
-                details=f"Command: {stripped[:120]}",
-            ))
+            bindings.append(
+                RuntimeEvidenceBinding(
+                    source=RuntimeEvidenceSource.COMMAND_OUTPUT,
+                    summary=f"Verification command: {stripped[:80]}",
+                    passed=not echo_only,
+                    is_echo_only=echo_only,
+                    details=f"Command: {stripped[:120]}",
+                )
+            )
         if is_echo:
-            failures.append("All verification commands are echo-only. Real checks required.")
+            failures.append(
+                "All verification commands are echo-only. Real checks required."
+            )
 
     # --- Bind test result evidence ---
     verif_plan = None
     if verification_result is not None:
         verif_plan = _safe_getattr(verification_result, "verification_plan", None)
     if verif_plan is not None or qg_result is not None:
-        bindings.append(RuntimeEvidenceBinding(
-            source=RuntimeEvidenceSource.TEST_RESULT,
-            summary=f"Verification gate status: {final_status or 'unknown'}",
-            passed=final_status in ("passed", "PASSED"),
-        ))
+        bindings.append(
+            RuntimeEvidenceBinding(
+                source=RuntimeEvidenceSource.TEST_RESULT,
+                summary=f"Verification gate status: {final_status or 'unknown'}",
+                passed=final_status in ("passed", "PASSED"),
+            )
+        )
 
     # --- Bind QA behavior evidence ---
-    ac_texts = ac_criteria + [stdout, stderr]
+    ac_texts = [*ac_criteria, stdout, stderr]
     has_behavior = _check_behavior_keywords(ac_texts)
     if task_role in ("verifier", "qa_engineer"):
-        bindings.append(RuntimeEvidenceBinding(
-            source=RuntimeEvidenceSource.QA_BEHAVIOR,
-            summary="QA behavior check: " + ("behavior/edge-case checks detected." if has_behavior else "no behavior/edge-case checks found."),
-            passed=has_behavior,
-        ))
+        bindings.append(
+            RuntimeEvidenceBinding(
+                source=RuntimeEvidenceSource.QA_BEHAVIOR,
+                summary="QA behavior check: "
+                + (
+                    "behavior/edge-case checks detected."
+                    if has_behavior
+                    else "no behavior/edge-case checks found."
+                ),
+                passed=has_behavior,
+            )
+        )
         if not has_behavior:
             warnings.append("QA/verification task lacks behavior or edge-case checks.")
 
@@ -322,39 +380,58 @@ def extract_runtime_evidence_from_task_result(
     if task_role in ("security_engineer", "verifier"):
         sec_texts = ac_texts + verif_commands
         has_sec = _check_security_keywords(sec_texts)
-        bindings.append(RuntimeEvidenceBinding(
-            source=RuntimeEvidenceSource.SECURITY_CHECK,
-            summary="Security check: " + ("security-focused checks detected." if has_sec else "no security checks found."),
-            passed=has_sec,
-        ))
+        bindings.append(
+            RuntimeEvidenceBinding(
+                source=RuntimeEvidenceSource.SECURITY_CHECK,
+                summary="Security check: "
+                + (
+                    "security-focused checks detected."
+                    if has_sec
+                    else "no security checks found."
+                ),
+                passed=has_sec,
+            )
+        )
         if not has_sec:
-            warnings.append("Security task lacks concrete security verification checks.")
+            warnings.append(
+                "Security task lacks concrete security verification checks."
+            )
 
     # --- Bind acceptance criteria evidence ---
     if ac_criteria:
-        bindings.append(RuntimeEvidenceBinding(
-            source=RuntimeEvidenceSource.ACCEPTANCE_CRITERIA,
-            summary=f"{len(ac_criteria)} acceptance criteria defined.",
-            passed=len(ac_criteria) > 0,
-        ))
+        bindings.append(
+            RuntimeEvidenceBinding(
+                source=RuntimeEvidenceSource.ACCEPTANCE_CRITERIA,
+                summary=f"{len(ac_criteria)} acceptance criteria defined.",
+                passed=len(ac_criteria) > 0,
+            )
+        )
 
     # --- Bind arbiter evidence ---
     if arbiter_action:
-        bindings.append(RuntimeEvidenceBinding(
-            source=RuntimeEvidenceSource.ARBITER_DECISION,
-            summary=f"Arbiter decision: {arbiter_action}",
-            passed=arbiter_action in ("approve", "retry"),
-        ))
+        bindings.append(
+            RuntimeEvidenceBinding(
+                source=RuntimeEvidenceSource.ARBITER_DECISION,
+                summary=f"Arbiter decision: {arbiter_action}",
+                passed=arbiter_action in ("approve", "retry"),
+            )
+        )
 
     # --- Determine overall status ---
     has_files = len(all_files) > 0
     has_real_cmds = _has_real_verification(verif_commands)
-    has_behavior_ev = _check_behavior_keywords(ac_criteria + [stdout, stderr])
-    has_security_ev = _check_security_keywords(ac_criteria + verif_commands + [stdout, stderr])
+    has_behavior_ev = _check_behavior_keywords([*ac_criteria, stdout, stderr])
+    has_security_ev = _check_security_keywords(
+        ac_criteria + verif_commands + [stdout, stderr]
+    )
     has_arbiter_ev = bool(arbiter_action)
 
     all_passed = all(b.passed for b in bindings)
-    if not all_passed and task_role in ("verifier", "qa_engineer") and _has_echo_only_verification(verif_commands):
+    if (
+        not all_passed
+        and task_role in ("verifier", "qa_engineer")
+        and _has_echo_only_verification(verif_commands)
+    ):
         overall = RuntimeEvidenceBindingStatus.BLOCKED
     elif failures:
         overall = RuntimeEvidenceBindingStatus.FAILED
@@ -370,7 +447,9 @@ def extract_runtime_evidence_from_task_result(
         summary_parts.append(f"files={len(all_files)}")
     else:
         summary_parts.append("no-files")
-    summary_parts.append(f"cmds={'real' if has_real_cmds else 'echo-only' if verif_commands else 'none'}")
+    summary_parts.append(
+        f"cmds={'real' if has_real_cmds else 'echo-only' if verif_commands else 'none'}"
+    )
     summary_parts.append(f"status={overall.value}")
 
     return RuntimeTaskEvidenceBundle(
@@ -398,16 +477,20 @@ def summarize_runtime_evidence_bundle(bundle: RuntimeTaskEvidenceBundle) -> str:
     lines.append(f"Bindings: {bundle.binding_count}")
     lines.append(f"  Files: {'yes' if bundle.has_files else 'no'}")
     lines.append(f"  Real Commands: {'yes' if bundle.has_real_commands else 'no'}")
-    lines.append(f"  Behavior Evidence: {'yes' if bundle.has_behavior_evidence else 'no'}")
-    lines.append(f"  Security Evidence: {'yes' if bundle.has_security_evidence else 'no'}")
-    lines.append(f"  Arbiter Evidence: {'yes' if bundle.has_arbiter_evidence else 'no'}")
+    lines.append(
+        f"  Behavior Evidence: {'yes' if bundle.has_behavior_evidence else 'no'}"
+    )
+    lines.append(
+        f"  Security Evidence: {'yes' if bundle.has_security_evidence else 'no'}"
+    )
+    lines.append(
+        f"  Arbiter Evidence: {'yes' if bundle.has_arbiter_evidence else 'no'}"
+    )
 
     if bundle.warnings:
         lines.append("WARNINGS:")
-        for w in bundle.warnings:
-            lines.append(f"  ! {w}")
+        lines.extend(f"  ! {w}" for w in bundle.warnings)
     if bundle.failures:
         lines.append("FAILURES:")
-        for f in bundle.failures:
-            lines.append(f"  !! {f}")
+        lines.extend(f"  !! {f}" for f in bundle.failures)
     return "\n".join(lines)

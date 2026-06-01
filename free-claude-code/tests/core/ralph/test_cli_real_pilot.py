@@ -101,9 +101,7 @@ class TestCliRealPilotSafety:
         )
         assert rc == EXIT_UNSAFE_REAL
 
-    def test_pilot_real_with_allow_succeeds_in_dry_run(
-        self, tmp_path: Path
-    ) -> None:
+    def test_pilot_real_with_allow_succeeds_in_dry_run(self, tmp_path: Path) -> None:
         """Pilot --real --allow-real-execution runs (dry-run in tests)."""
         rc = _run_cli(
             [
@@ -131,9 +129,7 @@ class TestCliRealPilotSafety:
         )
         assert rc == EXIT_UNSAFE_REAL
 
-    def test_pilot_with_json_parseable_on_error(
-        self, tmp_path: Path, capsys
-    ) -> None:
+    def test_pilot_with_json_parseable_on_error(self, tmp_path: Path, capsys) -> None:
         """Pilot with --json produces parseable JSON even on error."""
         capsys.readouterr()
         rc = _run_cli(
@@ -170,6 +166,7 @@ class TestCliRealPilotNoSideEffects:
     def test_pilot_no_api_key_usage(self) -> None:
         """Pilot command does not read API keys."""
         import os
+
         original = os.environ.get("ANTHROPIC_API_KEY")
         if original:
             del os.environ["ANTHROPIC_API_KEY"]

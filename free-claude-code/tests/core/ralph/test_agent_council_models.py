@@ -80,7 +80,10 @@ class TestAgentProfile:
 
     def test_immutable(self):
         agent = AgentProfile(
-            agent_id="test", role_name="T", layer=1, purpose="P",
+            agent_id="test",
+            role_name="T",
+            layer=1,
+            purpose="P",
         )
         with pytest.raises(AttributeError):
             agent.agent_id = "changed"  # type: ignore[misc]
@@ -124,7 +127,9 @@ class TestArtifactContract:
 
     def test_immutable(self):
         contract = ArtifactContract(
-            artifact_id="t", name="T", owner_agent="o",
+            artifact_id="t",
+            name="T",
+            owner_agent="o",
         )
         with pytest.raises(AttributeError):
             contract.artifact_id = "changed"  # type: ignore[misc]
@@ -167,11 +172,15 @@ class TestEvidenceItem:
         assert item.is_valid() is True
 
     def test_invalid_empty_source(self):
-        item = EvidenceItem(source_path="", claim="claim", evidence_type=EvidenceType.REPO_PATTERN)
+        item = EvidenceItem(
+            source_path="", claim="claim", evidence_type=EvidenceType.REPO_PATTERN
+        )
         assert item.is_valid() is False
 
     def test_invalid_empty_claim(self):
-        item = EvidenceItem(source_path="src", claim="", evidence_type=EvidenceType.REPO_PATTERN)
+        item = EvidenceItem(
+            source_path="src", claim="", evidence_type=EvidenceType.REPO_PATTERN
+        )
         assert item.is_valid() is False
 
     def test_defaults(self):

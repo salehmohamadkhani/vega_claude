@@ -91,7 +91,7 @@ class ResearchMap:
             with open(path) as f:
                 content = f.read()
             self._parse_agent_index_md(content)
-        except (OSError, UnicodeDecodeError):
+        except OSError, UnicodeDecodeError:
             pass
 
     def _parse_agent_index_md(self, content: str) -> None:
@@ -110,7 +110,11 @@ class ResearchMap:
                 parts = [p.strip() for p in line.split("|")]
                 if len(parts) >= 2:
                     agent = parts[1].strip("`").strip()
-                    if agent and not agent.startswith("-") and not agent.startswith("Agent"):
+                    if (
+                        agent
+                        and not agent.startswith("-")
+                        and not agent.startswith("Agent")
+                    ):
                         current_agent = agent
                         # Check if there's a repos column
                         if len(parts) >= 3:
@@ -118,7 +122,9 @@ class ResearchMap:
                             if repo_text and repo_text != "—" and repo_text != "-":
                                 self._agent_to_repo.setdefault(current_agent, [])
                                 for repo_id in self._extract_repo_ids(repo_text):
-                                    self._agent_to_repo.setdefault(current_agent, []).append(
+                                    self._agent_to_repo.setdefault(
+                                        current_agent, []
+                                    ).append(
                                         ResearchReference(
                                             repo_id=repo_id,
                                             relevance_agent=current_agent,
@@ -159,7 +165,7 @@ class ResearchMap:
             with open(path) as f:
                 content = f.read()
             self._parse_pattern_index_md(content)
-        except (OSError, UnicodeDecodeError):
+        except OSError, UnicodeDecodeError:
             pass
 
     def _parse_pattern_index_md(self, content: str) -> None:
@@ -171,13 +177,19 @@ class ResearchMap:
                 parts = [p.strip() for p in line.split("|")]
                 if len(parts) >= 2:
                     pattern = parts[1].strip("`").strip()
-                    if pattern and not pattern.startswith("-") and not pattern.startswith("Pattern"):
+                    if (
+                        pattern
+                        and not pattern.startswith("-")
+                        and not pattern.startswith("Pattern")
+                    ):
                         # Later columns may contain repo references
                         for i in range(2, min(len(parts), 4)):
                             repo_text = parts[i].strip()
                             if repo_text and repo_text != "—":
                                 for repo_id in self._extract_repo_ids(repo_text):
-                                    self._patterns.setdefault(pattern, []).append(repo_id)
+                                    self._patterns.setdefault(pattern, []).append(
+                                        repo_id
+                                    )
 
     # ------------------------------------------------------------------
     # Queries
@@ -236,10 +248,7 @@ class ResearchMap:
         """Find patterns matching a keyword (case-insensitive substring match)."""
         self.load()
         keyword = pattern_keyword.lower()
-        results = [
-            pattern for pattern in self._patterns
-            if keyword in pattern.lower()
-        ]
+        results = [pattern for pattern in self._patterns if keyword in pattern.lower()]
         return tuple(sorted(results))
 
     def list_categories(self) -> tuple[str, ...]:

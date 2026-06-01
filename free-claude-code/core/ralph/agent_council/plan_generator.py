@@ -37,33 +37,39 @@ from .research_map import ResearchMap
 # Known project types (mirrors activation.py)
 # ---------------------------------------------------------------------------
 
-_KNOWN_PROJECT_TYPES: frozenset[str] = frozenset({
-    "landing_page",
-    "static_site",
-    "frontend_app",
-    "full_stack_app",
-    "saas_product",
-    "ai_tool",
-    "internal_tool",
-    "research_project",
-})
+_KNOWN_PROJECT_TYPES: frozenset[str] = frozenset(
+    {
+        "landing_page",
+        "static_site",
+        "frontend_app",
+        "full_stack_app",
+        "saas_product",
+        "ai_tool",
+        "internal_tool",
+        "research_project",
+    }
+)
 
 # Critical artifacts that must exist for execution to proceed
-_CRITICAL_ARTIFACTS: frozenset[str] = frozenset({
-    "business_brief",
-    "product_requirements_doc",
-    "security_requirements",
-    "architecture_spec",
-    "test_plan",
-    "deployment_plan",
-})
+_CRITICAL_ARTIFACTS: frozenset[str] = frozenset(
+    {
+        "business_brief",
+        "product_requirements_doc",
+        "security_requirements",
+        "architecture_spec",
+        "test_plan",
+        "deployment_plan",
+    }
+)
 
 # Agents that are considered "required" for most project types
-_REQUIRED_AGENTS: frozenset[str] = frozenset({
-    "chief_vision_officer",
-    "orchestrator",
-    "product_manager",
-})
+_REQUIRED_AGENTS: frozenset[str] = frozenset(
+    {
+        "chief_vision_officer",
+        "orchestrator",
+        "product_manager",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -152,9 +158,7 @@ class CouncilPlanGenerator:
                 )
 
         # ---- 6. Build agent nodes --------------------------------------
-        agent_nodes = self._build_agent_nodes(
-            active_agent_ids, plan.parallel_groups
-        )
+        agent_nodes = self._build_agent_nodes(active_agent_ids, plan.parallel_groups)
 
         # ---- 7. Build artifact nodes -----------------------------------
         artifact_nodes = self._build_artifact_nodes(
@@ -167,9 +171,7 @@ class CouncilPlanGenerator:
         )
 
         # ---- 9. Generate risks -----------------------------------------
-        risks = self._generate_risks(
-            project_type, missing, request, warnings, cycles
-        )
+        risks = self._generate_risks(project_type, missing, request, warnings, cycles)
 
         # ---- 10. Research references -----------------------------------
         research_refs = self._collect_research_references(active_agent_ids, request)
@@ -205,10 +207,13 @@ class CouncilPlanGenerator:
         )
 
         # ---- 15. Contract IDs ------------------------------------------
-        contract_ids = tuple(sorted(
-            c.artifact_id for c in self._contracts.list_all()
-            if c.artifact_id in plan.required_artifacts
-        ))
+        contract_ids = tuple(
+            sorted(
+                c.artifact_id
+                for c in self._contracts.list_all()
+                if c.artifact_id in plan.required_artifacts
+            )
+        )
 
         return CouncilPlanResult(
             project_type=project_type,
@@ -271,14 +276,72 @@ class CouncilPlanGenerator:
         goal_lower = goal.lower()
         # Order matters: check more specific types first
         ordered_types: list[tuple[str, list[str]]] = [
-            ("saas_product", ["saas", "subscription", "multi-tenant", "b2b saas", "software as a service"]),
-            ("ai_tool", ["ai ", "ai-", " ml ", "machine learning", "llm", "gpt", "neural network", "chatbot"]),
-            ("landing_page", ["landing page", "landing", "one-page", "single page", "splash", "coming soon"]),
-            ("static_site", ["static site", "blog", "portfolio", "docs site", "documentation site"]),
-            ("frontend_app", ["spa", "single page app", "frontend only", "client-side"]),
-            ("internal_tool", ["internal tool", "admin tool", "internal dashboard", "back office"]),
-            ("research_project", ["research paper", "research analysis", "research study", "investigation"]),
-            ("full_stack_app", ["full stack", "full-stack", "web app", "web application", "crm", "dashboard"]),
+            (
+                "saas_product",
+                [
+                    "saas",
+                    "subscription",
+                    "multi-tenant",
+                    "b2b saas",
+                    "software as a service",
+                ],
+            ),
+            (
+                "ai_tool",
+                [
+                    "ai ",
+                    "ai-",
+                    " ml ",
+                    "machine learning",
+                    "llm",
+                    "gpt",
+                    "neural network",
+                    "chatbot",
+                ],
+            ),
+            (
+                "landing_page",
+                [
+                    "landing page",
+                    "landing",
+                    "one-page",
+                    "single page",
+                    "splash",
+                    "coming soon",
+                ],
+            ),
+            (
+                "static_site",
+                ["static site", "blog", "portfolio", "docs site", "documentation site"],
+            ),
+            (
+                "frontend_app",
+                ["spa", "single page app", "frontend only", "client-side"],
+            ),
+            (
+                "internal_tool",
+                ["internal tool", "admin tool", "internal dashboard", "back office"],
+            ),
+            (
+                "research_project",
+                [
+                    "research paper",
+                    "research analysis",
+                    "research study",
+                    "investigation",
+                ],
+            ),
+            (
+                "full_stack_app",
+                [
+                    "full stack",
+                    "full-stack",
+                    "web app",
+                    "web application",
+                    "crm",
+                    "dashboard",
+                ],
+            ),
         ]
         for ptype, kws in ordered_types:
             if any(kw in goal_lower for kw in kws):
@@ -330,18 +393,18 @@ class CouncilPlanGenerator:
             if agent is None:
                 continue
             # Filter dependencies to only active agents
-            active_deps = tuple(
-                d for d in agent.dependencies if d in active_agent_ids
+            active_deps = tuple(d for d in agent.dependencies if d in active_agent_ids)
+            nodes.append(
+                CouncilPlanAgentNode(
+                    agent_id=agent.agent_id,
+                    role_name=agent.role_name,
+                    layer=agent.layer,
+                    phase=phase_map.get(aid, 0),
+                    depends_on=active_deps,
+                    produces_artifacts=agent.produced_artifacts,
+                    can_run_parallel=agent.can_run_parallel,
+                )
             )
-            nodes.append(CouncilPlanAgentNode(
-                agent_id=agent.agent_id,
-                role_name=agent.role_name,
-                layer=agent.layer,
-                phase=phase_map.get(aid, 0),
-                depends_on=active_deps,
-                produces_artifacts=agent.produced_artifacts,
-                can_run_parallel=agent.can_run_parallel,
-            ))
 
         return tuple(nodes)
 
@@ -366,19 +429,18 @@ class CouncilPlanGenerator:
             name = contract.name if contract else art_id
             is_critical = art_id in _CRITICAL_ARTIFACTS
 
-            if art_id in available_set:
-                status = "available"
-            else:
-                status = "pending"
+            status = "available" if art_id in available_set else "pending"
 
-            nodes.append(CouncilPlanArtifactNode(
-                artifact_id=art_id,
-                name=name,
-                owner_agent=owner,
-                status=status,
-                consumers=contract.consumers if contract else (),
-                is_critical=is_critical,
-            ))
+            nodes.append(
+                CouncilPlanArtifactNode(
+                    artifact_id=art_id,
+                    name=name,
+                    owner_agent=owner,
+                    status=status,
+                    consumers=contract.consumers if contract else (),
+                    is_critical=is_critical,
+                )
+            )
 
         return tuple(nodes)
 
@@ -403,10 +465,11 @@ class CouncilPlanGenerator:
         available_set = frozenset(request.available_artifacts)
         produced_by_active = {n.artifact_id for n in artifact_nodes}
 
-        missing: list[str] = []
-        for art_id in _CRITICAL_ARTIFACTS:
-            if art_id not in available_set and art_id not in produced_by_active:
-                missing.append(art_id)
+        missing = [
+            art_id
+            for art_id in _CRITICAL_ARTIFACTS
+            if art_id not in available_set and art_id not in produced_by_active
+        ]
 
         return missing
 
@@ -423,51 +486,63 @@ class CouncilPlanGenerator:
 
         # Missing critical artifacts
         if missing_artifacts:
-            risks.append(CouncilPlanRisk(
-                risk_id="missing_critical_artifacts",
-                description=(
-                    f"Critical artifacts missing: {', '.join(sorted(missing_artifacts))}"
-                ),
-                severity=RiskSeverity.BLOCKING if request.strict_mode else RiskSeverity.HIGH,
-                affected_artifacts=tuple(sorted(missing_artifacts)),
-                mitigation="Produce the missing artifacts before execution or relax strict_mode.",
-            ))
+            risks.append(
+                CouncilPlanRisk(
+                    risk_id="missing_critical_artifacts",
+                    description=(
+                        f"Critical artifacts missing: {', '.join(sorted(missing_artifacts))}"
+                    ),
+                    severity=RiskSeverity.BLOCKING
+                    if request.strict_mode
+                    else RiskSeverity.HIGH,
+                    affected_artifacts=tuple(sorted(missing_artifacts)),
+                    mitigation="Produce the missing artifacts before execution or relax strict_mode.",
+                )
+            )
 
         # Unknown project type warning
         if project_type not in _KNOWN_PROJECT_TYPES and request.strict_mode:
-            risks.append(CouncilPlanRisk(
-                risk_id="unknown_project_type",
-                description=f"Project type '{project_type}' is not in the known set.",
-                severity=RiskSeverity.BLOCKING,
-                mitigation="Select a known project type or disable strict_mode.",
-            ))
+            risks.append(
+                CouncilPlanRisk(
+                    risk_id="unknown_project_type",
+                    description=f"Project type '{project_type}' is not in the known set.",
+                    severity=RiskSeverity.BLOCKING,
+                    mitigation="Select a known project type or disable strict_mode.",
+                )
+            )
 
         # Warnings as low-severity risks
         for i, w in enumerate(warnings):
-            risks.append(CouncilPlanRisk(
-                risk_id=f"warning_{i}",
-                description=w,
-                severity=RiskSeverity.LOW,
-            ))
+            risks.append(
+                CouncilPlanRisk(
+                    risk_id=f"warning_{i}",
+                    description=w,
+                    severity=RiskSeverity.LOW,
+                )
+            )
 
         # SaaS-specific risks
         if project_type == "saas_product":
-            risks.append(CouncilPlanRisk(
-                risk_id="saas_complexity",
-                description="SaaS products have high complexity with 50+ agents activated across all 17 layers.",
-                severity=RiskSeverity.MEDIUM,
-                mitigation="Ensure artifact contracts are validated at each quality gate.",
-            ))
+            risks.append(
+                CouncilPlanRisk(
+                    risk_id="saas_complexity",
+                    description="SaaS products have high complexity with 50+ agents activated across all 17 layers.",
+                    severity=RiskSeverity.MEDIUM,
+                    mitigation="Ensure artifact contracts are validated at each quality gate.",
+                )
+            )
 
         # AI tool ethics risk
         if project_type == "ai_tool":
-            risks.append(CouncilPlanRisk(
-                risk_id="ml_ethics_required",
-                description="AI tools require ethics audit. Chief Product Ethics Officer must be activated.",
-                severity=RiskSeverity.HIGH,
-                affected_agents=("chief_product_ethics_officer",),
-                mitigation="Ensure ethics_audit_report is produced before release.",
-            ))
+            risks.append(
+                CouncilPlanRisk(
+                    risk_id="ml_ethics_required",
+                    description="AI tools require ethics audit. Chief Product Ethics Officer must be activated.",
+                    severity=RiskSeverity.HIGH,
+                    affected_agents=("chief_product_ethics_officer",),
+                    mitigation="Ensure ethics_audit_report is produced before release.",
+                )
+            )
 
         return risks
 
@@ -487,14 +562,16 @@ class CouncilPlanGenerator:
         refs: list[CouncilPlanResearchReference] = []
         for aid in sorted(active_agent_ids):
             agent_refs = rm.find_for_agent(aid)
-            for ar in agent_refs:
-                refs.append(CouncilPlanResearchReference(
+            refs.extend(
+                CouncilPlanResearchReference(
                     repo_id=ar.repo_id,
                     category=ar.category,
                     relevance_agent=ar.relevance_agent,
                     relevance_level=ar.relevance_level,
                     patterns=ar.patterns,
-                ))
+                )
+                for ar in agent_refs
+            )
 
         return tuple(refs)
 
@@ -508,63 +585,75 @@ class CouncilPlanGenerator:
         reqs: list[CouncilPlanEvidenceRequirement] = []
 
         # Standard evidence requirements for all project types
-        reqs.append(CouncilPlanEvidenceRequirement(
-            requirement_id="ev_project_goal_validated",
-            description="Project goal has been validated against known constraints.",
-            priority="high",
-        ))
+        reqs.append(
+            CouncilPlanEvidenceRequirement(
+                requirement_id="ev_project_goal_validated",
+                description="Project goal has been validated against known constraints.",
+                priority="high",
+            )
+        )
 
         # Architecture evidence
         if "software_architect" in active_agent_ids:
-            reqs.append(CouncilPlanEvidenceRequirement(
-                requirement_id="ev_architecture_decisions",
-                description="Architecture decisions have documented rationale and trade-offs.",
-                required_for_agent="software_architect",
-                required_for_artifact="architecture_spec",
-                source_hint="Agent output: software_architect",
-                priority="high",
-            ))
+            reqs.append(
+                CouncilPlanEvidenceRequirement(
+                    requirement_id="ev_architecture_decisions",
+                    description="Architecture decisions have documented rationale and trade-offs.",
+                    required_for_agent="software_architect",
+                    required_for_artifact="architecture_spec",
+                    source_hint="Agent output: software_architect",
+                    priority="high",
+                )
+            )
 
         # Security evidence
         if "security_engineer" in active_agent_ids:
-            reqs.append(CouncilPlanEvidenceRequirement(
-                requirement_id="ev_threat_model",
-                description="Threat model covers OWASP Top 10 with documented mitigations.",
-                required_for_agent="security_engineer",
-                required_for_artifact="security_requirements",
-                source_hint="Agent output: security_engineer",
-                priority="high",
-            ))
+            reqs.append(
+                CouncilPlanEvidenceRequirement(
+                    requirement_id="ev_threat_model",
+                    description="Threat model covers OWASP Top 10 with documented mitigations.",
+                    required_for_agent="security_engineer",
+                    required_for_artifact="security_requirements",
+                    source_hint="Agent output: security_engineer",
+                    priority="high",
+                )
+            )
 
         # Missing artifact evidence
         if missing_artifacts:
-            reqs.append(CouncilPlanEvidenceRequirement(
-                requirement_id="ev_missing_artifacts",
-                description=f"Evidence of why critical artifacts are missing: {', '.join(missing_artifacts)}",
-                priority="high",
-            ))
+            reqs.append(
+                CouncilPlanEvidenceRequirement(
+                    requirement_id="ev_missing_artifacts",
+                    description=f"Evidence of why critical artifacts are missing: {', '.join(missing_artifacts)}",
+                    priority="high",
+                )
+            )
 
         # QA evidence
         if "qa_engineer" in active_agent_ids:
-            reqs.append(CouncilPlanEvidenceRequirement(
-                requirement_id="ev_test_coverage",
-                description="Test coverage report with pass/fail/blocked counts.",
-                required_for_agent="qa_engineer",
-                required_for_artifact="QA_report",
-                source_hint="Agent output: qa_engineer",
-                priority="medium",
-            ))
+            reqs.append(
+                CouncilPlanEvidenceRequirement(
+                    requirement_id="ev_test_coverage",
+                    description="Test coverage report with pass/fail/blocked counts.",
+                    required_for_agent="qa_engineer",
+                    required_for_artifact="QA_report",
+                    source_hint="Agent output: qa_engineer",
+                    priority="medium",
+                )
+            )
 
         # Ethics for AI/ML
         if project_type == "ai_tool" or "ml_engineer" in active_agent_ids:
-            reqs.append(CouncilPlanEvidenceRequirement(
-                requirement_id="ev_model_evaluation",
-                description="Model evaluation metrics with bias/fairness assessment.",
-                required_for_agent="ml_engineer",
-                required_for_artifact="ml_system_design",
-                source_hint="Agent output: ml_engineer",
-                priority="high",
-            ))
+            reqs.append(
+                CouncilPlanEvidenceRequirement(
+                    requirement_id="ev_model_evaluation",
+                    description="Model evaluation metrics with bias/fairness assessment.",
+                    required_for_agent="ml_engineer",
+                    required_for_artifact="ml_system_design",
+                    source_hint="Agent output: ml_engineer",
+                    priority="high",
+                )
+            )
 
         return tuple(reqs)
 
@@ -647,7 +736,9 @@ class CouncilPlanGenerator:
                 CouncilPlanNextAction.BLOCKED_BY_UNKNOWN_PROJECT_TYPE: "Blocked — unknown project type",
                 CouncilPlanNextAction.BLOCKED_BY_MISSING_REQUIRED_AGENT: "Blocked — required agent not available",
             }
-            lines.append(f"  -> {label_lookup.get(next_action, str(next_action.value))}")
+            lines.append(
+                f"  -> {label_lookup.get(next_action, str(next_action.value))}"
+            )
         return "\n".join(lines)
 
     def _filter_parallel_groups(
@@ -658,9 +749,7 @@ class CouncilPlanGenerator:
         """Filter parallel groups to only include active agents."""
         filtered: list[tuple[str, ...]] = []
         for group in groups:
-            active_in_group = tuple(
-                aid for aid in group if aid in active_agent_ids
-            )
+            active_in_group = tuple(aid for aid in group if aid in active_agent_ids)
             if active_in_group:
                 filtered.append(active_in_group)
         return tuple(filtered)

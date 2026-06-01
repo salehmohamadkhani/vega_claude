@@ -260,9 +260,7 @@ class QualityGate:
 
         # Step 7: Determine final status
         kpi_all_required_pass = all(
-            r.passed
-            for r in kpi_results
-            if r.status != KPIStatus.SKIPPED
+            r.passed for r in kpi_results if r.status != KPIStatus.SKIPPED
         )
         kpi_any_skipped = any(r.status == KPIStatus.SKIPPED for r in kpi_results)
 
@@ -300,16 +298,17 @@ class QualityGate:
                 summary_parts.append("kpi-skip")
 
         # --- Agent Council evidence gate enforcement (optional) ---
-        council_enforcement_meta: dict[str, object] | None = None
         if use_agent_council_gates:
             try:
                 from .agent_council.runtime_gate_enforcer import (
                     enforce_runtime_evidence_gates,
                     should_block_task_approval,
                 )
+
                 # Build a minimal task result wrapper for the enforcer
                 class _TaskResultWrapper:
                     __slots__ = ("quality_gate_result", "task", "task_id", "task_title")
+
                     def __init__(self, task_id, task_title, task, qg_result):
                         self.task_id = task_id
                         self.task_title = task_title
@@ -328,11 +327,15 @@ class QualityGate:
                     all_passed = False
                     summary_parts.append("council-gates=blocked")
                     if gate_result.blocking_issues:
-                        summary_parts.append(f"council-blocking={len(gate_result.blocking_issues)}")
+                        summary_parts.append(
+                            f"council-blocking={len(gate_result.blocking_issues)}"
+                        )
                 else:
                     summary_parts.append("council-gates=ok")
                     if gate_result.gates_warned > 0:
-                        summary_parts.append(f"council-warnings={gate_result.gates_warned}")
+                        summary_parts.append(
+                            f"council-warnings={gate_result.gates_warned}"
+                        )
 
             except Exception:
                 # Graceful degradation — council enforcement failed, proceed without it

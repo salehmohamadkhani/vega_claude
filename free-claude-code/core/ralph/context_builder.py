@@ -162,7 +162,7 @@ class ContextBuilder:
             if proc.returncode == 0:
                 return proc.stdout.strip()
             return ""
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        except subprocess.TimeoutExpired, FileNotFoundError, OSError:
             return ""
 
     def _safe_git_log(self) -> list[str]:
@@ -181,5 +181,5 @@ class ContextBuilder:
                     line.strip() for line in proc.stdout.split("\n") if line.strip()
                 ]
             return []
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        except subprocess.TimeoutExpired, FileNotFoundError, OSError:
             return []

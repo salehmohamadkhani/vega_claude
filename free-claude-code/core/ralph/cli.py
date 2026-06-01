@@ -178,6 +178,7 @@ def _cmd_plan(args: argparse.Namespace) -> int:
         project_type = getattr(args, "project_type", "") or ""
         strict_council = getattr(args, "strict_council", False)
         from .agent_council.planner_integration import build_agent_council_task_context
+
         agent_council_context = build_agent_council_task_context(
             goal=args.goal,
             project_type=project_type or None,
@@ -389,6 +390,7 @@ def _build_gate_config_from_args(args: argparse.Namespace) -> object | None:
     if not use_gates and not strict_gates:
         return None
     from .agent_council.runtime_gate_config import runtime_gate_config_from_options
+
     ptype: str | None = getattr(args, "run_project_type", None) or None
     return runtime_gate_config_from_options(
         use_agent_council_gates=use_gates,
@@ -460,8 +462,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
             for reason in guard_result.failure_reasons:
                 _warn(reason)
             _error(
-                "Real execution blocked by safety guard. "
-                "See warnings above.",
+                "Real execution blocked by safety guard. See warnings above.",
                 EXIT_UNSAFE_REAL,
             )
 
@@ -783,8 +784,7 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
             for reason in guard_result.failure_reasons:
                 _warn(reason)
             _error(
-                "Real execution blocked by safety guard. "
-                "See warnings above.",
+                "Real execution blocked by safety guard. See warnings above.",
                 EXIT_UNSAFE_REAL,
             )
 
@@ -889,7 +889,6 @@ def _cmd_run_loop(args: argparse.Namespace) -> int:
 def _print_pilot_result(result: RealPilotResult, *, json_mode: bool) -> None:
     """Print a RealPilotResult to stdout."""
     if json_mode:
-
         _print_json(
             {
                 "pilot_workspace_path": result.pilot_workspace_path,
@@ -1225,17 +1224,17 @@ def _cmd_sandbox_smoke(args: argparse.Namespace) -> int:
 
     No LLM calls. No product build. No network access.
     """
+    from .agent_council.gate_runner import gate_result_to_context, summarize_gate_result
+    from .agent_council.runtime_gate_enforcer import (
+        enforce_runtime_evidence_gates,
+        should_block_task_approval,
+    )
     from .agent_council.runtime_sandbox import (
         collect_sandbox_artifacts,
         create_backtest_run,
         summarize_sandbox_run,
         validate_sandbox_cleanliness,
     )
-    from .agent_council.runtime_gate_enforcer import (
-        enforce_runtime_evidence_gates,
-        should_block_task_approval,
-    )
-    from .agent_council.gate_runner import summarize_gate_result, gate_result_to_context
 
     project_type = args.project_type or "landing_page"
     goal = args.goal or "Build a test project"
@@ -1253,10 +1252,10 @@ def _cmd_sandbox_smoke(args: argparse.Namespace) -> int:
     # Write a deterministic fixture output file
     fixture_path = os.path.join(run_dir, "output.md")
     with open(fixture_path, "w") as f:
-        f.write(f"# Sandbox Smoke Test\n\n")
+        f.write("# Sandbox Smoke Test\n\n")
         f.write(f"Project: {goal}\n")
         f.write(f"Type: {project_type}\n")
-        f.write(f"Status: OK\n")
+        f.write("Status: OK\n")
 
     # Collect artifacts
     artifacts = collect_sandbox_artifacts(run_dir)
@@ -1286,13 +1285,15 @@ def _cmd_sandbox_smoke(args: argparse.Namespace) -> int:
     blocked = should_block_task_approval(gate_result)
 
     if getattr(args, "json", False):
-        _print_json({
-            "run_dir": run_dir,
-            "cleanliness": cleanliness,
-            "artifacts": artifacts,
-            "gate_result": gate_result_to_context(gate_result),
-            "approval_blocked": blocked,
-        })
+        _print_json(
+            {
+                "run_dir": run_dir,
+                "cleanliness": cleanliness,
+                "artifacts": artifacts,
+                "gate_result": gate_result_to_context(gate_result),
+                "approval_blocked": blocked,
+            }
+        )
     else:
         print(summarize_sandbox_run(run_dir))
         print()
@@ -1484,12 +1485,21 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Target number of tasks (default: 4). >4 decomposes implementation into sub-tasks.",
     )
-    p.add_argument("--project-type", default=None,
-                   help="Project type for Agent Council planning (landing_page, full_stack_app, saas_product, etc.)")
-    p.add_argument("--use-agent-council", action="store_true",
-                   help="Enable Agent Council V2 context injection into task planning")
-    p.add_argument("--strict-council", action="store_true",
-                   help="Enable strict mode for Agent Council planning (missing artifacts block)")
+    p.add_argument(
+        "--project-type",
+        default=None,
+        help="Project type for Agent Council planning (landing_page, full_stack_app, saas_product, etc.)",
+    )
+    p.add_argument(
+        "--use-agent-council",
+        action="store_true",
+        help="Enable Agent Council V2 context injection into task planning",
+    )
+    p.add_argument(
+        "--strict-council",
+        action="store_true",
+        help="Enable strict mode for Agent Council planning (missing artifacts block)",
+    )
     p.add_argument("--json", action="store_true", help="Output in JSON format")
 
     # --- review ---
@@ -1504,17 +1514,39 @@ def _build_parser() -> argparse.ArgumentParser:
     # --- run ---
     p = sub.add_parser("run", help="Run approved tasks (dry-run by default)")
     p.add_argument("--task", default=None, help="Run a specific task by ID")
-    p.add_argument("--loop", action="store_true", help="Enable multi-iteration Ralph loop")
+    p.add_argument(
+        "--loop", action="store_true", help="Enable multi-iteration Ralph loop"
+    )
     p.add_argument(
         "--max-iterations",
         type=int,
         default=3,
         help="Max iterations per task in loop mode (default: 3)",
     )
-    p.add_argument("--stop-on-debug", action="store_true", default=True, help="Stop on debug action (default: True)")
-    p.add_argument("--no-stop-on-debug", action="store_false", dest="stop_on_debug", help="Do not stop on debug action")
-    p.add_argument("--stop-on-escalate", action="store_true", default=True, help="Stop on escalate action (default: True)")
-    p.add_argument("--no-stop-on-escalate", action="store_false", dest="stop_on_escalate", help="Do not stop on escalate action")
+    p.add_argument(
+        "--stop-on-debug",
+        action="store_true",
+        default=True,
+        help="Stop on debug action (default: True)",
+    )
+    p.add_argument(
+        "--no-stop-on-debug",
+        action="store_false",
+        dest="stop_on_debug",
+        help="Do not stop on debug action",
+    )
+    p.add_argument(
+        "--stop-on-escalate",
+        action="store_true",
+        default=True,
+        help="Stop on escalate action (default: True)",
+    )
+    p.add_argument(
+        "--no-stop-on-escalate",
+        action="store_false",
+        dest="stop_on_escalate",
+        help="Do not stop on escalate action",
+    )
     p.add_argument(
         "--real",
         action="store_true",
@@ -1580,36 +1612,70 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # --- sandbox-smoke ---
     p = sub.add_parser("sandbox-smoke", help="Run a deterministic sandbox smoke test")
-    p.add_argument("--project-type", default="landing_page", help="Project type (default: landing_page)")
-    p.add_argument("--goal", default="Build a test project", help="Project goal description")
+    p.add_argument(
+        "--project-type",
+        default="landing_page",
+        help="Project type (default: landing_page)",
+    )
+    p.add_argument(
+        "--goal", default="Build a test project", help="Project goal description"
+    )
     p.add_argument("--strict", action="store_true", help="Enable strict mode")
     p.add_argument("--json", action="store_true", help="Output in JSON format")
-    p.add_argument("--sandbox-root", default="", help="Sandbox root path (default: auto-detect)")
+    p.add_argument(
+        "--sandbox-root", default="", help="Sandbox root path (default: auto-detect)"
+    )
 
     # --- status ---
     sub.add_parser("status", help="Show workspace / run status")
 
     # --- council-plan ---
-    p = sub.add_parser("council-plan", help="Generate a deterministic Council Plan before execution")
-    p.add_argument("--project-type", default="", help="Project type (landing_page, full_stack_app, saas_product, etc.)")
+    p = sub.add_parser(
+        "council-plan", help="Generate a deterministic Council Plan before execution"
+    )
+    p.add_argument(
+        "--project-type",
+        default="",
+        help="Project type (landing_page, full_stack_app, saas_product, etc.)",
+    )
     p.add_argument("--goal", default="", help="Project goal description")
-    p.add_argument("--strict", action="store_true", help="Enable strict mode (missing critical artifacts block execution)")
+    p.add_argument(
+        "--strict",
+        action="store_true",
+        help="Enable strict mode (missing critical artifacts block execution)",
+    )
     p.add_argument("--json", action="store_true", help="Output in JSON format")
     p.add_argument(
-        "--exclude-agent", action="append", default=[], dest="exclude_agents",
+        "--exclude-agent",
+        action="append",
+        default=[],
+        dest="exclude_agents",
         help="Agent ID to exclude from the plan (repeatable)",
     )
     p.add_argument(
-        "--include-agent", action="append", default=[], dest="include_agents",
+        "--include-agent",
+        action="append",
+        default=[],
+        dest="include_agents",
         help="Agent ID to include in the plan (repeatable)",
     )
     p.add_argument("--research-root", default="", help="Path to research corpus root")
 
     # --- council-gates ---
-    p = sub.add_parser("council-gates", help="Run evidence gates against a Council Plan")
-    p.add_argument("--project-type", default="", help="Project type (landing_page, full_stack_app, saas_product, etc.)")
+    p = sub.add_parser(
+        "council-gates", help="Run evidence gates against a Council Plan"
+    )
+    p.add_argument(
+        "--project-type",
+        default="",
+        help="Project type (landing_page, full_stack_app, saas_product, etc.)",
+    )
     p.add_argument("--goal", default="", help="Project goal description")
-    p.add_argument("--strict", action="store_true", help="Enable strict mode (missing evidence blocks)")
+    p.add_argument(
+        "--strict",
+        action="store_true",
+        help="Enable strict mode (missing evidence blocks)",
+    )
     p.add_argument("--json", action="store_true", help="Output in JSON format")
 
     # --- report ---

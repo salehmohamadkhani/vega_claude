@@ -13,15 +13,10 @@ Prove:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
-import pytest
-
 from core.ralph.agent_council.runtime_gate_config import (
     RuntimeGateConfig,
     runtime_gate_config_from_options,
 )
-from core.ralph.execution import ExecutionMode, ExecutionResult, ExecutionStatus
 from core.ralph.iteration_runner import IterationRunner, IterationRunnerConfig
 from core.ralph.models import RalphTask, TaskStatus
 from core.ralph.quality_gate import QualityGate
@@ -71,7 +66,7 @@ class TestIterationRunnerWithGates:
 
     def test_runner_with_disabled_gates_uses_old_behavior(self):
         """When gate_config is None or disabled, old behavior is preserved."""
-        task = RalphTask(
+        RalphTask(
             id="TASK-DISABLED-001",
             title="Disabled test",
             agent_role=AgentRole.DOER,
@@ -201,6 +196,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_in_config_module(self):
         from core.ralph.agent_council import runtime_gate_config
+
         source = runtime_gate_config.__file__
         if source:
             with open(str(source)) as f:

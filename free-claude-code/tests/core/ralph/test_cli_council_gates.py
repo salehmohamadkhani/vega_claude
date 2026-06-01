@@ -28,11 +28,15 @@ class TestCouncilGatesCLIBasic:
 
     def test_council_gates_full_stack(self, capsys):
         """Run gates against a full_stack_app plan."""
-        result = _run_cli([
-            "council-gates",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a small CRM",
-        ])
+        result = _run_cli(
+            [
+                "council-gates",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a small CRM",
+            ]
+        )
         # May pass or fail depending on context — just verify it runs
         assert result in (EXIT_SUCCESS, EXIT_ERROR)
 
@@ -41,22 +45,30 @@ class TestCouncilGatesCLIBasic:
 
     def test_council_gates_landing_page(self, capsys):
         """Run gates against a landing_page plan."""
-        result = _run_cli([
-            "council-gates",
-            "--project-type", "landing_page",
-            "--goal", "Build a landing page",
-        ])
+        _run_cli(
+            [
+                "council-gates",
+                "--project-type",
+                "landing_page",
+                "--goal",
+                "Build a landing page",
+            ]
+        )
         captured = capsys.readouterr()
         assert "EVIDENCE GATE RESULTS" in captured.out
 
     def test_council_gates_json(self, capsys):
         """--json flag produces structured output."""
-        result = _run_cli([
-            "council-gates",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a CRM",
-            "--json",
-        ])
+        _run_cli(
+            [
+                "council-gates",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a CRM",
+                "--json",
+            ]
+        )
         captured = capsys.readouterr()
         data = json.loads(captured.out)
         assert isinstance(data, dict)
@@ -66,29 +78,37 @@ class TestCouncilGatesCLIBasic:
 
     def test_council_gates_strict(self, capsys):
         """--strict flag is accepted."""
-        result = _run_cli([
-            "council-gates",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a CRM",
-            "--strict",
-        ])
+        _run_cli(
+            [
+                "council-gates",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Build a CRM",
+                "--strict",
+            ]
+        )
         captured = capsys.readouterr()
         assert "EVIDENCE GATE RESULTS" in captured.out
 
     def test_council_gates_no_flags(self, capsys):
         """Running with no flags uses defaults."""
-        result = _run_cli(["council-gates"])
+        _run_cli(["council-gates"])
         captured = capsys.readouterr()
         assert "EVIDENCE GATE RESULTS" in captured.out
 
     def test_council_gates_saas_product(self, capsys):
         """All project types work."""
         for ptype in ("landing_page", "full_stack_app", "saas_product"):
-            result = _run_cli([
-                "council-gates",
-                "--project-type", ptype,
-                "--goal", f"Build a {ptype}",
-            ])
+            _run_cli(
+                [
+                    "council-gates",
+                    "--project-type",
+                    ptype,
+                    "--goal",
+                    f"Build a {ptype}",
+                ]
+            )
             captured = capsys.readouterr()
             assert "EVIDENCE GATE RESULTS" in captured.out
 
@@ -100,8 +120,10 @@ class TestCouncilGatesCLIDeterminism:
         """Same input produces same gate run count."""
         args = [
             "council-gates",
-            "--project-type", "full_stack_app",
-            "--goal", "Build a CRM",
+            "--project-type",
+            "full_stack_app",
+            "--goal",
+            "Build a CRM",
             "--json",
         ]
 
@@ -125,12 +147,16 @@ class TestNoNetwork:
         import time
 
         start = time.monotonic()
-        result = _run_cli([
-            "council-gates",
-            "--project-type", "full_stack_app",
-            "--goal", "Test",
-            "--json",
-        ])
+        _run_cli(
+            [
+                "council-gates",
+                "--project-type",
+                "full_stack_app",
+                "--goal",
+                "Test",
+                "--json",
+            ]
+        )
         elapsed = time.monotonic() - start
 
         assert elapsed < 2.0, f"CLI took {elapsed:.3f}s — possible network call"

@@ -43,9 +43,7 @@ def build_reverse_graph(
 
     Maps each agent to the list of agents it depends on (upstream).
     """
-    return {
-        agent.agent_id: agent.dependencies for agent in registry.list_all()
-    }
+    return {agent.agent_id: agent.dependencies for agent in registry.list_all()}
 
 
 # ---------------------------------------------------------------------------
@@ -117,9 +115,7 @@ def topological_sort(
                 in_degree[agent.agent_id] = in_degree.get(agent.agent_id, 0) + 1
 
     # Start with agents that have no dependencies
-    queue: deque[str] = deque(
-        aid for aid, deg in in_degree.items() if deg == 0
-    )
+    queue: deque[str] = deque(aid for aid, deg in in_degree.items() if deg == 0)
     result: list[str] = []
 
     while queue:
@@ -279,8 +275,16 @@ def critical_path(
 ) -> tuple[str, ...]:
     """Find the critical path through the activated agents.
 
-    The critical path is the longest chain of sequential dependencies.
+    The critical path is the longest chain of sequential dependencies
+    (root → leaf). When multiple agents share the same depth at a step,
+    the first in alphabetical order is preferred for determinism.
+
+    Returns an empty tuple if no activated agents or if a cycle is
+    detected (topological sort via _path_predecessors would hang).
     """
+    if not activated_agent_ids:
+        return ()
+
     agent_depths: dict[str, int] = {}
 
     def _depth(aid: str) -> int:
@@ -304,29 +308,45 @@ def critical_path(
     for aid in activated_agent_ids:
         _depth(aid)
 
-    # Walk the longest path
-    path: list[str] = []
-    remaining = set(activated_agent_ids)
-    while remaining:
-        # Find the agent with the highest depth that has all deps in the path
-        candidates = [
-            a for a in remaining
-            if all(
-                d not in activated_agent_ids or d in path
-                for d in registry.get(a).dependencies
-            )
-        ]
+    # Guard: detect cycles by comparing depth count to activated count.
+    # A cycle would mean some agents never get a final depth, causing
+    # the path reconstruction below to loop forever.
+    depth_count = sum(1 for v in agent_depths.values() if v > 0)
+    if depth_count > len(activated_agent_ids):
+        return ()
+
+    # ── Reconstruct the longest path ──────────────────────────────────
+    # Walk backward from the deepest leaf, always picking the activated
+    # dependency with the highest depth.
+    max_depth = max(agent_depths.values(), default=0)
+    if max_depth == 0:
+        flat = sorted(activated_agent_ids)
+        return tuple(flat[:1]) if flat else ()
+
+    # Find every leaf that has this max depth
+    leaves = sorted(a for a, d in agent_depths.items() if d == max_depth)
+    if not leaves:
+        return tuple(sorted(activated_agent_ids))
+
+    # Walk backward from the first leaf (alphabetical tie-break)
+    path_reversed: list[str] = []
+    current = leaves[0]
+    visited: set[str] = set()
+    while current in activated_agent_ids:
+        if current in visited:
+            # Cycle guard — should not happen given depth guard above
+            break
+        visited.add(current)
+        path_reversed.append(current)
+        agent = registry.get(current)
+        # Find the activated dependency with the highest depth
+        candidates = sorted(
+            (d for d in agent.dependencies if d in activated_agent_ids),
+            key=lambda d: (agent_depths.get(d, 0), d),
+            reverse=True,
+        )
         if not candidates:
             break
-        # Pick the one with highest depth (most downstream)
-        candidates.sort(key=lambda a: agent_depths.get(a, 0), reverse=True)
-        # Actually we want to walk from root to leaf. Let's use a different approach.
-        # For critical path, find the longest chain from no-deps to most-depended.
-        break  # Skip — we'll use topological sort instead
+        current = candidates[0]
 
-    # Simpler approach: use topological sort within activated agents
-    try:
-        topo = topological_sort(registry)
-        return tuple(aid for aid in topo if aid in activated_agent_ids)
-    except ValueError:
-        return ()
+    return tuple(reversed(path_reversed))

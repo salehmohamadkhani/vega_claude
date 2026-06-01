@@ -18,17 +18,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import pytest
-
 from core.ralph.agent_council.runtime_evidence import (
     RuntimeEvidenceBinding,
     RuntimeEvidenceBindingStatus,
     RuntimeEvidenceSource,
     RuntimeTaskEvidenceBundle,
-    extract_runtime_evidence_from_task_result,
-    summarize_runtime_evidence_bundle,
     _has_echo_only_verification,
     _has_real_verification,
+    extract_runtime_evidence_from_task_result,
+    summarize_runtime_evidence_bundle,
 )
 
 
@@ -36,11 +34,20 @@ class TestRuntimeEvidenceSource:
     def test_all_sources(self):
         """Verify all expected evidence source types exist."""
         expected = {
-            "file_existence", "file_non_empty", "file_modified",
-            "command_output", "test_result", "qa_behavior",
-            "security_check", "visual_qa", "research_reference",
-            "arbiter_decision", "acceptance_criteria", "artifact_produced",
-            "staged_file", "unknown",
+            "file_existence",
+            "file_non_empty",
+            "file_modified",
+            "command_output",
+            "test_result",
+            "qa_behavior",
+            "security_check",
+            "visual_qa",
+            "research_reference",
+            "arbiter_decision",
+            "acceptance_criteria",
+            "artifact_produced",
+            "staged_file",
+            "unknown",
         }
         assert {e.value for e in RuntimeEvidenceSource} == expected
 
@@ -48,7 +55,11 @@ class TestRuntimeEvidenceSource:
 class TestRuntimeEvidenceBindingStatus:
     def test_all_statuses(self):
         assert {e.value for e in RuntimeEvidenceBindingStatus} == {
-            "bound", "warning", "failed", "blocked", "not_applicable",
+            "bound",
+            "warning",
+            "failed",
+            "blocked",
+            "not_applicable",
         }
 
 
@@ -88,22 +99,37 @@ class TestModels:
 
 class TestEchoOnlyDetection:
     def test_detects_echo_only(self):
-        assert _has_echo_only_verification([
-            'echo "Verified: all good"',
-            'echo "Verified: tests pass"',
-        ]) is True
+        assert (
+            _has_echo_only_verification(
+                [
+                    'echo "Verified: all good"',
+                    'echo "Verified: tests pass"',
+                ]
+            )
+            is True
+        )
 
     def test_detects_real_commands(self):
-        assert _has_echo_only_verification([
-            "uv run pytest tests/ -q",
-            "uv run ruff check .",
-        ]) is False
+        assert (
+            _has_echo_only_verification(
+                [
+                    "uv run pytest tests/ -q",
+                    "uv run ruff check .",
+                ]
+            )
+            is False
+        )
 
     def test_mixed_commands(self):
-        assert _has_echo_only_verification([
-            'echo "Verified: all good"',
-            "uv run pytest tests/ -q",
-        ]) is False
+        assert (
+            _has_echo_only_verification(
+                [
+                    'echo "Verified: all good"',
+                    "uv run pytest tests/ -q",
+                ]
+            )
+            is False
+        )
 
     def test_empty_commands(self):
         assert _has_echo_only_verification([]) is False
@@ -130,7 +156,9 @@ class TestExtractFromDict:
         }
         bundle = extract_runtime_evidence_from_task_result(task_result)
         assert bundle.has_files is True
-        assert any(b.source == RuntimeEvidenceSource.FILE_EXISTENCE for b in bundle.bindings)
+        assert any(
+            b.source == RuntimeEvidenceSource.FILE_EXISTENCE for b in bundle.bindings
+        )
 
     def test_dict_without_files(self):
         task_result = {
@@ -205,7 +233,10 @@ class TestExtractFromDict:
             "task_id": "TASK-007",
             "task": {
                 "agent_role": "security_engineer",
-                "verification_commands": ["uv run bandit -r .", "grep -r vulnerability ."],
+                "verification_commands": [
+                    "uv run bandit -r .",
+                    "grep -r vulnerability .",
+                ],
                 "acceptance_criteria": [
                     "Threat model must cover OWASP Top 10.",
                     "No critical CVEs allowed.",
@@ -233,9 +264,10 @@ class TestExtractFromObjects:
 
     def test_custom_object(self):
         class FakeResult:
-            task_id = "TASK-OBJ-001"
-            changed_files = ["report.md", "analysis.py"]
-            stdout_summary = "All tests passed"
+            def __init__(self) -> None:
+                self.task_id = "TASK-OBJ-001"
+                self.changed_files = ["report.md", "analysis.py"]
+                self.stdout_summary = "All tests passed"
 
         bundle = extract_runtime_evidence_from_task_result(FakeResult())
         assert bundle.has_files is True
@@ -248,14 +280,20 @@ class TestExtractFromObjects:
 
         @dataclass
         class FakeQGResult:
-            arbiter_decision: FakeArbiterDecision = field(default_factory=FakeArbiterDecision)
+            arbiter_decision: FakeArbiterDecision = field(
+                default_factory=FakeArbiterDecision
+            )
             final_status: str = "passed"
 
         @dataclass
         class FakeTask:
             agent_role: str = "doer"
-            verification_commands: list[str] = field(default_factory=lambda: ["uv run pytest -q"])
-            acceptance_criteria: list[str] = field(default_factory=lambda: ["Tests pass"])
+            verification_commands: list[str] = field(
+                default_factory=lambda: ["uv run pytest -q"]
+            )
+            acceptance_criteria: list[str] = field(
+                default_factory=lambda: ["Tests pass"]
+            )
 
         @dataclass
         class FakeIterationResult:
@@ -272,13 +310,17 @@ class TestExtractFromObjects:
         @dataclass
         class FakeTask:
             agent_role: str = "verifier"
-            verification_commands: list[str] = field(default_factory=lambda: [
-                "uv run pytest tests/ -q",
-                "uv run ruff check .",
-            ])
-            acceptance_criteria: list[str] = field(default_factory=lambda: [
-                "All edge cases must be verified.",
-            ])
+            verification_commands: list[str] = field(
+                default_factory=lambda: [
+                    "uv run pytest tests/ -q",
+                    "uv run ruff check .",
+                ]
+            )
+            acceptance_criteria: list[str] = field(
+                default_factory=lambda: [
+                    "All edge cases must be verified.",
+                ]
+            )
 
         @dataclass
         class FakeResult:
@@ -293,9 +335,11 @@ class TestExtractFromObjects:
         @dataclass
         class FakeTask:
             agent_role: str = "verifier"
-            verification_commands: list[str] = field(default_factory=lambda: [
-                'echo "Verified: all good"',
-            ])
+            verification_commands: list[str] = field(
+                default_factory=lambda: [
+                    'echo "Verified: all good"',
+                ]
+            )
             acceptance_criteria: list[str] = field(default_factory=list)
 
         @dataclass
@@ -337,6 +381,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import runtime_evidence
+
         source = runtime_evidence.__file__
         if source:
             with open(str(source)) as f:

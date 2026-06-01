@@ -167,6 +167,7 @@ class TestRealPilotWithMock:
 
 def _make_mocked_loop_result(*, completed: bool):
     from core.ralph.loop_runner import RalphLoopResult
+
     return RalphLoopResult(
         completed=completed,
         stopped_reason="Mocked" if completed else "Not completed",

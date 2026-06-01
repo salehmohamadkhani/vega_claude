@@ -98,15 +98,16 @@ def summarize_council_plan(plan: CouncilPlanResult) -> str:
     lines.append(f"Required Artifacts: {len(plan.required_artifacts)}")
     if plan.missing_artifacts:
         lines.append(f"Missing Artifacts:  {len(plan.missing_artifacts)}")
-        for art in plan.missing_artifacts[:5]:
-            lines.append(f"  - {art}")
+        lines.extend(f"  - {art}" for art in plan.missing_artifacts[:5])
         if len(plan.missing_artifacts) > 5:
             lines.append(f"  ... and {len(plan.missing_artifacts) - 5} more")
 
     lines.append("")
     lines.append(f"Risks:           {len(plan.risks)}")
-    for risk in plan.risks:
-        lines.append(f"  [{risk.severity.value.upper()}] {risk.description[:80]}")
+    lines.extend(
+        f"  [{risk.severity.value.upper()}] {risk.description[:80]}"
+        for risk in plan.risks
+    )
 
     lines.append("")
     lines.append(f"Research Refs:   {len(plan.research_references)}")
@@ -115,8 +116,7 @@ def summarize_council_plan(plan: CouncilPlanResult) -> str:
     if plan.warnings:
         lines.append("")
         lines.append("WARNINGS:")
-        for w in plan.warnings:
-            lines.append(f"  ! {w}")
+        lines.extend(f"  ! {w}" for w in plan.warnings)
 
     lines.append("")
     lines.append("=" * 60)

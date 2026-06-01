@@ -148,10 +148,7 @@ class KPIEvaluator:
 
         Optional KPIs that fail do not count as a failure.
         """
-        return all(
-            not (r.status == KPIStatus.FAILED and not r.passed)
-            for r in results
-        )
+        return all(not (r.status == KPIStatus.FAILED and not r.passed) for r in results)
 
     # ------------------------------------------------------------------
     # Per-type evaluators (all deterministic, no network)
@@ -339,5 +336,5 @@ class KPIEvaluator:
             resolved = (self._workspace_root / relative_path).resolve()
             resolved.relative_to(self._workspace_root)
             return resolved
-        except (ValueError, OSError):
+        except ValueError, OSError:
             return None

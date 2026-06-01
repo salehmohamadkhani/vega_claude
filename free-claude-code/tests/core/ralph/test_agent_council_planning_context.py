@@ -11,8 +11,6 @@ Prove:
 
 from __future__ import annotations
 
-import pytest
-
 from core.ralph.agent_council.plan import (
     CouncilPlanAgentNode,
     CouncilPlanArtifactNode,
@@ -31,7 +29,6 @@ from core.ralph.agent_council.planning_context import (
     extract_risk_task_hints,
     summarize_planning_context,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -68,8 +65,16 @@ def _make_plan(**overrides) -> CouncilPlanResult:
                 produces_artifacts=("backend_implementation_plan",),
             ),
         ),
-        "critical_path": ("chief_vision_officer", "software_architect", "senior_backend_developer"),
-        "parallel_groups": (("chief_vision_officer",), ("software_architect",), ("senior_backend_developer",)),
+        "critical_path": (
+            "chief_vision_officer",
+            "software_architect",
+            "senior_backend_developer",
+        ),
+        "parallel_groups": (
+            ("chief_vision_officer",),
+            ("software_architect",),
+            ("senior_backend_developer",),
+        ),
         "required_artifacts": (
             CouncilPlanArtifactNode(
                 artifact_id="business_brief",
@@ -306,14 +311,16 @@ class TestExtractRiskTaskHints:
         assert "Test risk" in hints[0]
 
     def test_blocking_risks(self):
-        plan = _make_plan(risks=(
-            CouncilPlanRisk(
-                risk_id="b1",
-                description="Blocking risk",
-                severity=RiskSeverity.BLOCKING,
-                mitigation="Fix it.",
-            ),
-        ))
+        plan = _make_plan(
+            risks=(
+                CouncilPlanRisk(
+                    risk_id="b1",
+                    description="Blocking risk",
+                    severity=RiskSeverity.BLOCKING,
+                    mitigation="Fix it.",
+                ),
+            )
+        )
         ctx = build_planning_context_from_council_plan(plan)
         hints = extract_risk_task_hints(ctx)
 
@@ -330,6 +337,7 @@ class TestNoNetworkOrLLM:
 
     def test_no_network_imports(self):
         from core.ralph.agent_council import planning_context
+
         source = planning_context.__file__
         if source:
             with open(str(source)) as f:

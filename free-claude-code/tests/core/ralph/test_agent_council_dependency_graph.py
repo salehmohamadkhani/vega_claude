@@ -165,29 +165,133 @@ class TestFindParallelizable:
 class TestBlockedByMissing:
     def test_chief_vision_blocked_by_missing_project_brief(self, registry):
         missing = blocked_by_missing(
-            registry, "chief_vision_officer", frozenset(),
+            registry,
+            "chief_vision_officer",
+            frozenset(),
         )
         assert "project_brief" in missing
 
     def test_no_blocking_when_inputs_available(self, registry):
         missing = blocked_by_missing(
-            registry, "chief_vision_officer", frozenset({"project_brief"}),
+            registry,
+            "chief_vision_officer",
+            frozenset({"project_brief"}),
         )
         assert len(missing) == 0
 
     def test_market_researcher_blocked_without_brief(self, registry):
         missing = blocked_by_missing(
-            registry, "market_researcher", frozenset(),
+            registry,
+            "market_researcher",
+            frozenset(),
         )
         assert "business_brief" in missing
 
 
 class TestCriticalPath:
-    def test_critical_path_includes_activated(self, registry):
-        activated = frozenset({
-            "chief_vision_officer", "market_researcher",
-            "product_manager", "final_arbiter",
-        })
+    def test_returns_tuple(self, registry):
+        activated = frozenset({"chief_vision_officer"})
         cp = critical_path(registry, activated)
+        assert isinstance(cp, tuple)
+
+    def test_single_agent(self, registry):
+        cp = critical_path(registry, frozenset({"chief_vision_officer"}))
+        assert cp == ("chief_vision_officer",)
+
+    def test_dependency_ordering(self, registry):
+        """chief_vision → market_researcher → product_manager → pm is a real chain."""
+        activated = frozenset(
+            {
+                "chief_vision_officer",
+                "market_researcher",
+                "product_manager",
+            }
+        )
+        cp = critical_path(registry, activated)
+        # The critical path must have chief_vision_officer before market_researcher,
+        # and market_researcher before product_manager
+        positions = {aid: i for i, aid in enumerate(cp)}
+        assert positions["chief_vision_officer"] < positions["market_researcher"]
+        assert positions["market_researcher"] < positions["product_manager"]
+
+    def test_with_final_arbiter(self, registry):
+        """final_arbiter is the most downstream agent — should be last on path."""
+        activated = frozenset(
+            {
+                "chief_vision_officer",
+                "market_researcher",
+                "product_manager",
+                "qa_engineer",
+                "security_engineer",
+                "final_arbiter",
+            }
+        )
+        cp = critical_path(registry, activated)
+        assert cp[-1] == "final_arbiter"
         assert "chief_vision_officer" in cp
-        assert "final_arbiter" in cp
+
+    def test_path_is_longer_than_topological_subset(self, registry):
+        """critical path should pick the longest chain, not just any ordering."""
+        activated = frozenset(
+            {
+                "chief_vision_officer",
+                "market_researcher",
+                "product_manager",
+                "final_arbiter",
+            }
+        )
+        cp = critical_path(registry, activated)
+        # The chain chief_vision → market_researcher → product_manager should
+        # be longer than any alternative through fewer depth levels
+        assert len(cp) >= 2
+
+    def test_no_activated_agents_returns_empty(self, registry):
+        cp = critical_path(registry, frozenset())
+        assert cp == ()
+
+    def test_unknown_agent_id_skipped(self, registry):
+        """Agents not in the registry are silently ignored."""
+        cp = critical_path(registry, frozenset({"nonexistent_agent"}))
+        # Should not crash; returns empty or just the valid agents
+        assert isinstance(cp, tuple)
+
+    def test_disjoint_activated_set(self, registry):
+        """Two independent chains produce a path through the deeper one."""
+        activated = frozenset(
+            {
+                "chief_vision_officer",  # depth 1
+                "project_memory_keeper",  # depth 1 (no deps)
+            }
+        )
+        cp = critical_path(registry, activated)
+        # Both have depth 1, so either is valid — just check no crash
+        assert isinstance(cp, tuple)
+        assert len(cp) == 1
+
+    def test_critical_path_respects_depth(self, registry):
+        """An agent at higher depth should appear after an agent at lower depth."""
+        # A longer chain: chief_vision (1) → market_researcher (2) →
+        # business_strategist (3) → product_manager (4?)
+        activated = frozenset(
+            {
+                "chief_vision_officer",
+                "market_researcher",
+                "business_strategist",
+                "product_manager",
+            }
+        )
+        cp = critical_path(registry, activated)
+        depths = {}
+        for aid in cp:
+            agent = registry.get(aid)
+            dep_depth = max(
+                (depths.get(d, 0) for d in agent.dependencies if d in activated),
+                default=0,
+            )
+            depths[aid] = dep_depth + 1
+        # Depths should be strictly increasing along the path
+        for i in range(len(cp) - 1):
+            assert depths[cp[i]] < depths[cp[i + 1]], (
+                f"Depth not increasing at {cp[i]} ({depths[cp[i]]}) -> "
+                f"{cp[i + 1]} ({depths[cp[i + 1]]})"
+            )

@@ -89,7 +89,9 @@ def _build_gate_context(
         evidence_items=ev_items,
         available_paths=tuple(sorted(available_paths)) if available_paths else (),
         available_file_sizes=available_file_sizes or {},
-        verification_commands=tuple(verification_commands) if verification_commands else (),
+        verification_commands=tuple(verification_commands)
+        if verification_commands
+        else (),
         acceptance_criteria=tuple(acceptance_criteria) if acceptance_criteria else (),
         research_references=tuple(research_references) if research_references else (),
         staged_paths=tuple(sorted(staged_paths)) if staged_paths else (),
@@ -180,9 +182,12 @@ def run_evidence_gates(
     }
     for f in findings:
         meta = meta_map.get(f.gate_id)
-        if meta and meta.blocking:
-            if f.status in (EvidenceGateStatus.FAILED, EvidenceGateStatus.BLOCKED):
-                blocking_issues.append(f.message)
+        if (
+            meta
+            and meta.blocking
+            and f.status in (EvidenceGateStatus.FAILED, EvidenceGateStatus.BLOCKED)
+        ):
+            blocking_issues.append(f.message)
         if f.status == EvidenceGateStatus.WARNING:
             all_warnings.append(f.message)
 
@@ -263,8 +268,7 @@ def summarize_gate_result(result: EvidenceGateResult) -> str:
     if result.blocking_issues:
         lines.append("")
         lines.append("BLOCKING ISSUES:")
-        for bi in result.blocking_issues:
-            lines.append(f"  !! {bi}")
+        lines.extend(f"  !! {bi}" for bi in result.blocking_issues)
 
     # Per-gate findings
     lines.append("")

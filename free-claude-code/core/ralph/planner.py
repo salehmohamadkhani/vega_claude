@@ -179,7 +179,9 @@ class TaskPlanner:
             )
 
         # Agent Council questions — only when context is available
-        if agent_council_context and agent_council_context.get("council_plan_available"):
+        if agent_council_context and agent_council_context.get(
+            "council_plan_available"
+        ):
             missing = agent_council_context.get("missing_artifact_ids", [])
             if missing and isinstance(missing, list) and len(missing) > 0:
                 questions.append(
@@ -197,7 +199,8 @@ class TaskPlanner:
 
             risks = agent_council_context.get("risks", [])
             blocking = [
-                r for r in risks
+                r
+                for r in risks
                 if isinstance(r, dict) and r.get("severity") == "blocking"
             ]
             if blocking:
@@ -251,7 +254,9 @@ class TaskPlanner:
 
         # Council summary enrichment
         council_available = False
-        if agent_council_context and agent_council_context.get("council_plan_available"):
+        if agent_council_context and agent_council_context.get(
+            "council_plan_available"
+        ):
             council_available = True
             council_type = agent_council_context.get("project_type", "unknown")
             agent_count = agent_council_context.get("active_agent_count", 0)
@@ -412,7 +417,9 @@ class TaskPlanner:
                 ac1.append("Verify provider routing is compatible with the target API.")
                 vc1.append("grep -r 'provider' core/ralph/ --include='*.py'")
             if "config" in categories:
-                ac1.append("Ensure Settings integration does not break existing config.")
+                ac1.append(
+                    "Ensure Settings integration does not break existing config."
+                )
                 vc1.append("uv run pytest tests/core/ralph -q")
 
         if _include_runtime_checks() and not vc1:
@@ -448,53 +455,117 @@ class TaskPlanner:
             _IMPL_SUB_GOAL_MAP = [
                 (
                     "Core logic / calculator engine",
-                    ["calculator", "arithmetic", "math", "compute",
-                     "calculator.js", "script.js", "app.js", "main.js"],
+                    [
+                        "calculator",
+                        "arithmetic",
+                        "math",
+                        "compute",
+                        "calculator.js",
+                        "script.js",
+                        "app.js",
+                        "main.js",
+                    ],
                 ),
                 (
                     "Main page UI and styling",
-                    ["index.html", "index.htm", "styles.css", "style.css",
-                     "landing page", "homepage", "ui", "interface", "layout"],
+                    [
+                        "index.html",
+                        "index.htm",
+                        "styles.css",
+                        "style.css",
+                        "landing page",
+                        "homepage",
+                        "ui",
+                        "interface",
+                        "layout",
+                    ],
                 ),
                 (
                     "Advanced / scientific mode pages",
-                    ["scientific.html", "advanced.html",
-                     "scientific", "advanced", "degree", "radian"],
+                    [
+                        "scientific.html",
+                        "advanced.html",
+                        "scientific",
+                        "advanced",
+                        "degree",
+                        "radian",
+                    ],
                 ),
                 (
                     "Help page and documentation files",
-                    ["help.html", "docs", "README.md",
-                     "help", "docs", "documentation", "usage"],
+                    [
+                        "help.html",
+                        "docs",
+                        "README.md",
+                        "help",
+                        "docs",
+                        "documentation",
+                        "usage",
+                    ],
                 ),
                 (
                     "Accessibility and i18n setup",
-                    ["accessibility", "i18n", "locale",
-                     "a11y", "language", "translation"],
+                    [
+                        "accessibility",
+                        "i18n",
+                        "locale",
+                        "a11y",
+                        "language",
+                        "translation",
+                    ],
                 ),
                 (
                     "Error handling and edge cases",
-                    ["error", "fallback", "validation",
-                     "divide by zero", "invalid", "boundary"],
+                    [
+                        "error",
+                        "fallback",
+                        "validation",
+                        "divide by zero",
+                        "invalid",
+                        "boundary",
+                    ],
                 ),
                 (
                     "Responsive layout and mobile support",
-                    ["responsive", "mobile", "media", "layout",
-                     "phone", "tablet", "viewport"],
+                    [
+                        "responsive",
+                        "mobile",
+                        "media",
+                        "layout",
+                        "phone",
+                        "tablet",
+                        "viewport",
+                    ],
                 ),
                 (
                     "Build / tooling configuration",
-                    ["Makefile", ".env", "config",
-                     "build", "tooling", "package"],
+                    ["Makefile", ".env", "config", "build", "tooling", "package"],
                 ),
                 (
                     "Testing and formula validation",
-                    ["test", "formula", "assert", "verify",
-                     "validation", "unit test", "spec", "check"],
+                    [
+                        "test",
+                        "formula",
+                        "assert",
+                        "verify",
+                        "validation",
+                        "unit test",
+                        "spec",
+                        "check",
+                    ],
                 ),
                 (
                     "Data persistence and user preferences",
-                    ["localStorage", "settings", "preferences",
-                     "history", "memory", "save", "persist", "theme"],
+                    [
+                        "localStorage",
+                        "settings",
+                        "preferences",
+                        "history",
+                        "memory",
+                        "save",
+                        "persist",
+                        "theme",
+                    ],
                 ),
             ]
 
@@ -769,7 +840,8 @@ class TaskPlanner:
             # Add artifact-driven acceptance criteria
             if isinstance(active_agents, list):
                 producers = [
-                    a for a in active_agents
+                    a
+                    for a in active_agents
                     if isinstance(a, dict) and a.get("produces_artifacts")
                 ]
                 if producers:
@@ -783,7 +855,11 @@ class TaskPlanner:
                     )
 
             # Add missing artifact gates
-            if missing_artifacts and isinstance(missing_artifacts, list) and len(missing_artifacts) > 0:
+            if (
+                missing_artifacts
+                and isinstance(missing_artifacts, list)
+                and len(missing_artifacts) > 0
+            ):
                 impl_task.acceptance_criteria.append(
                     f"Address missing council artifacts: {', '.join(str(m) for m in missing_artifacts[:5])}"
                 )
@@ -794,14 +870,17 @@ class TaskPlanner:
             # Add risk-gate acceptance criteria
             if isinstance(risks, list):
                 blocking = [
-                    r for r in risks
+                    r
+                    for r in risks
                     if isinstance(r, dict) and r.get("severity") == "blocking"
                 ]
                 if blocking:
                     impl_task.acceptance_criteria.append(
                         f"Mitigate {len(blocking)} blocking council risks before completion."
                     )
-                    impl_task.kpis.append("All blocking council risks have documented mitigations.")
+                    impl_task.kpis.append(
+                        "All blocking council risks have documented mitigations."
+                    )
 
         # --- Enrich verification task ---
         if verif_task:
@@ -818,7 +897,8 @@ class TaskPlanner:
             critical_artifacts = context.get("required_artifacts", [])
             if isinstance(critical_artifacts, list):
                 crit = [
-                    a for a in critical_artifacts
+                    a
+                    for a in critical_artifacts
                     if isinstance(a, dict) and a.get("is_critical")
                 ]
                 if crit:

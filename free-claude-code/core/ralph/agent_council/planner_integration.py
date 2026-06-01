@@ -23,7 +23,9 @@ from .runtime_adapter import build_council_plan_for_goal
 # ---------------------------------------------------------------------------
 
 
-def _degraded_context(reason: str = "Agent Council planning unavailable") -> dict[str, object]:
+def _degraded_context(
+    reason: str = "Agent Council planning unavailable",
+) -> dict[str, object]:
     """Return a minimal context dict when Agent Council is unavailable."""
     return {
         "council_plan_available": False,
@@ -159,7 +161,9 @@ def format_agent_council_context_for_prompt(
     # Active agents (top N)
     agents = context.get("active_agents", [])
     if isinstance(agents, list) and agents:
-        lines.append(f"\n### Active Agents ({len(agents)} total, showing top {max_agents})")
+        lines.append(
+            f"\n### Active Agents ({len(agents)} total, showing top {max_agents})"
+        )
         for a in agents[:max_agents]:
             if isinstance(a, dict):
                 deps = a.get("depends_on", [])
@@ -173,20 +177,22 @@ def format_agent_council_context_for_prompt(
     cp = context.get("critical_path", [])
     if cp and isinstance(cp, list):
         lines.append(f"\n### Critical Path ({len(cp)} agents)")
-        lines.append(f"{' → '.join(str(a) for a in cp[:8])}" +
-                     ("..." if len(cp) > 8 else ""))
+        lines.append(
+            f"{' → '.join(str(a) for a in cp[:8])}" + ("..." if len(cp) > 8 else "")
+        )
 
     # Missing artifacts
     missing = context.get("missing_artifact_ids", [])
     if missing and isinstance(missing, list) and len(missing) > 0:
         lines.append(f"\n### Missing Critical Artifacts ({len(missing)})")
-        for m in missing:
-            lines.append(f"- {m}")
+        lines.extend(f"- {m}" for m in missing)
 
     # Risks (top N)
     risks = context.get("risks", [])
     if isinstance(risks, list) and risks:
-        blocking = [r for r in risks if isinstance(r, dict) and r.get("severity") == "blocking"]
+        blocking = [
+            r for r in risks if isinstance(r, dict) and r.get("severity") == "blocking"
+        ]
         high = [r for r in risks if isinstance(r, dict) and r.get("severity") == "high"]
         lines.append(
             f"\n### Risks ({len(risks)} total — {len(blocking)} blocking, {len(high)} high)"
@@ -204,11 +210,11 @@ def format_agent_council_context_for_prompt(
     evidence = context.get("evidence_requirements", [])
     if isinstance(evidence, list) and evidence:
         lines.append(f"\n### Evidence Requirements ({len(evidence)} total)")
-        for e in evidence[:max_evidence]:
-            if isinstance(e, dict):
-                lines.append(
-                    f"- [{e.get('priority', 'medium').upper()}] {e.get('description', '')}"
-                )
+        lines.extend(
+            f"- [{e.get('priority', 'medium').upper()}] {e.get('description', '')}"
+            for e in evidence[:max_evidence]
+            if isinstance(e, dict)
+        )
 
     # Gate expectations
     gate_block = context.get("gate_prompt_block", "")
