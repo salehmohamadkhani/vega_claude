@@ -163,4 +163,24 @@ approval before starting.
 | GitHub verification | _pending_ |
 | next task | Agent CLI runner implementation |
 
+### Entry: U10-LITE
+
+| Field | Value |
+|-------|-------|
+| task id | U10-LITE |
+| date | 2026-06-01 |
+| mode | direct |
+| fan-out used | no |
+| why fan-out not used | new CLI script only, 0% risk — no LLM calls, no network, stdlib only |
+| estimated LLM calls | 0 |
+| actual LLM calls | 0 |
+| DeepSeek calls used | 0 |
+| files changed | `scripts/vega_agent_runner.py` (new), `tests/ralph/test_vega_agent_runner_cli.py` (new), `docs/ralph/U5_LITE_TASK_LEDGER.md` (updated) |
+| tests run | 68 \| 68 passed (incl. executor + runtime tests) |
+| commit hash | _pending_ |
+| push result | _pending_ |
+| branch | `ralph-r1-temp` |
+| GitHub verification | _pending_ |
+| next task | TBD |
+
 U5_TASK_LEDGER_READY
