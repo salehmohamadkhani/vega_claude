@@ -122,4 +122,23 @@ approval before starting.
 | GitHub verification | [7a24aff](https://github.com/salehmohamadkhani/vega_claude/commit/7a24aff) |
 | next task | agent execution interface |
 
+### Entry: U8-LITE
+
+| Field | Value |
+|-------|-------|
+| task id | U8-LITE |
+| date | 2026-06-01 |
+| mode | direct |
+| fan-out used | no |
+| why fan-out not used | new module only, 0% risk — no LLM calls, no network, stdlib only |
+| estimated LLM calls | 0 |
+| actual LLM calls | 0 |
+| files changed | `vega_agents/executor.py` (new), `vega_agents/__init__.py` (updated exports), `tests/ralph/test_vega_agent_executor.py` (new) |
+| tests run | 24 \| 24 passed |
+| commit hash | _pending_ |
+| push result | _pending_ |
+| branch | `ralph-r1-temp` |
+| GitHub verification | _pending_ |
+| next task | agent task runner / CLI command |
+
 U5_TASK_LEDGER_READY
